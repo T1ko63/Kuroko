@@ -151,6 +151,15 @@ public class PromptsLoaderTests
     }
 
     [Fact]
+    public void The_generated_default_file_documents_every_prompt_key()
+    {
+        var text = DefaultPrompts.Create();
+        foreach (var key in new[] { "name", "prompt", "mode", "output", "hotkey", "provider", "model" })
+            Assert.Contains($"#   {key} ", text);
+        Assert.Contains("\"overlay\"", text);
+    }
+
+    [Fact]
     public void The_generated_default_file_round_trips_to_the_built_in_prompts()
     {
         var result = Parse(DefaultPrompts.Create());
@@ -164,6 +173,7 @@ public class PromptsLoaderTests
             Assert.Equal(expected.Name, actual.Name);
             Assert.Equal(expected.Mode, actual.Mode);
             Assert.Equal(expected.Hotkey, actual.Hotkey);
+            Assert.Equal(expected.Output, actual.Output);
             Assert.Equal(expected.Prompt.Trim().Replace("\r\n", "\n"), actual.Prompt.Replace("\r\n", "\n"));
         }
     }
