@@ -18,6 +18,12 @@ public static class DefaultPrompts
         text.AppendLine("#            \"universal\": beides in einem. Ohne Marker ist der ganze Text ein Auftrag (\"Absage an Freunde\");");
         text.AppendLine("#                         mit Marker wird dessen Inhalt auf den übrigen Text angewendet (\"<<als Rapsong>> Hallo ...\").");
         text.AppendLine("#                         Die Marker-Zeichen stehen in settings.toml (marker_start / marker_end).");
+        text.AppendLine("#   output   optional: wohin das Ergebnis geht, unabhängig von mode");
+        text.AppendLine("#            \"replace\" (Standard): das Ergebnis ersetzt den markierten Text bzw. das ganze Feld");
+        text.AppendLine("#            \"overlay\": das Ergebnis erscheint in einer kleinen Karte, der Text in der App bleibt unverändert.");
+        text.AppendLine("#                       Braucht eine Markierung (das ganze Feld wird nur in eindeutig bearbeitbaren Feldern gelesen),");
+        text.AppendLine("#                       funktioniert auch auf schreibgeschütztem Text wie Webseiten. Esc schließt die Karte,");
+        text.AppendLine("#                       result_copy_hotkey (settings.toml) kopiert sie.");
         text.AppendLine("#   hotkey   optional, z. B. \"Ctrl+Alt+K\": führt den Prompt direkt aus, ohne Overlay");
         text.AppendLine("#   provider optional: Name eines [providers.*] aus settings.toml (sonst der Standard-Anbieter)");
         text.AppendLine("#   model    optional: Modell, das statt dem des Anbieters verwendet wird");
@@ -28,6 +34,7 @@ public static class DefaultPrompts
             text.AppendLine("[[prompt]]");
             text.AppendLine($"name = {Quote(prompt.Name)}");
             text.AppendLine($"mode = \"{ModeText(prompt.Mode)}\"");
+            if (prompt.Output != PromptOutput.Replace) text.AppendLine($"output = \"{OutputText(prompt.Output)}\"");
             if (prompt.Hotkey is not null) text.AppendLine($"hotkey = {Quote(prompt.Hotkey)}");
             text.AppendLine("prompt = \"\"\"");
             text.AppendLine(EscapeMultiline(prompt.Prompt));
@@ -49,6 +56,12 @@ public static class DefaultPrompts
         PromptMode.Instruction => "instruction",
         PromptMode.Universal => "universal",
         _ => "transform",
+    };
+
+    public static string OutputText(PromptOutput output) => output switch
+    {
+        PromptOutput.Overlay => "overlay",
+        _ => "replace",
     };
 
     private static string Quote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
