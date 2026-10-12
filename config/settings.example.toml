@@ -41,6 +41,17 @@ result_width = 480
 result_min_height = 0
 result_max_height = 360
 
+# Where the status pill (progress, notes, errors) appears: follow (where the prompt picker opens, default) | caret (at the text
+# cursor, otherwise at the mouse) | mouse | fixed (at pill_fixed_position, with overlay_screen_margin) | card (where the result
+# card appears, see result_position). For prompts with a result card the pill always sits where the card will appear.
+pill_position = "follow"
+pill_fixed_position = "top-third"   # same places as result_fixed_position
+pill_min_width = 200        # 100-1600 px; longer text wraps at pill_max_width
+pill_max_width = 420        # 100-1600 px
+pill_min_height = 0         # 0-400 px (0 = as high as the text; otherwise the text is centred and the pill grows when it wraps)
+pill_font_size = 13         # 8-32
+pill_duration = 2           # seconds a note such as "Undone" stays, 0.5-60 (errors keep 5 s, a failed paste 15 s)
+
 # Markers for one-off instructions inside the text, e.g.  <<shorter>> Hello ...
 # Used by prompts with mode = "universal". Must not be empty.
 marker_start = "<<"
@@ -50,7 +61,7 @@ theme = "system"            # system | light | dark
 accent = "none"             # none | system | hex colour like "#3B82F6" (caret, text selection, progress line)
 overlay_position = "caret"  # caret | mouse | fixed
 
-# Prompt picker (and the progress pill): a fixed place and size, like the result card. The fixed place (overlay_position = "fixed") is
+# Prompt picker (and the pill with pill_position = "follow"): a fixed place and size, like the result card. The fixed place (overlay_position = "fixed") is
 # one of top-third | center | bottom-third | top-left | bottom-left | top-right | bottom-right | left | right | top | bottom.
 # The picker grows away from the screen edge it sits at. The margin is the distance to the screen edge in pixels (0-200).
 overlay_fixed_position = "top-third"

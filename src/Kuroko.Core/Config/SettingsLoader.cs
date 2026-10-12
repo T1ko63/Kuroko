@@ -15,6 +15,7 @@ public static class SettingsLoader
     private static readonly string[] Themes = ["system", "light", "dark"];
     private static readonly string[] Positions = ["caret", "mouse", "fixed", "center"]; // "center" is the old name of "fixed"
     private static readonly string[] ResultPositions = ["fixed", "follow", "caret", "mouse", "center"]; // "center" is the old name of "fixed"
+    private static readonly string[] PillPositions = ["follow", "caret", "mouse", "fixed", "card"];
 
     /// <summary>The places the result card can have (result_fixed_position).</summary>
     public static readonly string[] ResultSpots =
@@ -31,6 +32,7 @@ public static class SettingsLoader
         "appearance", "result_copy_hotkey", "result_position", "result_font_size",
         "result_width", "result_max_height", "result_min_height", "result_fixed_position", "result_screen_margin",
         "overlay_fixed_position", "overlay_screen_margin", "overlay_width", "overlay_min_height", "overlay_max_height", "overlay_font_size",
+        "pill_position", "pill_fixed_position", "pill_min_width", "pill_max_width", "pill_min_height", "pill_font_size", "pill_duration",
     };
 
     private static readonly HashSet<string> ProviderKeys = new(StringComparer.Ordinal)
@@ -101,6 +103,19 @@ public static class SettingsLoader
         {
             reader.Issue(reader.LineOf("result_min_height"), "result_min_height must not be larger than result_max_height", isError: true);
         }
+
+        var pillPosition = reader.Choice(root, "pill_position", AppSettings.DefaultPillPosition, PillPositions);
+        var pillFixedPosition = reader.Choice(root, "pill_fixed_position", AppSettings.DefaultPillFixedPosition, ResultSpots);
+        var pillMinWidth = ReadNumber(root, reader, "pill_min_width", AppSettings.DefaultPillMinWidth, AppSettings.MinPillWidth, AppSettings.MaxPillWidth);
+        var pillMaxWidth = ReadNumber(root, reader, "pill_max_width", AppSettings.DefaultPillMaxWidth, AppSettings.MinPillWidth, AppSettings.MaxPillWidth);
+        if (pillMinWidth > pillMaxWidth)
+        {
+            reader.Issue(reader.LineOf("pill_min_width"), "pill_min_width must not be larger than pill_max_width", isError: true);
+        }
+
+        var pillMinHeight = ReadNumber(root, reader, "pill_min_height", AppSettings.DefaultPillMinHeight, 0, AppSettings.MaxPillMinHeight);
+        var pillFontSize = ReadNumber(root, reader, "pill_font_size", AppSettings.DefaultPillFontSize, AppSettings.MinResultFontSize, AppSettings.MaxResultFontSize);
+        var pillDuration = ReadNumber(root, reader, "pill_duration", AppSettings.DefaultPillDuration, AppSettings.MinPillDuration, AppSettings.MaxPillDuration);
 
         var theme = reader.Choice(root, "theme", "system", Themes);
         var accent = reader.Choice(root, "accent", "none", null).Trim();
@@ -183,6 +198,13 @@ public static class SettingsLoader
             overlayFixedPosition, overlayScreenMargin, overlayWidth, overlayMinHeight, overlayMaxHeight, overlayFontSize)
         {
             Appearance = appearance,
+            PillPosition = pillPosition,
+            PillFixedPosition = pillFixedPosition,
+            PillMinWidth = pillMinWidth,
+            PillMaxWidth = pillMaxWidth,
+            PillMinHeight = pillMinHeight,
+            PillFontSize = pillFontSize,
+            PillDuration = pillDuration,
         };
         return new SettingsLoadResult(issues.Any(i => i.IsError) ? null : settings, issues);
     }

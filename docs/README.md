@@ -95,10 +95,16 @@ nicht mehr (unverändert) vorkommt oder mehrfach vorkommt; dann erscheint nur ei
 nicht per Strg+Z der Ziel-App, weil dessen Verhalten je nach App unterschiedlich ist. Preis: Der Feldinhalt wird komplett neu eingefügt, daher
 können Formatierung (Rich-Text) und Cursorposition verloren gehen; die App-eigene Undo-Liste (Strg+Z) bleibt meist erhalten.
 
-**Position und Größe des Menüs:** Das Auswahl-Menü (und die Fortschrittspille) hat dieselben Optionen wie die Ergebnis-Karte:
+**Position und Größe des Menüs:** Das Auswahl-Menü (und die Pille bei `pill_position = "follow"`) hat dieselben Optionen wie die Ergebnis-Karte:
 `overlay_position = "fixed"` mit `overlay_fixed_position` (dieselben elf Plätze), `overlay_screen_margin`, `overlay_width`, `overlay_min_height`,
 `overlay_max_height` und `overlay_font_size` (das ganze Menü skaliert mit der Schrift). Mit `caret` oder `mouse` öffnet es wie bisher am
 Textcursor bzw. an der Maus. Es wächst vom Bildschirmrand weg, wenn die Liste beim Tippen länger oder kürzer wird.
+
+**Pille:** Fortschritt, kurze Hinweise und Fehler zeigt eine kleine Pille. Sie steht standardmäßig dort, wo sich das Prompt-Menü
+öffnet (`pill_position = "follow"`). Mit `caret` steht sie am Textcursor, mit `mouse` an der Maus, mit `fixed` an
+`pill_fixed_position` (dieselben elf Plätze, Abstand `overlay_screen_margin`) und mit `card` dort, wo die Ergebnis-Karte erscheint.
+Bei Prompts mit Ergebnis-Karte steht sie immer am Platz der Karte, weil aus ihr die Karte wird. Größe und Schrift stellen
+`pill_min_width`, `pill_max_width`, `pill_min_height` und `pill_font_size` ein, `pill_duration` die Sekunden, die ein Hinweis steht.
 
 **Aussehen:** Das Overlay ist bewusst reduziert: oben die Suche, darunter nur Name und (falls vorhanden) Hotkey jedes Prompts,
 links die Ziffern zum Direktwählen. Hell/Dunkel folgt Windows (`theme`). Transparenz, Eckenradius, Blur und die drei Farben jedes
@@ -211,6 +217,13 @@ result_font_size = 15       # Schriftgröße der Ergebnis-Karte, 8-32 (auch 14.5
 result_width = 480           # Breite der Ergebnis-Karte in px, 240-1600 (nie größer als der Monitor)
 result_min_height = 0         # Mindesthöhe der Karte in px, 0-2000 (0 = so klein wie der Text)
 result_max_height = 360     # maximale Höhe in px, 120-2000; darüber scrollt der Text
+pill_position = "follow"    # Pille: follow (wie das Prompt-Menü) | caret | mouse | fixed (pill_fixed_position) | card (wie die Ergebnis-Karte)
+pill_fixed_position = "top-third"   # dieselben Plätze wie result_fixed_position
+pill_min_width = 200        # Breite der Pille in px, 100-1600; ab pill_max_width bricht der Text um
+pill_max_width = 420
+pill_min_height = 0         # Mindesthöhe in px, 0-400 (0 = so hoch wie der Text; sonst Text mittig)
+pill_font_size = 13         # Schriftgröße der Pille, 8-32
+pill_duration = 2           # Sekunden, die ein Hinweis steht, 0.5-60 (Fehler 5 s, gescheitertes Einfügen 15 s)
 autostart = false
 idle_trim_seconds = 90      # gibt nach Ruhe ungenutzten Speicher frei (0 = nie)
 default_provider = "gemini"

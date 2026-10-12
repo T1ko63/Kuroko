@@ -50,6 +50,8 @@ public interface IStatusView
 
     void SetResultSize(double width, double minHeight, double maxHeight);
 
+    void SetPillLayout(PillLayout layout);
+
     void ShowProgress(string text, Anchor anchor);
 
     void UpdateProgress(string text, Anchor anchor);

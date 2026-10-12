@@ -11,7 +11,8 @@
 
     <Border x:Name="Panel" Background="{DynamicResource SurfaceBrush}">
         <Grid x:Name="Root">
-            <TextBlock x:Name="Message" Margin="{StaticResource Status.Padding}" TextWrapping="Wrap"/>
+            <!-- Centred when pill_min_height makes the pill taller than its text. -->
+            <TextBlock x:Name="Message" Margin="{StaticResource Status.Padding}" TextWrapping="Wrap" VerticalAlignment="Center"/>
             <!-- Result card: replaces the message with the first piece of the answer (see StatusWindow.BeginResult). -->
             <ScrollViewer x:Name="ResultScroll" Style="{StaticResource ResultScroller}" Visibility="Collapsed"
                           VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" CanContentScroll="False"

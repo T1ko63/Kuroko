@@ -39,13 +39,14 @@ internal sealed class ReplaceRun(
         {
             if (restoreFocus && !await _desktop.RestoreFocusAsync(target))
             {
-                _status.ShowError(Loc.Get("err_focus"), session.Anchor);
+                _status.ShowError(Loc.Get("err_focus"), _anchors.ForPill(session.Anchor, target));
                 return;
             }
 
             // The probe is normally long finished; waiting for it first lets the progress pill sit at the text cursor.
+            // From here on the session's anchor is where the pills of this run go.
             var probe = await session.Probe;
-            session = session with { Anchor = _anchors.Refine(session.Anchor, target, probe) };
+            session = session with { Anchor = _anchors.ForPill(_anchors.Refine(session.Anchor, target, probe), target, probe) };
             _status.ShowProgress(Loc.Get("working", prompt.Name), session.Anchor);
 
             var captured = await Task.Run(() => _text.CaptureAsync(target, ReadStrategy.Auto, probe, ct: cts.Token));

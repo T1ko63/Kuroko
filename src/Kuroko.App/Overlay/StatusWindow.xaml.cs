@@ -22,11 +22,15 @@ namespace Kuroko.App.Overlay;
 public partial class StatusWindow : Window, IStatusView
 {
     private static readonly TimeSpan ErrorDuration = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan InfoDuration = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan ActionDuration = TimeSpan.FromSeconds(15);
 
     private readonly DispatcherTimer _autoHide;
-    private readonly double _pillMaxWidth;
+
+    // The pill's size limits include the shadow margin; pill_min_height is the height of the panel (0 = as high as the text).
+    private double _pillMinWidth;
+    private double _pillMaxWidth;
+    private double _pillMinHeight;
+    private TimeSpan _infoDuration = TimeSpan.FromSeconds(2);
     private nint _hwnd;
     private bool _isProgress;
     private bool _actionPill;
@@ -63,7 +67,7 @@ public partial class StatusWindow : Window, IStatusView
     {
         InitializeComponent();
         WindowSkin.Prepare(this, Panel);
-        MinWidth = (double)FindResource("Status.MinWidth") + 2 * WindowSkin.ShadowMargin;
+        _pillMinWidth = (double)FindResource("Status.MinWidth") + 2 * WindowSkin.ShadowMargin;
         _pillMaxWidth = (double)FindResource("Status.MaxWidth") + 2 * WindowSkin.ShadowMargin;
         MaxWidth = Math.Max(_pillMaxWidth, (double)FindResource("Result.Width") + 2 * WindowSkin.ShadowMargin);
         System.Windows.Documents.TextElement.SetFontSize(ResultLines, (double)FindResource("Font.Result"));
@@ -115,6 +119,18 @@ public partial class StatusWindow : Window, IStatusView
         _resultMinHeight = minHeight;
         _resultMaxHeight = maxHeight;
         MaxWidth = Math.Max(_pillMaxWidth, width + 2 * WindowSkin.ShadowMargin); // a wider card must not be clipped by the window
+    }
+
+    /// <summary>Size, font and info duration of the pill (pill_* settings). Used for the next pill; a pill on screen keeps its size.</summary>
+    public void SetPillLayout(PillLayout layout)
+    {
+        var shadow = WindowSkin.ShadowMargin;
+        _pillMinWidth = layout.MinWidth + 2 * shadow;
+        _pillMaxWidth = Math.Max(layout.MaxWidth, layout.MinWidth) + 2 * shadow;
+        _pillMinHeight = layout.MinHeight;
+        _infoDuration = layout.InfoDuration;
+        FontSize = layout.FontSize; // the card text has its own size (result_font_size)
+        MaxWidth = Math.Max(_pillMaxWidth, _resultWidth + 2 * shadow);
     }
 
     /// <summary>True from <see cref="BeginResult"/> until the card is gone.</summary>
@@ -189,7 +205,7 @@ public partial class StatusWindow : Window, IStatusView
         _isProgress = false;
         Present(text, anchor, showBar: false);
         _autoHide.Stop();
-        _autoHide.Interval = longer ? ErrorDuration : InfoDuration;
+        _autoHide.Interval = longer ? ErrorDuration : _infoDuration;
         _autoHide.Start();
     }
 
@@ -339,6 +355,7 @@ public partial class StatusWindow : Window, IStatusView
         if (switching)
         {
             _cardShown = true;
+            Root.MinHeight = 0; // the card has its own minimum height (result_min_height)
             Message.Visibility = Visibility.Collapsed;
             ResultScroll.Visibility = Visibility.Visible;
             Width = _cardInnerWidth + 2 * WindowSkin.ShadowMargin;
@@ -465,8 +482,9 @@ public partial class StatusWindow : Window, IStatusView
         var shadow = WindowSkin.ShadowMargin;
         var padding = Message.Margin.Left + Message.Margin.Right;
         Message.MaxWidth = _pillMaxWidth - 2 * shadow - padding;
+        Root.MinHeight = Math.Max(0, _pillMinHeight - Panel.BorderThickness.Top - Panel.BorderThickness.Bottom);
         Root.Measure(new Size(_pillMaxWidth - 2 * shadow, double.PositiveInfinity));
-        Width = Math.Max(MinWidth, Math.Min(_pillMaxWidth, Root.DesiredSize.Width + 2 * shadow));
+        Width = Math.Max(_pillMinWidth, Math.Min(_pillMaxWidth, Root.DesiredSize.Width + 2 * shadow));
         UpdateLayout();
 
         if (showBar) StartLine(Width - 2 * shadow - Line.Margin.Left - Line.Margin.Right);
