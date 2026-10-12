@@ -457,6 +457,103 @@ public class AppControllerTests
         Assert.Single(_text.Replacements);
     });
 
+    // ---- a question ("//") ----
+
+    private async Task<AppController> AskAsync(string question)
+    {
+        var controller = Controller();
+        controller.OnOverlayHotkey(0);
+        await UiThread.Until(() => _overlay.Activated, "overlay active");
+        _overlay.Ask(question);
+        return controller;
+    }
+
+    private async Task AnswerAsync(string answer)
+    {
+        await UiThread.Until(() => _runner.Waiting, "stream");
+        _runner.Piece(answer);
+        _runner.EndStream();
+        await UiThread.Until(() => _status.Last == "end", "end of answer");
+    }
+
+    [Fact]
+    public void A_question_without_a_selection_is_asked_alone_and_answered_in_the_card() => UiThread.Run(async () =>
+    {
+        _text.CaptureFailure = CaptureFailure.NoText;
+
+        await AskAsync("Wo liegt Sachalin?");
+        await AnswerAsync("Im Pazifik.");
+
+        Assert.Equal(["Wo liegt Sachalin?"], _runner.Inputs);
+        Assert.Equal(PromptMode.Instruction, _runner.Prompts[0].Mode);
+        Assert.Equal(QuestionPrompt.Name, _runner.Prompts[0].Name);
+        Assert.Equal("Im Pazifik.", _status.CardText);
+        Assert.Contains("capture Display", _text.Calls);
+        Assert.DoesNotContain(_status.Shown, s => s.StartsWith("error"));
+        Assert.DoesNotContain("replace", _text.Calls);
+        Assert.False(_overlay.IsShown);
+        Assert.Equal(1, _desktop.FocusRestores);
+    });
+
+    [Fact]
+    public void A_question_with_a_selection_sends_the_selection_as_material() => UiThread.Run(async () =>
+    {
+        _text.FieldText = "Sachalin ist eine Insel.";
+
+        await AskAsync("Stimmt das?");
+        await AnswerAsync("Ja.");
+
+        Assert.Equal(["Sachalin ist eine Insel."], _runner.Inputs);
+        Assert.Equal(PromptMode.Transform, _runner.Prompts[0].Mode);
+        Assert.Contains("Stimmt das?", _runner.Prompts[0].Prompt);
+        Assert.Null(_runner.Prompts[0].Provider);
+        Assert.Equal(PromptOutput.Overlay, _runner.Prompts[0].Output);
+    });
+
+    [Fact]
+    public void Other_capture_failures_of_a_question_are_reported_as_for_card_prompts() => UiThread.Run(async () =>
+    {
+        _text.CaptureFailure = CaptureFailure.TooLong;
+
+        var controller = await AskAsync("Zusammenfassen");
+        await Idle(controller);
+
+        Assert.Empty(_runner.Inputs);
+        Assert.Equal($"error: {Loc.Get("err_too_long")}", _status.Last);
+    });
+
+    [Fact]
+    public void The_question_itself_is_never_written_to_the_log() => UiThread.Run(async () =>
+    {
+        var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kuroko-tests-" + Guid.NewGuid().ToString("N"));
+        Kuroko.Core.Diagnostics.AppLog.Init(dir, "question.log");
+        _text.CaptureFailure = CaptureFailure.NoText;
+
+        var controller = await AskAsync("geheime Frage 7f3a");
+        await AnswerAsync("Antwort");
+        _hotkeys.Press(FakeHotkeys.Esc);
+        await Idle(controller);
+        Kuroko.Core.Diagnostics.AppLog.Flush();
+
+        // The log writer keeps the file open.
+        using var stream = new System.IO.FileStream(Kuroko.Core.Diagnostics.AppLog.FilePath!, System.IO.FileMode.Open,
+            System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete);
+        var log = new System.IO.StreamReader(stream).ReadToEnd();
+        Assert.Contains($"'{QuestionPrompt.Name}'", log);
+        Assert.DoesNotContain("7f3a", log);
+    });
+
+    [Fact]
+    public void An_empty_question_does_nothing() => UiThread.Run(async () =>
+    {
+        var controller = await AskAsync("   ");
+        await UiThread.Settle();
+
+        Assert.True(_overlay.IsShown);
+        Assert.Empty(_runner.Inputs);
+        Assert.True(controller.IsBusy);
+    });
+
     [Fact]
     public void Closing_the_overlay_gives_the_focus_back_and_frees_the_controller() => UiThread.Run(async () =>
     {

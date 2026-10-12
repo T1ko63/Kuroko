@@ -10,6 +10,9 @@ public static class Loc
         ["search_placeholder"] = ("Prompt suchen … oder / für Befehle", "Search prompts … or / for commands"),
         ["command_on"] = ("an", "on"),
         ["command_off"] = ("aus", "off"),
+        ["question_row"] = ("Frage zum Text", "Question about the text"),
+        ["question_hint"] = ("Frage zum markierten Text, Enter zum Senden", "Question about the selected text, Enter to send"),
+        ["question_name"] = ("Frage", "Question"),
         ["no_results"] = ("Keine Treffer", "No matches"),
         ["working"] = ("{0} …", "{0} …"),
 

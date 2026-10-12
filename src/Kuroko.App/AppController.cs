@@ -63,6 +63,7 @@ public sealed class AppController
 
         _overlay.PromptChosen += prompt => _ = OnPromptChosenAsync(prompt);
         _overlay.CommandChosen += command => _ = OnCommandChosenAsync(command);
+        _overlay.QuestionAsked += question => _ = OnQuestionAskedAsync(question);
         _overlay.Cancelled += () => _ = CloseOverlayAsync(restoreFocus: true);
         _overlay.Dismissed += () => _ = CloseOverlayAsync(restoreFocus: false);
         _status.CancelRequested += OnStatusCancelRequested;
@@ -322,6 +323,19 @@ public sealed class AppController
         _session = null;
         _overlay.HideOverlay();
         await ExecuteAsync(session, prompt, restoreFocus: true, hotkeyTimestamp: null);
+    }
+
+    /// <summary>
+    /// A question typed after "//": the same flow as a chosen card prompt (overlay closed, focus back, selection read only
+    /// then), with the answer always in the card. Without a selection the question is asked on its own.
+    /// </summary>
+    private async Task OnQuestionAskedAsync(string question)
+    {
+        var session = _session;
+        if (session is null || string.IsNullOrWhiteSpace(question)) return;
+        _session = null;
+        _overlay.HideOverlay();
+        await _cardRun.AskAsync(session, question, restoreFocus: true);
     }
 
     /// <summary>

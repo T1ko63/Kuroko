@@ -43,6 +43,7 @@ public partial class OverlayWindow : Window, IOverlayView
         InitializeComponent();
         Placeholder.Text = Loc.Get("search_placeholder");
         NoResults.Text = Loc.Get("no_results");
+        QuestionHint.Text = Loc.Get("question_hint");
         WindowSkin.Prepare(this, Panel);
         _baseFont = (double)FindResource("Font.Row");
         _baseSearch = (double)FindResource("Font.Search");
@@ -94,6 +95,9 @@ public partial class OverlayWindow : Window, IOverlayView
 
     /// <summary>The user picked an enabled command from the "/" list (Enter or click).</summary>
     public event Action<AppCommand>? CommandChosen;
+
+    /// <summary>The user typed "//" and a question, then pressed Enter. Carries the question without the "//".</summary>
+    public event Action<string>? QuestionAsked;
 
     /// <summary>The user pressed Esc.</summary>
     public event Action? Cancelled;
@@ -247,15 +251,17 @@ public partial class OverlayWindow : Window, IOverlayView
         if (input.Kind != OverlayInputKind.Search)
         {
             // Commands are few and their enabled/on-off state may have changed: always built anew, never cached.
-            // A question ("//") has no list.
+            // A question ("//") has no list, only the hint how to send it.
             _renderedAll = null;
             _renderedQuery = null;
-            var commands = input.Kind == OverlayInputKind.Command
-                ? FuzzyMatcher.Keep(_commands, input.Text, c => c.Name)
-                : [];
-            ShowRows(commands.Select(OverlayRow.For).ToList());
+            var question = input.Kind == OverlayInputKind.Question;
+            ShowRows(question ? [] : OverlayRow.ForCommands(_commands, input.Text));
+            if (question) NoResults.Visibility = Visibility.Collapsed;
+            QuestionHint.Visibility = question ? Visibility.Visible : Visibility.Collapsed;
             return;
         }
+
+        QuestionHint.Visibility = Visibility.Collapsed;
 
         var query = input.Text;
         if (ReferenceEquals(_all, _renderedAll) && query == _renderedQuery)
@@ -305,6 +311,17 @@ public partial class OverlayWindow : Window, IOverlayView
         if (!row.IsEnabled) return;
         if (row.Prompt is { } prompt) PromptChosen?.Invoke(prompt);
         else if (row.Command is { } command) CommandChosen?.Invoke(command);
+        else if (row.IsQuestion)
+        {
+            Search.Text = "//";
+            Search.CaretIndex = Search.Text.Length;
+        }
+    }
+
+    /// <summary>Enter after "//": a non-empty question is sent, an empty one does nothing.</summary>
+    private void Ask(string question)
+    {
+        if (question.Length > 0) QuestionAsked?.Invoke(question);
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -334,7 +351,8 @@ public partial class OverlayWindow : Window, IOverlayView
                 e.Handled = true;
                 return;
             case Key.Enter:
-                Choose(List.SelectedIndex);
+                if (OverlayInput.Parse(Search.Text) is { Kind: OverlayInputKind.Question } input) Ask(input.Text);
+                else Choose(List.SelectedIndex);
                 e.Handled = true;
                 return;
         }
