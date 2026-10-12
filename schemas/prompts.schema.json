@@ -20,7 +20,8 @@
         "name": {
           "type": "string",
           "minLength": 1,
-          "description": "Name shown in the overlay. Must be unique (not case-sensitive)."
+          "pattern": "^[^/]",
+          "description": "Name shown in the overlay. Must be unique (not case-sensitive) and must not start with \"/\", which opens the command list in the overlay."
         },
         "prompt": {
           "type": "string",

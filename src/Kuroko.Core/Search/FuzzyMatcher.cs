@@ -54,6 +54,13 @@ public static class FuzzyMatcher
             .ToList();
     }
 
+    /// <summary>Keeps the items that match, in their original order (no ranking). An empty query keeps everything.</summary>
+    public static List<T> Keep<T>(IEnumerable<T> items, string query, Func<T, string> text)
+    {
+        query = query.Trim();
+        return items.Where(item => Score(query, text(item)).HasValue).ToList();
+    }
+
     private static bool IsWordStart(string text, int index)
         => index == 0 || !char.IsLetterOrDigit(text[index - 1]);
 }

@@ -13,23 +13,16 @@ using Kuroko.Platform.Windowing;
 
 namespace Kuroko.App.Overlay;
 
-public sealed record PromptRow(PromptDefinition Prompt, string Number)
-{
-    public string Name => Prompt.Name;
-
-    /// <summary>The prompt's own hotkey, shown right-aligned as subtle text; empty when it has none.</summary>
-    public string Hotkey => Prompt.Hotkey ?? string.Empty;
-}
-
 /// <summary>
-/// The prompt picker. Created once at start-up and only shown/hidden afterwards. It is shown without
+/// The prompt picker; after "/" it lists the app commands instead. Created once at start-up and only shown/hidden afterwards. It is shown without
 /// taking the focus and activated separately (see <see cref="ActivateForInput"/>), so the hotkey handler
 /// can finish reading the target field before the focus moves.
 /// </summary>
 public partial class OverlayWindow : Window, IOverlayView
 {
     private IReadOnlyList<PromptDefinition> _all = [];
-    private List<PromptRow> _rows = [];
+    private IReadOnlyList<AppCommand> _commands = [];
+    private List<OverlayRow> _rows = [];
     private nint _hwnd;
     private bool _activated;
     private bool _hiding;
@@ -99,6 +92,9 @@ public partial class OverlayWindow : Window, IOverlayView
     /// <summary>The user picked a prompt (Enter, click or digit).</summary>
     public event Action<PromptDefinition>? PromptChosen;
 
+    /// <summary>The user picked an enabled command from the "/" list (Enter or click).</summary>
+    public event Action<AppCommand>? CommandChosen;
+
     /// <summary>The user pressed Esc.</summary>
     public event Action? Cancelled;
 
@@ -110,7 +106,7 @@ public partial class OverlayWindow : Window, IOverlayView
     /// <summary>Creates the native window and renders the first frame off-screen, so the first real show is instant.</summary>
     public void Warmup(IReadOnlyList<PromptDefinition> prompts)
     {
-        Present(prompts);
+        Present(prompts, []);
         Left = -32000;
         Top = -32000;
         Opacity = 0;
@@ -120,11 +116,15 @@ public partial class OverlayWindow : Window, IOverlayView
         Opacity = 1;
     }
 
-    /// <summary>Resets the filter and loads the prompt list. Call before <see cref="ShowAt"/>.</summary>
-    public void Present(IReadOnlyList<PromptDefinition> prompts)
+    /// <summary>
+    /// Resets the filter and loads the prompts and the commands. Call before <see cref="ShowAt"/>. Whether a command is
+    /// enabled and its on/off state are read each time the "/" list is built.
+    /// </summary>
+    public void Present(IReadOnlyList<PromptDefinition> prompts, IReadOnlyList<AppCommand> commands)
     {
         _quietUntil = Environment.TickCount64 + 250;
         _all = prompts;
+        _commands = commands;
         Search.Text = string.Empty;
         Refresh();
     }
@@ -241,9 +241,23 @@ public partial class OverlayWindow : Window, IOverlayView
 
     private void Refresh()
     {
-        var query = Search.Text.Trim();
+        var input = OverlayInput.Parse(Search.Text);
         Placeholder.Visibility = Search.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
 
+        if (input.Kind != OverlayInputKind.Search)
+        {
+            // Commands are few and their enabled/on-off state may have changed: always built anew, never cached.
+            // A question ("//") has no list.
+            _renderedAll = null;
+            _renderedQuery = null;
+            var commands = input.Kind == OverlayInputKind.Command
+                ? FuzzyMatcher.Keep(_commands, input.Text, c => c.Name)
+                : [];
+            ShowRows(commands.Select(OverlayRow.For).ToList());
+            return;
+        }
+
+        var query = input.Text;
         if (ReferenceEquals(_all, _renderedAll) && query == _renderedQuery)
         {
             // Same prompts, same filter (e.g. the overlay is opened again): only reset the selection.
@@ -253,20 +267,29 @@ public partial class OverlayWindow : Window, IOverlayView
         }
 
         var matches = FuzzyMatcher.Filter(_all, query, p => p.Name);
-        _rows = matches.Select((p, i) => new PromptRow(p, query.Length == 0 && i < 9 ? (i + 1).ToString() : string.Empty)).ToList();
         _renderedAll = _all;
         _renderedQuery = query;
+        ShowRows(matches.Select((p, i) => OverlayRow.For(p, query.Length == 0 && i < 9 ? (i + 1).ToString() : string.Empty)).ToList());
+    }
+
+    private void ShowRows(List<OverlayRow> rows)
+    {
+        _rows = rows;
         List.ItemsSource = _rows;
-        List.SelectedIndex = _rows.Count > 0 ? 0 : -1;
+        List.SelectedIndex = RowNavigation.First(Enabled());
+        if (List.SelectedIndex >= 0) List.ScrollIntoView(_rows[List.SelectedIndex]);
         NoResults.Visibility = _rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    private bool[] Enabled() => _rows.Select(r => r.IsEnabled).ToArray();
 
     private void OnSearchChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) => Refresh();
 
     private void Move(int delta)
     {
         if (_rows.Count == 0) return;
-        var index = Math.Clamp(List.SelectedIndex + delta, 0, _rows.Count - 1);
+        var index = RowNavigation.Move(Enabled(), List.SelectedIndex, delta);
+        if (index < 0) return;
         List.SelectedIndex = index;
         List.ScrollIntoView(_rows[index]);
     }
@@ -274,7 +297,14 @@ public partial class OverlayWindow : Window, IOverlayView
     private void Choose(int index)
     {
         if (index < 0 || index >= _rows.Count) return;
-        PromptChosen?.Invoke(_rows[index].Prompt);
+        Choose(_rows[index]);
+    }
+
+    private void Choose(OverlayRow row)
+    {
+        if (!row.IsEnabled) return;
+        if (row.Prompt is { } prompt) PromptChosen?.Invoke(prompt);
+        else if (row.Command is { } command) CommandChosen?.Invoke(command);
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -326,9 +356,9 @@ public partial class OverlayWindow : Window, IOverlayView
     private void OnListClick(object sender, MouseButtonEventArgs e)
     {
         if (e.OriginalSource is DependencyObject source
-            && ItemsControlContainer(source) is { DataContext: PromptRow row })
+            && ItemsControlContainer(source) is { DataContext: OverlayRow row })
         {
-            PromptChosen?.Invoke(row.Prompt);
+            Choose(row);
             e.Handled = true;
         }
     }

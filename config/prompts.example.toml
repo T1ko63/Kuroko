@@ -6,7 +6,7 @@
 # If that file is missing, the app creates one with the built-in prompts on first start.
 #
 # One [[prompt]] block per prompt:
-#   name      required: name shown in the overlay, must be unique
+#   name      required: name shown in the overlay, must be unique and must not start with "/" (commands)
 #   prompt    required: the instruction sent to the AI
 #   mode      optional: transform (default) | instruction | universal
 #               transform    edits the selected text, or the whole field

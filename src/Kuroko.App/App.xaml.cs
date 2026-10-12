@@ -156,7 +156,8 @@ public partial class App : Application
             warmUp: () => _ = _providers!.WarmUpAsync(),
             hotkeys: _hotkeys,
             clipboard: _clipboard,
-            desktop: new Win32Desktop());
+            desktop: new Win32Desktop(),
+            commands: Commands);
 
         ApplyConfig(loaded, initial: true);
         Lap("apply config+hotkeys");
