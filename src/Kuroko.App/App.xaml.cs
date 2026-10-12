@@ -488,6 +488,12 @@ public partial class App : Application
             Register(prompt.Hotkey!, prompt.Name, ts => _controller.OnPromptHotkey(ts, captured));
         }
 
+        foreach (var submap in settings.Submaps)
+        {
+            var captured = submap;
+            Register(submap.Open, $"submap {submap.Name}", ts => _controller.OnSubmapHotkey(ts, captured));
+        }
+
         if (failures.Count > 0)
         {
             var more = failures.Count > 2 ? Loc.Get("cfg_more", failures.Count - 2) : string.Empty;
@@ -544,27 +550,28 @@ public partial class App : Application
 
     /// <summary>
     /// All app commands in their fixed order: the tray menu and the overlay's command list are built from this one list.
-    /// Built anew each time, so the labels follow the current language.
+    /// Built anew each time, so the labels follow the current language. The names come from <see cref="CommandNames"/>, which
+    /// settings.toml is checked against ("/name" in a submap): a new command gets its name there.
     /// </summary>
     private IReadOnlyList<AppCommand> Commands() =>
     [
-        new("copy", Loc.Get("tray_copy_last"), () => _controller!.CopyLastResult(), CommandFocus.Field)
+        new(CommandNames.Copy, Loc.Get("tray_copy_last"), () => _controller!.CopyLastResult(), CommandFocus.Field)
         {
             IsEnabled = () => _controller!.HasLastResult, GroupEnd = true,
         },
-        new("prompts", Loc.Get("tray_edit_prompts"), () => OpenFile(_config!.PromptsPath), CommandFocus.Window),
-        new("settings", Loc.Get("tray_edit_settings"), () => OpenFile(_config!.SettingsPath), CommandFocus.Window),
-        new("folder", Loc.Get("tray_open_config"),
+        new(CommandNames.Prompts, Loc.Get("tray_edit_prompts"), () => OpenFile(_config!.PromptsPath), CommandFocus.Window),
+        new(CommandNames.Settings, Loc.Get("tray_edit_settings"), () => OpenFile(_config!.SettingsPath), CommandFocus.Window),
+        new(CommandNames.Folder, Loc.Get("tray_open_config"),
             () => Process.Start(new ProcessStartInfo(_configDir) { UseShellExecute = true }), CommandFocus.Window),
-        new("reload", Loc.Get("tray_reload"), () => ReloadConfig(manual: true), CommandFocus.Field) { GroupEnd = true },
-        new("keys", Loc.Get("tray_keys"), ShowKeysWindow, CommandFocus.Window),
-        new("test", Loc.Get("tray_test"), TestConnection, CommandFocus.Field),
-        new("autostart", Loc.Get("tray_autostart"), ToggleAutostart, CommandFocus.Field)
+        new(CommandNames.Reload, Loc.Get("tray_reload"), () => ReloadConfig(manual: true), CommandFocus.Field) { GroupEnd = true },
+        new(CommandNames.Keys, Loc.Get("tray_keys"), ShowKeysWindow, CommandFocus.Window),
+        new(CommandNames.Test, Loc.Get("tray_test"), TestConnection, CommandFocus.Field),
+        new(CommandNames.Autostart, Loc.Get("tray_autostart"), ToggleAutostart, CommandFocus.Field)
         {
             State = () => _config!.Current.Settings.Autostart, GroupEnd = true,
         },
-        new("about", Loc.Get("tray_about"), ShowAbout, CommandFocus.Window),
-        new("quit", Loc.Get("tray_quit"), Shutdown, CommandFocus.None),
+        new(CommandNames.About, Loc.Get("tray_about"), ShowAbout, CommandFocus.Window),
+        new(CommandNames.Quit, Loc.Get("tray_quit"), Shutdown, CommandFocus.None),
     ];
 
     private static void ShowAbout()

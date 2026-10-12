@@ -338,7 +338,8 @@ public class TextAccessServiceTests
 
         var result = await Service().CaptureAsync(Target(), ReadStrategy.Auto);
 
-        Assert.Equal("late text", result.Capture!.Text);
+        Assert.True(result.Capture is not null, $"capture failed: {result.Failure}");
+        Assert.Equal("late text", result.Capture.Text);
         Assert.Equal(["C"], _app.Keys);
     }
 

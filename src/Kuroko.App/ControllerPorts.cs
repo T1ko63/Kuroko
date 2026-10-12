@@ -65,6 +65,9 @@ public interface IStatusView
 
     void ShowErrorWithAction(string text, Anchor anchor);
 
+    /// <summary>The label of an open submap; stays until <see cref="HideStatus"/>, a click raises <see cref="CancelRequested"/>.</summary>
+    void ShowSubmap(string text, Anchor anchor);
+
     void HideStatus();
 
     void BeginResult(string label, Anchor anchor);
@@ -99,6 +102,9 @@ public interface IDesktop
 
     /// <summary>Runs <paramref name="action"/> later on the UI thread, after the current work (e.g. closing the overlay) has finished.</summary>
     void Post(Action action);
+
+    /// <summary>Calls <paramref name="elapsed"/> once on the UI thread after <paramref name="delay"/>; disposing the result stops it.</summary>
+    IDisposable StartTimer(TimeSpan delay, Action elapsed);
 }
 
 /// <summary>The real <see cref="IDesktop"/>.</summary>
@@ -124,4 +130,21 @@ public sealed class Win32Desktop : IDesktop
     }
 
     public void Post(Action action) => System.Windows.Application.Current.Dispatcher.BeginInvoke(action);
+
+    public IDisposable StartTimer(TimeSpan delay, Action elapsed)
+    {
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = delay };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            elapsed();
+        };
+        timer.Start();
+        return new StopTimer(timer);
+    }
+
+    private sealed class StopTimer(System.Windows.Threading.DispatcherTimer timer) : IDisposable
+    {
+        public void Dispose() => timer.Stop();
+    }
 }

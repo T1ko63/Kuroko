@@ -80,6 +80,9 @@ public sealed record AppSettings(
     /// </summary>
     public IReadOnlyDictionary<string, Hotkeys.HotkeyModifiers> Mods { get; init; } = Hotkeys.HotkeyMods.None;
 
+    /// <summary>Submaps ([submaps.name]): a hotkey that makes a few plain keys hotkeys for a moment. Open hotkeys are stored filled in.</summary>
+    public IReadOnlyList<SubmapDefinition> Submaps { get; init; } = [];
+
     public const string DefaultOverlayHotkey = "Ctrl+Shift+Space";
     public const string DefaultUndoHotkey = "Ctrl+Alt+Z";
 

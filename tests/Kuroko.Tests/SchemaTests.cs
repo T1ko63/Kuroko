@@ -234,6 +234,38 @@ public class SchemaTests
         }
     }
 
+    [Fact]
+    public void Submap_schema_names_the_fields_the_loader_reads()
+    {
+        var schema = Schema("settings.schema.json");
+        var submap = schema.GetProperty("definitions").GetProperty("submap");
+        Assert.Equal(["keys", "label", "open", "timeout"], Keys(schema, submap).Order());
+        Assert.Equal(SubmapDefinition.DefaultTimeoutMs, submap.GetProperty("properties").GetProperty("timeout").GetProperty("default").GetInt32());
+        Assert.Equal(SubmapDefinition.MinTimeoutMs, submap.GetProperty("properties").GetProperty("timeout").GetProperty("minimum").GetInt32());
+        Assert.Equal(SubmapDefinition.MaxTimeoutMs, submap.GetProperty("properties").GetProperty("timeout").GetProperty("maximum").GetInt32());
+
+        // Every command the loader accepts is named in the description of keys.
+        var keysDescription = submap.GetProperty("properties").GetProperty("keys").GetProperty("description").GetString()!;
+        foreach (var command in CommandNames.All) Assert.Contains($"/{command}", keysDescription);
+    }
+
+    [Theory]
+    [InlineData("P")]
+    [InlineData("5")]
+    [InlineData("F5")]
+    [InlineData("Space")]
+    [InlineData("Num5")]
+    [InlineData("0xE2")]
+    [InlineData("<")]
+    [InlineData("ü")]
+    [InlineData("+")]
+    public void Submap_key_pattern_allows_every_way_to_write_a_key(string key)
+    {
+        var keys = Schema("settings.schema.json").GetProperty("definitions").GetProperty("submap").GetProperty("properties").GetProperty("keys");
+        Assert.Matches(keys.GetProperty("propertyNames").GetProperty("pattern").GetString()!, key);
+        Assert.True(Kuroko.Core.Hotkeys.HotkeyGesture.TryParseSubmapKey(key, FakeKeyLayout.German, out _, out var error), error);
+    }
+
     [Theory]
     [InlineData("Ctrl+")]
     [InlineData("Ctrl++K")]

@@ -176,6 +176,44 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
         return true;
     }
 
+    /// <summary>
+    /// A key of a submap: one key without modifiers, written like the key of a hotkey (P, F5, Space, 0xE2, ü, &lt;). Any key
+    /// may stand alone here, not only F1-F24, because it is a hotkey only while the submap is open. Esc closes the submap
+    /// and cannot be one of its keys.
+    /// </summary>
+    public static bool TryParseSubmapKey(string? text, IKeyLayout? layout, out int virtualKey, [NotNullWhen(false)] out string? error)
+    {
+        virtualKey = 0;
+        var key = text?.Trim() ?? string.Empty;
+        if (key.Length == 0)
+        {
+            error = "Submap key is empty.";
+            return false;
+        }
+
+        if (key.Length > 1 && key.Contains('+'))
+        {
+            error = $"Submap key '{text}' has modifiers: inside a submap a key is written alone (P, not Ctrl+P).{DocsHint}";
+            return false;
+        }
+
+        if (ModifierNames.ContainsKey(key))
+        {
+            error = $"Submap key '{text}' is a modifier: a modifier alone cannot be a key.{DocsHint}";
+            return false;
+        }
+
+        if (!TryParseKey(key, key, layout, out virtualKey, out error)) return false;
+        if (virtualKey == 0x1B)
+        {
+            virtualKey = 0;
+            error = $"Submap key '{text}' is Esc, which closes the submap; choose another key.{DocsHint}";
+            return false;
+        }
+
+        return true;
+    }
+
     /// <summary>Splits "Ctrl+Alt+K" into modifiers and key; a trailing "++" makes "+" the key ("Ctrl+Alt++").</summary>
     private static bool TrySplit(string text, out string[] modifiers, out string key)
     {

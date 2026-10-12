@@ -286,6 +286,12 @@ internal sealed class FakeStatus : IStatusView
         IsActionShown = true;
     }
 
+    public void ShowSubmap(string text, Anchor anchor)
+    {
+        Leave();
+        Shown.Add($"submap: {text}");
+    }
+
     public void HideStatus()
     {
         Leave();
@@ -348,8 +354,12 @@ internal sealed class FakeHotkeys : IHotkeyRegistry
 
     public static HotkeyGesture Copy { get; } = HotkeyGesture.Parse(Kuroko.Core.Config.AppSettings.DefaultResultCopyHotkey);
 
+    /// <summary>A gesture whose registration throws, to test that a failure halfway releases what was taken.</summary>
+    public HotkeyGesture? ThrowOn { get; set; }
+
     public HotkeyRegistration Register(HotkeyGesture gesture, Action<long> callback, bool temporary = false)
     {
+        if (gesture == ThrowOn) throw new InvalidOperationException("registration failed");
         if (Taken.Contains(gesture) || _registered.Values.Any(r => r.Gesture == gesture)) return HotkeyRegistration.Fail($"{gesture} taken");
         var id = _next++;
         _registered[id] = (gesture, callback);
@@ -419,6 +429,39 @@ internal sealed class FakeDesktop : IDesktop
 
     /// <summary>Another window came to the front.</summary>
     public void SwitchWindow() => _foregroundChanged?.Invoke();
+
+    private readonly List<FakeTimer> _timers = [];
+
+    public IDisposable StartTimer(TimeSpan delay, Action elapsed)
+    {
+        var timer = new FakeTimer(delay, elapsed);
+        _timers.Add(timer);
+        return timer;
+    }
+
+    /// <summary>Delays of the timers that are still running.</summary>
+    public IReadOnlyList<TimeSpan> RunningTimers => _timers.Where(t => !t.Stopped).Select(t => t.Delay).ToList();
+
+    /// <summary>Lets every running timer elapse.</summary>
+    public void ElapseTimers()
+    {
+        foreach (var timer in _timers.Where(t => !t.Stopped).ToList())
+        {
+            timer.Stopped = true;
+            timer.Elapsed();
+        }
+    }
+
+    private sealed class FakeTimer(TimeSpan delay, Action elapsed) : IDisposable
+    {
+        public TimeSpan Delay => delay;
+
+        public Action Elapsed => elapsed;
+
+        public bool Stopped { get; set; }
+
+        public void Dispose() => Stopped = true;
+    }
 
     private sealed class Unwatch(FakeDesktop desktop) : IDisposable
     {

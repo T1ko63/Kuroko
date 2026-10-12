@@ -11,6 +11,7 @@ Hotkeys are set in two files in `%APPDATA%\Kuroko` (tray → **Edit settings** /
 | `undo_hotkey`: undo the last replacement | `settings.toml` | `Ctrl+Alt+Z` |
 | `result_copy_hotkey`: copy the result card | `settings.toml` | `Ctrl+Alt+C` |
 | `hotkey` of a `[[prompt]]`: run that prompt directly | `prompts.toml` | `Ctrl+Alt+U` (Universal), `Ctrl+Alt+K` (Correction) |
+| `open` of a `[submaps.<name>]`: open a [submap](#submaps) of plain keys | `settings.toml` | none |
 
 Changes apply as soon as the file is saved. A hotkey with an error is reported with file and line, and the last
 working configuration stays active.
@@ -61,6 +62,9 @@ hotkey = "$card+S"      # Ctrl+Alt+S
 output = "overlay"
 prompt = "..."
 ```
+
+For many prompts, a [submap](#submaps) needs only one hotkey: press it, then a plain key (`P`, `L`, …) picks the
+prompt.
 
 Save the file and the hotkeys apply at once. If something is wrong, a message names the file and line; the
 [Messages](#messages) table says what it means. More in [Modifiers and variables](#modifiers-and-variables) and
@@ -250,7 +254,111 @@ long as no modifier appears twice after filling in. `$card+Ctrl+K` with `card = 
 
 ## Submaps
 
-> *Coming in a later update: key sequences (press a leader hotkey, then a second key).*
+A submap is one hotkey that opens a small set of plain keys for a moment, like a leader key in Vim or a submap in
+Hyprland. Press the `open` hotkey, the pill shows the submap's label, then press one of its keys (`P`, `L`, …) to run
+what it stands for. Ten prompts then need one hotkey instead of ten.
+
+```toml
+# settings.toml: general settings stay above the first [table]
+[mods]
+replace = "Shift+Alt"
+
+[submaps.tone]
+open = "$replace+^"                     # Alt+Shift+^ opens the submap
+label = "Ton: P professionell · L locker · K kürzer · A ausführlicher"
+timeout = 3000                          # milliseconds, default 2000
+keys = { P = "Professioneller", L = "Lockerer", K = "Kürzen", A = "Ausführlicher" }
+```
+
+`Alt+Shift+^`, then `P`, runs the prompt "Professioneller" on the selected text, exactly as its own hotkey would.
+
+### Fields
+
+| Field | Meaning | Default |
+|---|---|---|
+| `open` | The hotkey that opens the submap. Written like any hotkey: modifiers, `$variables` from `[mods]`, every key name. Pressed again while the submap is open, it closes it. | required |
+| `label` | The text the pill shows while the submap is open. Best used to say which key does what. | the submap's name |
+| `timeout` | How long the submap stays open without a key, in milliseconds, from 100 to 60000. | `2000` |
+| `keys` | Each key and what it runs: `key = "target"`. At least one. | required |
+
+The name after `submaps.` is free: letters, digits, `_` and `-` (`tone`, `my-tools`), not case-sensitive. Each
+submap has its own `[submaps.<name>]` block; like `[mods]`, it goes below the general settings.
+
+`keys` can also be written as a table of its own, one key per line, which is easier to read for long lists:
+
+```toml
+[submaps.tone]
+open = "$replace+^"
+
+[submaps.tone.keys]
+P = "Professioneller"
+L = "Lockerer"
+"<" = "Kürzen"          # characters other than letters and digits need quotes
+```
+
+### Keys
+
+A key in a submap is written **alone, without modifiers**: `P`, `5`, `F5`, `Space`, `Num5`, `0xE2`, or the
+character printed on it (`"<"`, `"ü"`, `"#"`), exactly as the key part of a hotkey (see [Keys](#keys)). Any key may
+stand alone here, not only F1–F24, because it is a hotkey only while the submap is open. Not allowed:
+
+* modifiers (`"Ctrl+P"`): the submap takes the plain key only;
+* `Esc`: it closes the submap;
+* the same key twice (`p` and `P`, or `"<"` and `0xE2`);
+* a key that is already a hotkey on its own elsewhere (an `F8` prompt hotkey and `F8` in a submap).
+
+### Targets
+
+| Target | Example | Runs |
+|---|---|---|
+| A prompt name from `prompts.toml` | `P = "Professioneller"` | the prompt, exactly as its own `hotkey` would: it reads the selection (or the whole field), and replaces it or shows the card. Names are not case-sensitive. The prompt needs no hotkey of its own. |
+| A command with `/` | `U = "/undo"` | the command, as the tray menu does. |
+
+The commands are the ones of the overlay's `/` list, plus `/undo`:
+
+| Command | Does |
+|---|---|
+| `/undo` | undo the last replacement, as `undo_hotkey` does (with `undo_history = 0` there is nothing to undo) |
+| `/copy` | copy the last result |
+| `/prompts`, `/settings` | open `prompts.toml` or `settings.toml` in the editor |
+| `/folder` | open the config folder |
+| `/reload` | reload the configuration |
+| `/keys` | open the API key window |
+| `/test` | test the connection to the default provider |
+| `/autostart` | switch autostart on or off |
+| `/about` | show the version |
+| `/quit` | quit Kuroko |
+
+A prompt a submap names must exist: if you rename or remove it in `prompts.toml`, that `prompts.toml` is rejected
+with a message naming the submap, and the last working version stays active until you change the submap too.
+
+### While a submap is open
+
+* **The pill** shows the label, where pills appear (`pill_position`), until the submap closes. A click on it closes
+  the submap.
+* **Taken from other apps:** only the listed keys and `Esc`, without modifiers, and only until the submap closes, at
+  most for `timeout` milliseconds (default 2 seconds). Pressing them goes to Kuroko, not to the app in front.
+* **Everything else types as usual.** A key that is not listed, or a listed key with a modifier (`Shift+P`), reaches
+  the app in front; the submap stays open until a listed key, `Esc` or the timeout.
+* **A listed key** closes the submap first (all its keys are released) and then runs its target.
+* **`Esc` or the timeout** closes the submap; nothing runs.
+* **Other hotkeys** still work. Each one closes the submap first, as do the `open` hotkey of another submap, a
+  configuration reload and a message in the pill.
+* **While a prompt runs or the overlay is open**, the `open` hotkey is ignored, like the other hotkeys.
+* **A key another app already holds** (it registered the same plain key itself) is left out of the submap: the log
+  says `Submap '…': key … is left out, it could not be registered`, and the other keys still work.
+
+### Limits of submaps
+
+Kuroko has no keyboard hook (see [Limits](#limits)), so a submap is a set of hotkeys that exist for a moment, not a
+mode that sees every key:
+
+* It cannot react to keys that are not listed: they are not swallowed and do not close the submap.
+* Only one key after `open`: a target cannot be another submap, and there are no sequences of more than two keys.
+* The listed keys are taken as they are pressed, without modifiers: `P` and `Shift+P` cannot do different things.
+* A key that Windows or another app keeps for itself cannot be taken (see the log line above).
+
+## Choosing good hotkeys
 
 ## Choosing good hotkeys
 
@@ -379,7 +487,51 @@ hotkey = "$main+J"   # Win+Alt+J
 `Win+Alt+<digit>` (jump list of a taskbar app), so use letters for prompts. Plain `Win+<letter>` is
 mostly taken by Windows; do not use `main = "Win"` alone.
 
-> *Recipes with submaps follow in a later update.*
+### A tone submap
+
+One hotkey for four rewrites of the selected text. `^` is the key left of `1` on German; on US, take `` ` `` or
+another key.
+
+```toml
+# settings.toml
+[mods]
+replace = "Shift+Alt"
+
+[submaps.tone]
+open = "$replace+^"   # Alt+Shift+^
+label = "Ton: P professionell · L locker · K kürzer · A ausführlicher"
+timeout = 3000
+keys = { P = "Professioneller", L = "Lockerer", K = "Kürzen", A = "Ausführlicher" }
+```
+
+```toml
+# prompts.toml: the four prompts must exist (names are not case-sensitive); they need no hotkey of their own
+[[prompt]]
+name = "Kürzen"
+prompt = "..."
+
+[[prompt]]
+name = "Ausführlicher"
+prompt = "..."
+```
+
+"Professioneller" and "Lockerer" are built-in prompts of a new `prompts.toml`; "Kürzen" and "Ausführlicher" are
+examples you write yourself (or point `K` and `A` at the built-in "Condense" and "Expand").
+
+### A tools submap with commands
+
+Undo, copy and reload on one hotkey, next to a prompt:
+
+```toml
+# settings.toml
+[submaps.tools]
+open = "Ctrl+Alt+Shift+K"
+label = "U undo · C copy last result · R reload · K correct"
+keys = { U = "/undo", C = "/copy", R = "/reload", K = "Correction" }
+```
+
+`Ctrl+Alt+Shift+K`, then `U`, undoes the last replacement. With such a submap, `undo_hotkey` can move to a
+combination you never press by accident.
 
 ## Limits
 
@@ -421,7 +573,7 @@ block anything.
 | No key on the active keyboard layout (…) types '…' (hotkey '…'). | The character is not on any key of this layout, or only through a dead key (`é`). | Write the character of the key itself, or its name or code. If the hotkey was written for another layout, switch to it and reload. |
 | '…' in hotkey '…' is Shift+… / AltGr+… on the active keyboard layout (…). A hotkey names the key, not the character: … | You wrote a Shift or AltGr character (`>`, `\|`, `°`, `@`). | Write the key's own character as the message shows, and add `Shift` yourself if you want it: `Ctrl+Shift+<`. |
 | *(warning)* … is also AltGr+…, which types '…' on the active keyboard layout (…); while Kuroko runs, '…' cannot be typed with AltGr. | A `Ctrl+Alt` hotkey takes away an AltGr character, see [the AltGr trap](#the-altgr-trap). | Choose another key or other modifiers. If you never type that character, ignore it. |
-| hotkey … is used twice: … and … | Two settings or prompts have the same hotkey (also when written differently, e.g. `<` and `0xE2`, or `$card+S` and `Ctrl+Alt+S`). | Give one of them another hotkey. |
+| hotkey … is used twice: … and … | Two settings, prompts or submap `open` hotkeys are the same (also when written differently, e.g. `<` and `0xE2`, or `$card+S` and `Ctrl+Alt+S`). | Give one of them another hotkey. |
 | Unknown variable '$…' in hotkey '…'. Defined in [mods] of settings.toml: … | The hotkey uses a `$name` that `[mods]` does not define (typo, or removed from `[mods]`). | Fix the name, or add it to `[mods]`. If you just removed it from `[mods]`, the old `settings.toml` stays active until no prompt uses it any more. |
 | Unknown variable '$…' in hotkey '…'. No variables are defined: add them to a [mods] table in settings.toml. | The hotkey uses `$name`, but `settings.toml` has no `[mods]` (or it is empty). | Add `[mods]` with that name, see [Modifiers and variables](#modifiers-and-variables). |
 | '$' in hotkey '…' must be followed by a variable name (letters, digits, _). | A `$` with no name after it (`$+K`). | Write the variable's name right after `$`: `$card+K`. |
@@ -434,6 +586,25 @@ block anything.
 | [mods] … = "…": '…' is not a modifier (Ctrl, Alt, Shift or Win); a variable holds modifiers only, the key comes in the hotkey | The value contains a key (`"Ctrl+K"`) or a misspelled modifier. | Keep only the modifiers in `[mods]` and write the key in the hotkey: `"$main+K"`. |
 | [mods] … = "…" uses the variable '$…'; a variable holds modifiers only, not other variables | A variable refers to another one (`"$main+Alt"`). | Write the modifiers out: `"Ctrl+Alt"`. |
 | [mods] … = "…": modifier '…' appears twice | `"Ctrl+Strg"` and the like. | Write each modifier once. |
+| submaps must contain tables: [submaps.name] with open, label, timeout and keys | `submaps = …` was written as a single value. | Write one `[submaps.<name>]` block per submap, see [Submaps](#submaps). |
+| submaps.… must be a table ([submaps.…]) | A line `name = …` directly under `[submaps]`. | Write `[submaps.<name>]` and put `open`, `keys` … below it. |
+| [submaps.…] name '…' is not allowed: use letters, digits, _ and -. | The name in `[submaps."…"]` has other characters (a space, a dot). | Rename it, e.g. `my-tools`. |
+| [submaps.…] name '…' is used twice (names are not case-sensitive) | Two submaps whose names differ only in case. | Rename one. |
+| [submaps.…] open is missing: the hotkey that opens the submap | The block has no `open`. | Add `open = "…"` with a hotkey. |
+| [submaps.…] open: *any hotkey message above* | The `open` hotkey has an error, e.g. no modifier or an unknown variable. | Fix it as the message says; `open` follows all rules of a hotkey. |
+| [submaps.…] label must not be empty | `label = ""`. | Write a label, or remove the line to show the name. |
+| [submaps.…] timeout must be between 100 and 60000 (milliseconds) | `timeout` is too small, too large or not a whole number. | Write milliseconds: `timeout = 3000` for three seconds. |
+| [submaps.…] keys must list at least one key and what it runs | `keys` is missing, empty or not a table. | `keys = { P = "Professioneller" }`. |
+| [submaps.…] Submap key '…' has modifiers: inside a submap a key is written alone (P, not Ctrl+P). | A key with `+` (`"Ctrl+P"`). | Write the plain key; the modifiers belong in `open`. |
+| [submaps.…] Submap key '…' is Esc, which closes the submap; choose another key. | `Esc` in `keys`. | Esc always closes the submap; use another key. |
+| [submaps.…] Submap key '…' is a modifier: a modifier alone cannot be a key. | `Shift`, `Ctrl`, … in `keys`. | Use a real key. |
+| [submaps.…] Unknown key '…' / No key on the active keyboard layout … / '…' is Shift+… | The key itself is wrong: the same messages and fixes as for hotkeys above. | See the rows above. |
+| [submaps.…] key '…' is listed twice (also as '…') | Two entries mean the same key (`p` and `P`, `"<"` and `0xE2`). | Keep one. |
+| [submaps.…] key '…' must name a prompt from prompts.toml or a command such as "/undo" | The target is empty (or just `/`) or not text. | Write a prompt name or a command. |
+| [submaps.…] key '…': unknown command '/…' (commands: …) | A target with `/` that is not a command. | Use one of the commands the message lists, see [Targets](#targets). |
+| [submaps.…] key '…' runs '…', but prompts.toml has no prompt of that name (prompts: …) | No prompt has that name: a typo, or the prompt was renamed or removed. The message lists the prompts. | Fix the name in `settings.toml`, or add the prompt. If you just renamed it in `prompts.toml`, that file stays rejected until the submap uses the new name. |
+| [submaps.…] key '…' is also the hotkey of …; give one of them another key | A submap key that is already a hotkey without modifiers (e.g. an `F8` prompt hotkey and `F8` in a submap). | Change one of them. |
+| *(warning)* [submaps.…] unknown setting '…' | A field other than `open`, `label`, `timeout`, `keys` (often a typo such as `lable`). | Fix the name. |
 | result_copy_hotkey: … is used by the app to read the selection (Ctrl+C, Ctrl+A, Ctrl+V); choose another hotkey | See [App shortcuts](#app-shortcuts). | Choose another hotkey, e.g. the default `Ctrl+Alt+C`. |
 | Hotkey … (…) is already used by another app. | Shown at start or reload: Windows refused the hotkey because another program registered it first. | Choose another hotkey, or quit the other program. |
 

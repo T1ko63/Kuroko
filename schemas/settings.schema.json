@@ -234,6 +234,12 @@
       },
       "examples": [{ "main": "Ctrl", "card": "Ctrl+Alt", "replace": "Shift+Alt" }]
     },
+    "submaps": {
+      "type": "object",
+      "description": "One [submaps.<name>] block per submap: its open hotkey shows the label in the pill and, for timeout milliseconds, makes each listed key a hotkey of its own without modifiers. Names: letters, digits, _ and -. See docs/keybindings.md.",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_-]+$" },
+      "additionalProperties": { "$ref": "#/definitions/submap" }
+    },
     "providers": {
       "type": "object",
       "description": "One [providers.<name>] block per provider. The name is free and is used by default_provider and by the provider key in prompts.toml.",
@@ -370,6 +376,37 @@
       "type": "string",
       "pattern": "^\\s*(#[0-9A-Fa-f]{6}|[Rr][Gg][Bb]\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*\\))\\s*$",
       "examples": ["#000000", "rgb(240, 240, 240)"]
+    },
+    "submap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["open", "keys"],
+      "properties": {
+        "open": {
+          "allOf": [{ "$ref": "#/definitions/hotkey" }],
+          "description": "Hotkey that opens the submap; pressed again while it is open, it closes it. Counts in the check for hotkeys used twice."
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Text the pill shows while the submap is open, e.g. which key does what. The submap's name when missing."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 2000,
+          "description": "Milliseconds the submap stays open without a key. Esc closes it earlier."
+        },
+        "keys": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Key = what it runs. The key is written alone, without modifiers: a letter, digit, F-key, name (Space, Num5), code (0xE2) or the character on the key (\"<\", \"ü\"); not Esc. The target is a prompt name from prompts.toml or a command with a slash: /undo, /copy, /prompts, /settings, /folder, /reload, /keys, /test, /autostart, /about, /quit.",
+          "propertyNames": { "pattern": "^\\s*([A-Za-z][A-Za-z0-9]*|0[xX][0-9A-Fa-f]{1,2}|[^\\s+]|\\+)\\s*$" },
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "examples": [{ "P": "Professioneller", "L": "Lockerer", "U": "/undo" }]
+        }
+      }
     },
     "provider": {
       "type": "object",
