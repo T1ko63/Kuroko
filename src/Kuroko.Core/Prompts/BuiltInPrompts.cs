@@ -19,7 +19,7 @@ public static class BuiltInPrompts
             {OutputRule}
             """,
             PromptMode.Universal,
-            Hotkey: "Ctrl+Alt+M"),
+            Hotkey: "Ctrl+Alt+U"),
 
         new("Correction",
             $"""

@@ -56,7 +56,7 @@ The result lands in `publish\Kuroko` or `publish\Kuroko-selfcontained`, next to 
 | Action | Default hotkey |
 |---|---|
 | Open the overlay (search and pick a prompt) | `Ctrl+Shift+Space` |
-| Run the Universal prompt directly (write **and** edit) | `Ctrl+Alt+M` |
+| Run the Universal prompt directly (write **and** edit) | `Ctrl+Alt+U` |
 | Run another prompt directly | per prompt in `prompts.toml`, e.g. `Ctrl+Alt+K` for Correction |
 | Undo the last replacement | `Ctrl+Alt+Z` |
 | Cancel a running request | `Esc`, only while a request is running |

@@ -13,7 +13,7 @@ Audit-Bericht vom Oktober 2026 in [`refactoring-report.md`](refactoring-report.m
 | Aktion | Standard-Hotkey |
 |---|---|
 | Overlay öffnen (Prompt suchen/wählen) | `Ctrl+Shift+Space` |
-| „Universal" direkt ausführen (schreiben **und** bearbeiten) | `Ctrl+Alt+M` |
+| „Universal" direkt ausführen (schreiben **und** bearbeiten) | `Ctrl+Alt+U` |
 | Anderen Prompt direkt ausführen (z. B. „Correction") | pro Prompt in `prompts.toml`, Standard `Ctrl+Alt+K` |
 | Letzte Ersetzung rückgängig machen | `Ctrl+Alt+Z` (`undo_hotkey`) |
 | Laufende Anfrage abbrechen | `Esc`, nur solange eine Anfrage läuft |

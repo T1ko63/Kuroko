@@ -62,7 +62,7 @@ public class PromptsLoaderTests
         var defaults = Parse(DefaultPrompts.Create()).Prompts!;
         Assert.Equal("Universal", defaults[0].Name);                      // first, so it is quick-select 1 in the overlay
         Assert.Equal(PromptMode.Universal, defaults[0].Mode);
-        Assert.Equal("Ctrl+Alt+M", defaults[0].Hotkey);
+        Assert.Equal("Ctrl+Alt+U", defaults[0].Hotkey);
     }
 
     [Fact]

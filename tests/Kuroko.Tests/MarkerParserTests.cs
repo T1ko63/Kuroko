@@ -132,7 +132,7 @@ public class MarkerParserTests
 public class UniversalPromptTests
 {
     private static readonly PromptDefinition Universal =
-        new("Universal", "  Du bist ein Schreibassistent.  ", PromptMode.Universal, Hotkey: "Ctrl+Alt+M", Provider: "gemini", Model: "m-1");
+        new("Universal", "  Du bist ein Schreibassistent.  ", PromptMode.Universal, Hotkey: "Ctrl+Alt+U", Provider: "gemini", Model: "m-1");
 
     private static (PromptDefinition Prompt, string Input) Resolve(string text) => UniversalPrompt.Resolve(Universal, text, "<<", ">>");
 
@@ -188,7 +188,7 @@ public class UniversalPromptTests
             Assert.Equal("Universal", prompt.Name);
             Assert.Equal("gemini", prompt.Provider);
             Assert.Equal("m-1", prompt.Model);
-            Assert.Equal("Ctrl+Alt+M", prompt.Hotkey);
+            Assert.Equal("Ctrl+Alt+U", prompt.Hotkey);
         }
     }
 
