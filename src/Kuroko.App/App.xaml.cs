@@ -511,21 +511,31 @@ public partial class App : Application
         status.ApplyLook(_theme.IsDark, _theme.Backdrop, _theme.NativeCornerPx, _theme.CustomCornerRadius);
     }
 
-    private IReadOnlyList<TrayMenuItem> BuildMenu() =>
+    private IReadOnlyList<TrayMenuItem> BuildMenu() => AppCommand.ToTrayMenu(Commands());
+
+    /// <summary>
+    /// All app commands in their fixed order: the tray menu and the overlay's command list are built from this one list.
+    /// Built anew each time, so the labels follow the current language.
+    /// </summary>
+    private IReadOnlyList<AppCommand> Commands() =>
     [
-        new TrayMenuItem(Loc.Get("tray_copy_last"), () => _controller!.CopyLastResult(), Enabled: _controller!.HasLastResult),
-        new TrayMenuItem(string.Empty, () => { }, Separator: true),
-        new TrayMenuItem(Loc.Get("tray_edit_prompts"), () => OpenFile(_config!.PromptsPath)),
-        new TrayMenuItem(Loc.Get("tray_edit_settings"), () => OpenFile(_config!.SettingsPath)),
-        new TrayMenuItem(Loc.Get("tray_open_config"), () => Process.Start(new ProcessStartInfo(_configDir) { UseShellExecute = true })),
-        new TrayMenuItem(Loc.Get("tray_reload"), () => ReloadConfig(manual: true)),
-        new TrayMenuItem(string.Empty, () => { }, Separator: true),
-        new TrayMenuItem(Loc.Get("tray_keys"), ShowKeysWindow),
-        new TrayMenuItem(Loc.Get("tray_test"), TestConnection),
-        new TrayMenuItem(Loc.Get("tray_autostart"), ToggleAutostart, Checked: _config!.Current.Settings.Autostart),
-        new TrayMenuItem(string.Empty, () => { }, Separator: true),
-        new TrayMenuItem(Loc.Get("tray_about"), ShowAbout),
-        new TrayMenuItem(Loc.Get("tray_quit"), Shutdown),
+        new("copy", Loc.Get("tray_copy_last"), () => _controller!.CopyLastResult(), CommandFocus.Field)
+        {
+            IsEnabled = () => _controller!.HasLastResult, GroupEnd = true,
+        },
+        new("prompts", Loc.Get("tray_edit_prompts"), () => OpenFile(_config!.PromptsPath), CommandFocus.Window),
+        new("settings", Loc.Get("tray_edit_settings"), () => OpenFile(_config!.SettingsPath), CommandFocus.Window),
+        new("folder", Loc.Get("tray_open_config"),
+            () => Process.Start(new ProcessStartInfo(_configDir) { UseShellExecute = true }), CommandFocus.Window),
+        new("reload", Loc.Get("tray_reload"), () => ReloadConfig(manual: true), CommandFocus.Field) { GroupEnd = true },
+        new("keys", Loc.Get("tray_keys"), ShowKeysWindow, CommandFocus.Window),
+        new("test", Loc.Get("tray_test"), TestConnection, CommandFocus.Field),
+        new("autostart", Loc.Get("tray_autostart"), ToggleAutostart, CommandFocus.Field)
+        {
+            State = () => _config!.Current.Settings.Autostart, GroupEnd = true,
+        },
+        new("about", Loc.Get("tray_about"), ShowAbout, CommandFocus.Window),
+        new("quit", Loc.Get("tray_quit"), Shutdown, CommandFocus.None),
     ];
 
     private static void ShowAbout()
