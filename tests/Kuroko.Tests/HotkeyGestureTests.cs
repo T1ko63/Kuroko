@@ -343,4 +343,16 @@ public class HotkeyGestureTests
         var issues = ConfigValidator.Validate(settings, prompts, keyLayout: De);
         Assert.Contains(issues, i => i.IsError && i.Message.Contains("hotkey Ctrl+Alt+< is used twice"));
     }
+
+    [Fact]
+    public void Default_hotkeys_take_no_AltGr_character_on_german()
+    {
+        var defaults = new[] { AppSettings.DefaultOverlayHotkey, AppSettings.DefaultUndoHotkey, AppSettings.DefaultResultCopyHotkey }
+            .Concat(Kuroko.Core.Prompts.BuiltInPrompts.All.Select(p => p.Hotkey).OfType<string>())
+            .Concat(PromptsLoader.Parse(DefaultPrompts.Create(), De).Prompts!.Select(p => p.Hotkey).OfType<string>());
+        foreach (var hotkey in defaults)
+        {
+            Assert.Null(HotkeyGesture.Parse(hotkey, De).SwallowedAltGrCharacter(De));
+        }
+    }
 }

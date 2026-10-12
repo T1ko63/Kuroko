@@ -10,7 +10,7 @@ Hotkeys are set in two files in `%APPDATA%\Kuroko` (tray → **Edit settings** /
 | `overlay_hotkey`: open the overlay | `settings.toml` | `Ctrl+Shift+Space` |
 | `undo_hotkey`: undo the last replacement | `settings.toml` | `Ctrl+Alt+Z` |
 | `result_copy_hotkey`: copy the result card | `settings.toml` | `Ctrl+Alt+C` |
-| `hotkey` of a `[[prompt]]`: run that prompt directly | `prompts.toml` | `Ctrl+Alt+M` (Universal), `Ctrl+Alt+K` (Correction) |
+| `hotkey` of a `[[prompt]]`: run that prompt directly | `prompts.toml` | `Ctrl+Alt+U` (Universal), `Ctrl+Alt+K` (Correction) |
 
 Changes apply as soon as the file is saved. A hotkey with an error is reported with file and line, and the last
 working configuration stays active.
@@ -170,8 +170,9 @@ On German, these `Ctrl+Alt` hotkeys take away a character:
 | `Ctrl+Alt++` | `~` |
 | `Ctrl+Alt+<` | `\|` |
 
-The default `Ctrl+Alt+M` of the Universal prompt is one of them (`µ`); if you type `µ` with AltGr+M, give the prompt
-another hotkey in `prompts.toml`.
+The default hotkeys avoid them. Older versions gave the Universal prompt `Ctrl+Alt+M` (`µ`); it is now `Ctrl+Alt+U`.
+A `prompts.toml` created by an older version keeps `Ctrl+Alt+M` and shows the warning; change it there if you type
+`µ` with AltGr+M.
 
 Ways around it: another letter (`Ctrl+Alt+K`, `Ctrl+Alt+Z` are free on German), `Ctrl+Shift+…`, `Alt+Shift+…`,
 `Ctrl+Alt+Shift+…` or `Win+Alt+…`.
