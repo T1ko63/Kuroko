@@ -81,6 +81,17 @@ public class HotkeyModsTests
         Assert.Contains("written as 'Win+$card'", error);
     }
 
+    [Theory]
+    [InlineData("$card+S", "Ctrl+Alt+S")]
+    [InlineData("$replace+c", "Alt+Shift+C")]
+    [InlineData("Ctrl+Alt+0xE2", "Ctrl+Alt+<")]
+    [InlineData("$nope+S", "$nope+S")]
+    [InlineData("Ctrl+Alt+>", "Ctrl+Alt+>")]
+    public void Display_fills_in_and_canonicalizes_or_keeps_the_text(string text, string shown)
+    {
+        Assert.Equal(shown, HotkeyGesture.Display(text, Mods, FakeKeyLayout.German));
+    }
+
     // ---- [mods] in settings.toml ----
 
     [Fact]
