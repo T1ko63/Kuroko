@@ -245,6 +245,19 @@
           "default": "Kuroko",
           "description": "Grey text in the empty search field of the prompt picker. \"\" = no placeholder."
         },
+        "selection_style": {
+          "type": "string",
+          "enum": ["fill", "border"],
+          "default": "fill",
+          "description": "How the selected row is marked: fill (an area) or border (a frame only; the text does not move)."
+        },
+        "selection_opacity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 25,
+          "description": "Opacity of the selected row in percent, for both styles. The row under the mouse has half of it."
+        },
         "transparency": {
           "type": "integer",
           "minimum": 0,
@@ -316,10 +329,8 @@
           "description": "Main text colour: #RRGGBB or rgb(r, g, b)."
         },
         "selection": {
-          "type": "string",
-          "pattern": "^\\s*(#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8}|[Rr][Gg][Bb][Aa]?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*(,\\s*\\d*\\.?\\d+%?\\s*)?\\))\\s*$",
-          "description": "Selected row: #AARRGGBB (alpha first), #RRGGBB or rgba(r, g, b, a) with a from 0 to 1.",
-          "examples": ["#40FFFFFF", "rgba(255, 255, 255, 0.25)"]
+          "allOf": [{ "$ref": "#/definitions/opaqueColor" }],
+          "description": "Selected row: #RRGGBB or rgb(r, g, b). Its opacity is [appearance] selection_opacity; an old value with alpha (#AARRGGBB, rgba()) still works, the alpha is ignored and reported."
         },
         "border_color": {
           "allOf": [{ "$ref": "#/definitions/opaqueColor" }],

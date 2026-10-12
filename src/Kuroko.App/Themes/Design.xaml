@@ -62,16 +62,23 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
-                    <Border x:Name="Row" Height="{DynamicResource Row.Height}" Margin="{StaticResource Row.Margin}"
-                            Padding="{StaticResource Row.Padding}" CornerRadius="{DynamicResource Row.Radius}" Background="Transparent">
-                        <ContentPresenter VerticalAlignment="Center"/>
-                    </Border>
+                    <!-- selection_style: "fill" colours the area (Row), "border" the frame (Frame); ThemeService makes the other one
+                         transparent. The frame lies over the row and takes no room, so the text never moves. -->
+                    <Grid Height="{DynamicResource Row.Height}" Margin="{StaticResource Row.Margin}">
+                        <Border x:Name="Row" Padding="{StaticResource Row.Padding}" CornerRadius="{DynamicResource Row.Radius}" Background="Transparent">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                        <Border x:Name="Frame" CornerRadius="{DynamicResource Row.Radius}" BorderThickness="1" BorderBrush="Transparent"
+                                IsHitTestVisible="False"/>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Row" Property="Background" Value="{DynamicResource RowHoverBrush}"/>
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource RowHoverEdgeBrush}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Setter TargetName="Row" Property="Background" Value="{DynamicResource RowSelectedBrush}"/>
+                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource RowSelectedEdgeBrush}"/>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Row" Property="Opacity" Value="0.45"/>

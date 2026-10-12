@@ -9,7 +9,7 @@ namespace Kuroko.Core.Config;
 internal static class AppearanceLoader
 {
     private static readonly HashSet<string> Keys = new(StringComparer.Ordinal) {
-        "placeholder", "transparency", "radius", "blur", "border", "border_width", "separator", "separator_width", "font", "custom_corners", "dark", "light",
+        "placeholder", "selection_style", "selection_opacity", "transparency", "radius", "blur", "border", "border_width", "separator", "separator_width", "font", "custom_corners", "dark", "light",
     };
 
     private static readonly HashSet<string> ColorKeys = new(StringComparer.Ordinal) { "background", "foreground", "selection", "border_color", "separator_color" };
@@ -44,6 +44,8 @@ internal static class AppearanceLoader
         var borderWidth = ReadInt(table, "border_width", AppearanceSettings.DefaultLineWidth, 0, AppearanceSettings.MaxLineWidth, reader, Line);
         var separatorWidth = ReadInt(table, "separator_width", AppearanceSettings.DefaultLineWidth, 0, AppearanceSettings.MaxLineWidth, reader, Line);
         var font = ReadFont(table, reader, Line, fontExists);
+        var selectionStyle = ReadSelectionStyle(table, reader, Line);
+        var selectionOpacity = ReadInt(table, "selection_opacity", AppearanceSettings.DefaultSelectionOpacity, 0, 100, reader, Line);
         return new AppearanceSettings(transparency, radius, blur, dark, light, border, customCorners)
         {
             Placeholder = placeholder,
@@ -51,6 +53,8 @@ internal static class AppearanceLoader
             BorderWidth = borderWidth,
             SeparatorWidth = separatorWidth,
             Font = font,
+            SelectionStyle = selectionStyle,
+            SelectionOpacity = selectionOpacity,
         };
     }
 
@@ -127,6 +131,19 @@ internal static class AppearanceLoader
 
     private static string Quote(IEnumerable<string> names) => string.Join(", ", names.Select(n => $"\"{n}\""));
 
+    private static SelectionStyle ReadSelectionStyle(TomlTable table, TomlReader reader, Func<string, int?> line)
+    {
+        if (!table.TryGetValue("selection_style", out var value)) return AppearanceSettings.DefaultSelectionStyle;
+        switch ((value as string)?.Trim().ToLowerInvariant())
+        {
+            case "fill": return SelectionStyle.Fill;
+            case "border": return SelectionStyle.Border;
+            default:
+                Warn(reader, line("selection_style"), "[appearance] selection_style must be \"fill\" or \"border\"; using \"fill\"");
+                return AppearanceSettings.DefaultSelectionStyle;
+        }
+    }
+
     private static BlurMode ReadBlur(TomlTable table, TomlReader reader, Func<string, int?> line)
     {
         if (!table.TryGetValue("blur", out var value)) return AppearanceSettings.DefaultBlur;
@@ -162,9 +179,9 @@ internal static class AppearanceLoader
             Warn(reader, Line(key), $"{header} unknown setting '{key}'{SettingsLoader.MisplacedHint(key)}");
         }
 
-        var background = ReadColor(table, "background", defaults.Background, alphaAllowed: false, header, reader, Line);
-        var foreground = ReadColor(table, "foreground", defaults.Foreground, alphaAllowed: false, header, reader, Line);
-        var selection = ReadColor(table, "selection", defaults.Selection, alphaAllowed: true, header, reader, Line);
+        var background = ReadColor(table, "background", defaults.Background, header, reader, Line);
+        var foreground = ReadColor(table, "foreground", defaults.Foreground, header, reader, Line);
+        var selection = ReadColor(table, "selection", defaults.Selection, header, reader, Line);
         var border = ReadOptionalColor(table, "border_color", header, reader, Line);
         var separator = ReadOptionalColor(table, "separator_color", header, reader, Line);
         return new ThemeColors(background, foreground, selection, border, separator);
@@ -184,27 +201,26 @@ internal static class AppearanceLoader
         return Rgba.Opaque(color.R, color.G, color.B);
     }
 
-    private static Rgba ReadColor(
-        TomlTable table, string key, Rgba fallback, bool alphaAllowed, string header, TomlReader reader, Func<string, int?> line)
+    /// <summary>An opaque colour. An alpha part (#AARRGGBB, rgba()) is ignored and reported: opacity has its own settings.</summary>
+    private static Rgba ReadColor(TomlTable table, string key, Rgba fallback, string header, TomlReader reader, Func<string, int?> line)
     {
         if (!table.TryGetValue(key, out var value)) return fallback;
 
         if (!ColorParser.TryParse(value as string, out var color, out var hasAlpha))
         {
-            var format = alphaAllowed ? "#AARRGGBB, #RRGGBB or rgba(r, g, b, a)" : "#RRGGBB or rgb(r, g, b)";
-            Warn(reader, line(key), $"{header} {key} is not a valid colour (expected {format}); using {Show(fallback, alphaAllowed)}");
+            Warn(reader, line(key), $"{header} {key} is not a valid colour (expected #RRGGBB or rgb(r, g, b)); using {Show(fallback)}");
             return fallback;
         }
 
-        if (hasAlpha && !alphaAllowed)
+        if (hasAlpha)
         {
-            // Transparency has exactly one place: [appearance] transparency.
-            Warn(reader, line(key), $"{header} {key}: alpha ignored (use #RRGGBB or rgb(); the window's transparency is set by transparency)");
-            return Rgba.Opaque(color.R, color.G, color.B);
+            // Opacity has exactly one place each: [appearance] transparency for the window, selection_opacity for the selected row.
+            var where = key == "selection" ? "the row's opacity is set by [appearance] selection_opacity" : "the window's transparency is set by transparency";
+            Warn(reader, line(key), $"{header} {key}: alpha ignored (use #RRGGBB or rgb(); {where})");
         }
 
-        return color;
+        return Rgba.Opaque(color.R, color.G, color.B);
     }
 
-    private static string Show(Rgba color, bool withAlpha) => withAlpha ? color.ToString() : $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+    private static string Show(Rgba color) => $"#{color.R:X2}{color.G:X2}{color.B:X2}";
 }

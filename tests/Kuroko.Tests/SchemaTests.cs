@@ -181,9 +181,12 @@ public class SchemaTests
             foreach (var value in Enum(schema, property.Value)) Accepts($"{property.Name} = \"{value}\"\n{MinimalProvider}", $"{property.Name} = {value}");
         }
 
-        foreach (var value in Enum(schema, definitions.GetProperty("appearance").GetProperty("properties").GetProperty("blur")))
+        foreach (var key in new[] { "blur", "selection_style" })
         {
-            Accepts($"[appearance]\nblur = \"{value}\"\n{MinimalProvider}", $"blur = {value}");
+            foreach (var value in Enum(schema, definitions.GetProperty("appearance").GetProperty("properties").GetProperty(key)))
+            {
+                Accepts($"[appearance]\n{key} = \"{value}\"\n{MinimalProvider}", $"{key} = {value}");
+            }
         }
 
         var provider = definitions.GetProperty("provider").GetProperty("properties");

@@ -101,6 +101,8 @@ public sealed class ThemeService
         Publish("Separator", Convert(palette.Separator));
         Publish("RowHover", Convert(palette.RowHover));
         Publish("RowSelected", Convert(palette.RowSelected));
+        Publish("RowHoverEdge", Convert(palette.RowHoverEdge));
+        Publish("RowSelectedEdge", Convert(palette.RowSelectedEdge));
         Publish("ScrollThumb", Convert(palette.ScrollThumb));
         Publish("Progress", Convert(palette.Progress));
         Publish("Caret", Convert(palette.Caret));

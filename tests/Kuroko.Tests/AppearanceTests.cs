@@ -128,8 +128,9 @@ public class AppearanceLoaderTests
         Assert.Equal(50, AppearanceSettings.Default.Transparency);
         Assert.Equal(10, AppearanceSettings.Default.Radius);
         Assert.Equal(BlurMode.Acrylic, AppearanceSettings.Default.Blur);
-        Assert.Equal(new Rgba(0x40, 0xFF, 0xFF, 0xFF), AppearanceSettings.Default.Dark.Selection);
-        Assert.Equal(new Rgba(0x40, 0x00, 0x00, 0x00), AppearanceSettings.Default.Light.Selection);
+        Assert.Equal(Rgba.Opaque(0xFF, 0xFF, 0xFF), AppearanceSettings.Default.Dark.Selection);
+        Assert.Equal(Rgba.Opaque(0x00, 0x00, 0x00), AppearanceSettings.Default.Light.Selection);
+        Assert.Equal((SelectionStyle.Fill, 25), (AppearanceSettings.Default.SelectionStyle, AppearanceSettings.Default.SelectionOpacity));
     }
 
     [Fact]
@@ -154,7 +155,7 @@ public class AppearanceLoaderTests
             [appearance.dark]
             background = "#102030"
             foreground = "#EEEEEE"
-            selection = "#80FF0000"
+            selection = "#FF0000"
 
             [appearance.light]
             background = "#fafafa"
@@ -167,7 +168,7 @@ public class AppearanceLoaderTests
         Assert.Equal(BlurMode.Mica, a.Blur);
         Assert.Equal(Rgba.Opaque(0x10, 0x20, 0x30), a.Dark.Background);
         Assert.Equal(Rgba.Opaque(0xEE, 0xEE, 0xEE), a.Dark.Foreground);
-        Assert.Equal(new Rgba(0x80, 0xFF, 0x00, 0x00), a.Dark.Selection);
+        Assert.Equal(Rgba.Opaque(0xFF, 0x00, 0x00), a.Dark.Selection);
         Assert.Equal(Rgba.Opaque(0xFA, 0xFA, 0xFA), a.Light.Background);
         Assert.Equal(Rgba.Opaque(0x22, 0x33, 0x44), a.Light.Selection);
     }
@@ -282,13 +283,13 @@ public class AppearanceLoaderTests
     [Fact]
     public void Colour_picker_formats_work_in_the_settings_file()
     {
-        var result = Parse("[appearance.dark]\nbackground = \"rgb(16, 32, 48)\"\nforeground = \"rgb(255, 0, 0)\"\nselection = \"rgba(0, 255, 255, 0.25)\"\n");
+        var result = Parse("[appearance.dark]\nbackground = \"rgb(16, 32, 48)\"\nforeground = \"rgb(255, 0, 0)\"\nselection = \"rgb(0, 255, 255)\"\n");
 
         var dark = result.Settings!.Appearance.Dark;
         Assert.Empty(Shown(result));
         Assert.Equal(Rgba.Opaque(16, 32, 48), dark.Background);
         Assert.Equal(Rgba.Opaque(255, 0, 0), dark.Foreground);
-        Assert.Equal(new Rgba(64, 0, 255, 255), dark.Selection);
+        Assert.Equal(Rgba.Opaque(0, 255, 255), dark.Selection);
     }
 
     [Fact]
@@ -514,15 +515,60 @@ public class AppearanceLoaderTests
         Assert.Contains("alpha ignored", Assert.Single(Shown(result)).Message);
     }
 
+    [Fact]
+    public void The_selection_is_a_plain_colour()
+    {
+        var result = Parse("[appearance.dark]\nselection = \"#336699\"\n");
+
+        Assert.Empty(Shown(result));
+        Assert.Equal(Rgba.Opaque(0x33, 0x66, 0x99), result.Settings!.Appearance.Dark.Selection);
+    }
+
     [Theory]
-    [InlineData("#40FFFFFF", 0x40, 0xFF, 0xFF, 0xFF)]
-    [InlineData("#336699", 0xFF, 0x33, 0x66, 0x99)]
-    public void The_selection_may_carry_its_own_alpha(string value, int a, int r, int g, int b)
+    [InlineData("#40FFFFFF")]
+    [InlineData("rgba(255, 255, 255, 0.25)")]
+    public void An_old_selection_with_alpha_is_still_read_and_points_to_selection_opacity(string value)
     {
         var result = Parse($"[appearance.dark]\nselection = \"{value}\"\n");
 
+        Assert.True(result.Ok);
+        Assert.Equal(Rgba.Opaque(0xFF, 0xFF, 0xFF), result.Settings!.Appearance.Dark.Selection);
+        var issue = Assert.Single(Shown(result));
+        Assert.Equal(2, issue.Line);
+        Assert.Contains("selection_opacity", issue.Message);
+    }
+
+    [Fact]
+    public void The_old_default_selection_looks_the_same_with_the_default_opacity()
+    {
+        var old = Parse("[appearance.dark]\nselection = \"#40FFFFFF\"\n[appearance.light]\nselection = \"#40000000\"\n").Settings!.Appearance;
+
+        Assert.Equal(new Rgba(0x40, 0xFF, 0xFF, 0xFF), AppearancePalette.Derive(old, dark: true).RowSelected);
+        Assert.Equal(new Rgba(0x40, 0x00, 0x00, 0x00), AppearancePalette.Derive(old, dark: false).RowSelected);
+    }
+
+    [Theory]
+    [InlineData("\"fill\"", SelectionStyle.Fill)]
+    [InlineData("\"Border\"", SelectionStyle.Border)]
+    public void The_selection_style_is_read(string value, SelectionStyle expected)
+    {
+        var result = Parse($"[appearance]\nselection_style = {value}\nselection_opacity = 60\n");
+
         Assert.Empty(Shown(result));
-        Assert.Equal(new Rgba((byte)a, (byte)r, (byte)g, (byte)b), result.Settings!.Appearance.Dark.Selection);
+        Assert.Equal((expected, 60), (result.Settings!.Appearance.SelectionStyle, result.Settings.Appearance.SelectionOpacity));
+    }
+
+    [Theory]
+    [InlineData("selection_style = \"bar\"")]
+    [InlineData("selection_opacity = 101")]
+    [InlineData("selection_opacity = \"25\"")]
+    public void An_invalid_selection_setting_is_reported_and_replaced_by_the_default(string line)
+    {
+        var result = Parse($"[appearance]\nradius = 4\n{line}\n");
+
+        var a = result.Settings!.Appearance;
+        Assert.Equal((SelectionStyle.Fill, 25, 4), (a.SelectionStyle, a.SelectionOpacity, a.Radius));
+        Assert.Equal(3, Assert.Single(Shown(result)).Line);
     }
 
     [Fact]
@@ -631,17 +677,30 @@ public class AppearanceMathTests
     }
 
     [Fact]
-    public void Hover_is_the_selection_with_half_the_alpha()
+    public void Hover_is_the_selection_with_half_the_opacity()
     {
         var dark = AppearancePalette.Derive(AppearanceSettings.Default, dark: true);
         var custom = AppearancePalette.Derive(AppearanceSettings.Default with
         {
-            Light = AppearanceSettings.DefaultLight with { Selection = new Rgba(0x80, 1, 2, 3) },
+            Light = AppearanceSettings.DefaultLight with { Selection = Rgba.Opaque(1, 2, 3) },
+            SelectionOpacity = 50,
         }, dark: false);
 
         Assert.Equal(new Rgba(0x40, 0xFF, 0xFF, 0xFF), dark.RowSelected);
         Assert.Equal(new Rgba(0x20, 0xFF, 0xFF, 0xFF), dark.RowHover);
+        Assert.Equal(new Rgba(0x80, 1, 2, 3), custom.RowSelected);
         Assert.Equal(new Rgba(0x40, 1, 2, 3), custom.RowHover);
+    }
+
+    [Fact]
+    public void Fill_colours_the_area_and_border_the_frame_the_other_stays_clear()
+    {
+        var fill = AppearancePalette.Derive(AppearanceSettings.Default, dark: true);
+        var border = AppearancePalette.Derive(AppearanceSettings.Default with { SelectionStyle = SelectionStyle.Border }, dark: true);
+
+        Assert.Equal((0, 0), (fill.RowSelectedEdge.A, fill.RowHoverEdge.A));
+        Assert.Equal((0, 0), (border.RowSelected.A, border.RowHover.A));
+        Assert.Equal((fill.RowSelected, fill.RowHover), (border.RowSelectedEdge, border.RowHoverEdge));
     }
 
     [Fact]
