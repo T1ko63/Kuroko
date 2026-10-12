@@ -74,6 +74,12 @@ public sealed record AppSettings(
     /// <summary>Look of the windows ([appearance] in settings.toml). Defaults when the block is missing.</summary>
     public AppearanceSettings Appearance { get; init; } = AppearanceSettings.Default;
 
+    /// <summary>
+    /// Modifier variables ([mods]): name (without '$', case-insensitive) to modifiers. The hotkeys of this file are stored
+    /// with the variables already filled in; prompt hotkeys keep "$name" and are filled in where they are used.
+    /// </summary>
+    public IReadOnlyDictionary<string, Hotkeys.HotkeyModifiers> Mods { get; init; } = Hotkeys.HotkeyMods.None;
+
     public const string DefaultOverlayHotkey = "Ctrl+Shift+Space";
     public const string DefaultUndoHotkey = "Ctrl+Alt+Z";
 

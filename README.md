@@ -66,6 +66,7 @@ The result lands in `publish\Kuroko` or `publish\Kuroko-selfcontained`, next to 
 
 All hotkeys can be changed in `settings.toml` and `prompts.toml`. Keys can be written as the character printed on them in your
 keyboard layout (`Ctrl+Alt+ü`, `Ctrl+Alt+<`), by name (`Num1`, `PrintScreen`, `VolumeUp`) or by key code (`Ctrl+Alt+0xE2`).
+Modifier combinations can get a name in `[mods]` (`card = "Ctrl+Alt"`) and be used as `$card+S` in every hotkey.
 [`docs/keybindings.md`](docs/keybindings.md) lists every key, how to find a key's code, which hotkeys to avoid and what each message means.
 
 Kuroko works on the selected text, or on the whole field if nothing is selected. The Universal prompt decides from the text:

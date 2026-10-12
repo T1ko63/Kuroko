@@ -135,7 +135,8 @@ public static class PromptsLoader
         var output = reader.Choice(table, "output", "replace", Outputs, Line) == "overlay" ? PromptOutput.Overlay : PromptOutput.Replace;
 
         var hotkey = reader.Choice(table, "hotkey", string.Empty, null, Line).Trim();
-        if (hotkey.Length > 0)
+        // "$name" hotkeys need [mods] from settings.toml; ConfigValidator checks them with both files at hand.
+        if (hotkey.Length > 0 && !HotkeyMods.UsesVariables(hotkey))
         {
             if (!HotkeyGesture.TryParse(hotkey, layout, out var gesture, out var hotkeyError))
             {

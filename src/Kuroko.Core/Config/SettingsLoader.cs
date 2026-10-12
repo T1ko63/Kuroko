@@ -29,7 +29,7 @@ public static class SettingsLoader
     {
         "overlay_hotkey", "marker_start", "marker_end", "theme", "autostart", "overlay_position", "language",
         "idle_trim_seconds", "default_provider", "fallback_provider", "providers", "accent", "undo_hotkey", "undo_history",
-        "appearance", "result_copy_hotkey", "result_position", "result_font_size",
+        "appearance", "mods", "result_copy_hotkey", "result_position", "result_font_size",
         "result_width", "result_max_height", "result_min_height", "result_fixed_position", "result_screen_margin",
         "overlay_fixed_position", "overlay_screen_margin", "overlay_width", "overlay_min_height", "overlay_max_height", "overlay_font_size",
         "pill_position", "pill_fixed_position", "pill_screen_margin", "pill_min_width", "pill_max_width", "pill_min_height", "pill_font_size", "pill_duration",
@@ -70,7 +70,8 @@ public static class SettingsLoader
             reader.Issue(reader.LineOf(key), $"unknown setting '{key}'", isError: false);
         }
 
-        var overlayHotkey = ReadHotkey(root, reader, "overlay_hotkey", AppSettings.DefaultOverlayHotkey, layout);
+        var mods = ReadMods(root, reader);
+        var overlayHotkey = ReadHotkey(root, reader, "overlay_hotkey", AppSettings.DefaultOverlayHotkey, layout, mods);
 
         var markerStart = reader.Choice(root, "marker_start", "<<", null);
         var markerEnd = reader.Choice(root, "marker_end", ">>", null);
@@ -79,14 +80,14 @@ public static class SettingsLoader
             reader.Issue(reader.LineOf("marker_start"), "marker_start and marker_end must not be empty", isError: true);
         }
 
-        var undoHotkey = ReadHotkey(root, reader, "undo_hotkey", AppSettings.DefaultUndoHotkey, layout);
+        var undoHotkey = ReadHotkey(root, reader, "undo_hotkey", AppSettings.DefaultUndoHotkey, layout, mods);
         var undoHistory = reader.Int(root, "undo_history", AppSettings.DefaultUndoHistory);
         if (undoHistory is < 0 or > AppSettings.MaxUndoHistory)
         {
             reader.Issue(reader.LineOf("undo_history"), $"undo_history must be between 0 and {AppSettings.MaxUndoHistory} (0 = off)", isError: true);
         }
 
-        var resultCopyHotkey = ReadHotkey(root, reader, "result_copy_hotkey", AppSettings.DefaultResultCopyHotkey, layout);
+        var resultCopyHotkey = ReadHotkey(root, reader, "result_copy_hotkey", AppSettings.DefaultResultCopyHotkey, layout, mods);
         if (HotkeyGesture.TryParse(resultCopyHotkey, layout, out var copyGesture, out _) && CollidesWithCapture(copyGesture))
         {
             // The app itself sends exactly these keys to read the selection; RegisterHotKey would also catch those.
@@ -202,6 +203,7 @@ public static class SettingsLoader
             overlayFixedPosition, overlayScreenMargin, overlayWidth, overlayMinHeight, overlayMaxHeight, overlayFontSize)
         {
             Appearance = appearance,
+            Mods = mods,
             PillPosition = pillPosition,
             PillFixedPosition = pillFixedPosition,
             PillScreenMargin = pillScreenMargin,
@@ -243,19 +245,71 @@ public static class SettingsLoader
     public static bool CollidesWithCapture(HotkeyGesture gesture)
         => gesture.Modifiers == HotkeyModifiers.Ctrl && gesture.VirtualKey is 'A' or 'C' or 'V';
 
-    private static string ReadHotkey(TomlTable root, TomlReader reader, string key, string fallback, IKeyLayout? layout)
+    /// <summary>The hotkey with its [mods] variables filled in, so everything that uses it later sees plain modifiers.</summary>
+    private static string ReadHotkey(
+        TomlTable root, TomlReader reader, string key, string fallback, IKeyLayout? layout, IReadOnlyDictionary<string, HotkeyModifiers> mods)
     {
         var text = reader.Choice(root, key, fallback, null);
-        if (!HotkeyGesture.TryParse(text, layout, out var gesture, out var error))
+        if (!HotkeyGesture.TryParse(text, mods, layout, out var gesture, out var error))
         {
             reader.Issue(reader.LineOf(key), $"{key}: {error}", isError: true);
+            return text;
         }
-        else if (gesture.AltGrWarning(layout) is { } warning)
+
+        if (gesture.AltGrWarning(layout) is { } warning)
         {
             reader.Issue(reader.LineOf(key), $"{key}: {warning}", isError: false, show: true);
         }
 
-        return text;
+        return HotkeyMods.TryExpand(text, mods, out var expanded, out _) ? expanded : text;
+    }
+
+    /// <summary>[mods]: name = "Ctrl+Alt". Names are letters, digits and _, not case-sensitive; values are modifiers only.</summary>
+    private static Dictionary<string, HotkeyModifiers> ReadMods(TomlTable root, TomlReader reader)
+    {
+        var mods = new Dictionary<string, HotkeyModifiers>(StringComparer.OrdinalIgnoreCase);
+        if (!root.TryGetValue("mods", out var value)) return mods;
+        if (value is not TomlTable table)
+        {
+            reader.Issue(reader.LineOf("mods"), "mods must be a table: [mods] with lines like main = \"Ctrl\"", isError: true);
+            return mods;
+        }
+
+        var block = reader.Block("[mods]");
+        int? Line(string key) => block is { } b
+            ? reader.LineOf(key, b.Start, b.End) ?? reader.LineOf($"\"{key}\"", b.Start, b.End) ?? b.Start // a quoted name: "my-mod" = ...
+            : reader.LineOf(key);
+
+        foreach (var (name, raw) in table)
+        {
+            if (!HotkeyMods.IsValidName(name))
+            {
+                reader.Issue(Line(name), $"[mods] name '{name}' is not allowed: use letters, digits and _ (e.g. main, card_2){HotkeyGesture.DocsHint}", isError: true);
+                continue;
+            }
+
+            if (mods.ContainsKey(name))
+            {
+                reader.Issue(Line(name), $"[mods] '{name}' is defined twice (names are not case-sensitive)", isError: true);
+                continue;
+            }
+
+            if (raw is not string text)
+            {
+                reader.Issue(Line(name), $"[mods] {name} must be text such as \"Ctrl+Alt\"", isError: true);
+                continue;
+            }
+
+            if (!HotkeyMods.TryParseValue(text, out var modifiers, out var error))
+            {
+                reader.Issue(Line(name), $"[mods] {name} = {error}.{HotkeyGesture.DocsHint}", isError: true);
+                continue;
+            }
+
+            mods[name] = modifiers;
+        }
+
+        return mods;
     }
 
     private static ProviderSettings? ReadProvider(string name, TomlTable table, TomlReader reader, Func<string, string?> getEnv, IKeyStore? keyStore)

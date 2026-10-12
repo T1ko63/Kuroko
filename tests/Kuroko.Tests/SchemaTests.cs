@@ -220,6 +220,8 @@ public class SchemaTests
     [InlineData("Ctrl+Num5")]
     [InlineData("Ctrl+Oem102")]
     [InlineData("Win+VolumeUp")]
+    [InlineData("$main+Alt+K")]
+    [InlineData("$card_2 + S")]
     public void Hotkey_pattern_allows_every_way_to_write_a_key(string hotkey)
     {
         foreach (var name in new[] { "settings.schema.json", "prompts.schema.json" })
@@ -227,7 +229,8 @@ public class SchemaTests
             var schema = Schema(name);
             var pattern = schema.GetProperty("definitions").GetProperty("hotkey").GetProperty("pattern").GetString()!;
             Assert.Matches(pattern, hotkey);
-            Assert.True(Kuroko.Core.Hotkeys.HotkeyGesture.TryParse(hotkey, FakeKeyLayout.German, out _, out var error), error);
+            var mods = new Dictionary<string, Kuroko.Core.Hotkeys.HotkeyModifiers> { ["main"] = Kuroko.Core.Hotkeys.HotkeyModifiers.Ctrl, ["card_2"] = Kuroko.Core.Hotkeys.HotkeyModifiers.Win };
+            Assert.True(Kuroko.Core.Hotkeys.HotkeyGesture.TryParse(hotkey, mods, FakeKeyLayout.German, out _, out var error), error);
         }
     }
 
@@ -236,6 +239,7 @@ public class SchemaTests
     [InlineData("Ctrl++K")]
     [InlineData("Ctrl+Alt+0x1FF")]
     [InlineData("Ctrl+Alt+ab cd")]
+    [InlineData("$my-mod+K")]
     public void Hotkey_pattern_rejects_malformed_text(string hotkey)
     {
         var pattern = Schema("settings.schema.json").GetProperty("definitions").GetProperty("hotkey").GetProperty("pattern").GetString()!;

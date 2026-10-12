@@ -88,6 +88,29 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
             ? gesture
             : throw new FormatException(error);
 
+    public static HotkeyGesture Parse(string text, IReadOnlyDictionary<string, HotkeyModifiers>? mods, IKeyLayout? layout)
+        => TryParse(text, mods, layout, out var gesture, out var error)
+            ? gesture
+            : throw new FormatException(error);
+
+    /// <summary>
+    /// Fills in modifier variables ("$card+S", see <see cref="HotkeyMods"/>) and parses the result. Errors in the
+    /// expanded text name both what was written and what it became.
+    /// </summary>
+    public static bool TryParse(
+        string? text, IReadOnlyDictionary<string, HotkeyModifiers>? mods, IKeyLayout? layout,
+        out HotkeyGesture gesture, [NotNullWhen(false)] out string? error)
+    {
+        gesture = default;
+        if (!HotkeyMods.UsesVariables(text)) return TryParse(text, layout, out gesture, out error);
+        if (!HotkeyMods.TryExpand(text!, mods, out var expanded, out error)) return false;
+        if (TryParse(expanded, layout, out gesture, out error)) return true;
+
+        var hint = error.EndsWith(DocsHint, StringComparison.Ordinal) ? DocsHint : string.Empty;
+        error = $"{error[..^hint.Length].TrimEnd('.')} (written as '{text}', which is '{expanded}' with [mods] filled in).{hint}";
+        return false;
+    }
+
     /// <summary>Parses against <see cref="KeyLayouts.Current"/>.</summary>
     public static bool TryParse(string? text, out HotkeyGesture gesture, [NotNullWhen(false)] out string? error)
         => TryParse(text, KeyLayouts.Current, out gesture, out error);
