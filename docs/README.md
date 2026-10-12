@@ -68,8 +68,9 @@ schreibgeschützten Inhalten, aber auch für Analysen in einem Entwurf, ohne ihn
 
 **Welcher Text gelesen wird (Overlay-Ausgabe):** nur die **Auswahl**, aus UI Automation oder über `Strg+C` (Zwischenablage gesichert und
 wiederhergestellt). Die App sendet dabei **nie `Strg+A`**: auf einer Webseite würde die ganze Seite markiert, in einem Feld bliebe alles
-markiert. Ohne Auswahl wird nur dann der ganze Feldtext gelesen, wenn UI Automation das Feld nachweislich als editierbar meldet (ohne
-Tastendruck, nicht in Browsern/Electron); sonst erscheint „Kein Text markiert.“. Schreibgeschützte Ziele sind erlaubt. Weiterhin
+markiert. Ohne Auswahl wird nie der Feldinhalt gelesen, auch nicht in bearbeitbaren Feldern; es erscheint „Kein Text markiert.“.
+Meldet UI Automation in einem bearbeitbaren Feld sicher „nichts markiert“, sendet die App auch kein `Strg+C` (VS Code würde sonst die
+aktuelle Zeile kopieren). Schreibgeschützte Ziele sind erlaubt. Weiterhin
 abgelehnt werden Passwortfelder, Terminals und Administrator-Fenster; die Eingabe ist auf 50.000 Zeichen begrenzt. In der Palette
 (`Ctrl+Shift+Space`) erscheinen auch auf schreibgeschützten Zielen alle Prompts; ein Prompt mit `output = "replace"` bekommt dort wie bisher
 die Meldung „schreibgeschützt“.
@@ -406,7 +407,7 @@ Zwischenablage, Antworten echter Apps über UIA, Fensterdarstellung), bleibt Sac
 [`refactoring-report.md`](refactoring-report.md#manuelle-testcheckliste).
 
 **Textzugriff, gestuft:** (1) UI Automation für die Markierung, ohne die Zwischenablage anzufassen; (2) Strg+C mit
-Marker-Text als Erkennung; (3) ohne Markierung das ganze Feld (nicht bei Overlay-Ausgabe: dort nie Strg+A, siehe oben). Ersetzt wird per Strg+V; die Zwischenablage des Nutzers
+Marker-Text als Erkennung; (3) ohne Markierung das ganze Feld (nicht bei Overlay-Ausgabe: dort nur die Markierung, nie Strg+A, siehe oben). Ersetzt wird per Strg+V; die Zwischenablage des Nutzers
 wird vorher vollständig gesichert und danach zurückgeschrieben. Der Text im Feld wird erst angefasst, wenn die
 KI-Antwort vollständig und fehlerfrei da ist. Bei Overlay-Ausgabe wird nichts ersetzt; die Antwort wird gestreamt angezeigt.
 

@@ -181,6 +181,78 @@ public class TextAccessServiceTests
     }
 
     [Fact]
+    public async Task Display_mode_never_reads_the_whole_field_of_an_editable_field_without_a_selection()
+    {
+        // Notepad, caret only: replace mode would take the whole field through UIA; a card prompt must not.
+        _uia.Info = Uia(selected: string.Empty, whole: "private notes");
+        _app.FieldText = "private notes";
+
+        var result = await Service().CaptureAsync(Target(), ReadStrategy.Auto, mode: CaptureMode.Display);
+
+        Assert.Equal(CaptureFailure.NoText, result.Failure);
+        Assert.Empty(_app.Keys);
+        Assert.Equal(0, _app.Snapshots);
+    }
+
+    [Fact]
+    public async Task Display_mode_sends_no_ctrl_c_to_a_web_editor_without_a_selection()
+    {
+        // VS Code: a plain Ctrl+C without selection would copy the current line, which is unselected text too.
+        _uia.Info = Uia(selected: string.Empty, whole: "fragment", web: true);
+        _app.FieldText = "the whole document";
+
+        var result = await Service().CaptureAsync(Target("Code", "Chrome_WidgetWin_1"), ReadStrategy.Auto, mode: CaptureMode.Display);
+
+        Assert.Equal(CaptureFailure.NoText, result.Failure);
+        Assert.Empty(_app.Keys);
+        Assert.Equal(0, _app.Snapshots);
+    }
+
+    [Fact]
+    public async Task Display_mode_reports_no_text_rather_than_too_long_when_only_the_unselected_field_is_long()
+    {
+        // The probe marks the field as too long while reading the whole field; with nothing selected that is irrelevant.
+        _uia.Info = Uia(selected: string.Empty, whole: null, tooLong: true);
+
+        var result = await Service().CaptureAsync(Target(), ReadStrategy.Auto, mode: CaptureMode.Display);
+
+        Assert.Equal(CaptureFailure.NoText, result.Failure);
+        Assert.Empty(_app.Keys);
+    }
+
+    [Fact]
+    public async Task Display_mode_still_reads_a_selection()
+    {
+        _uia.Info = Uia(selected: "selected words");
+        var fromUia = await Service().CaptureAsync(Target(), ReadStrategy.Auto, mode: CaptureMode.Display);
+
+        _uia.Info = null; // UIA could not tell: a plain Ctrl+C copies the selection
+        _app.FieldText = "one two three";
+        _app.Selection = "two";
+        var fromClipboard = await Service().CaptureAsync(Target(), ReadStrategy.Auto, mode: CaptureMode.Display);
+
+        Assert.Equal("selected words", fromUia.Capture!.Text);
+        Assert.Equal("two", fromClipboard.Capture!.Text);
+        Assert.Equal(TextOrigin.Selection, fromClipboard.Capture.Origin);
+        Assert.Equal(["C"], _app.Keys);
+        Assert.Equal("user clipboard", _app.ClipboardText);
+    }
+
+    [Fact]
+    public async Task Display_mode_falls_back_to_a_plain_ctrl_c_where_uia_cannot_prove_the_selection_empty()
+    {
+        // A web page or document: not provably editable, so UIA's "nothing selected" is not trusted.
+        _uia.Info = Uia(selected: string.Empty, editable: false, web: true, controlType: "ControlType.Document");
+        _app.FieldText = "a web page";
+        _app.Selection = "page";
+
+        var result = await Service().CaptureAsync(Target("msedge", "Chrome_WidgetWin_1"), ReadStrategy.Auto, mode: CaptureMode.Display);
+
+        Assert.Equal("page", result.Capture!.Text);
+        Assert.Equal(["C"], _app.Keys);
+    }
+
+    [Fact]
     public async Task A_cancel_while_waiting_for_the_copy_ends_the_read_at_once_and_restores_the_clipboard()
     {
         // Nothing is selected and display mode never sends Ctrl+A, so the app never answers Ctrl+C: only the cancel

@@ -11,6 +11,13 @@ public class CapturePolicyTests
         Assert.False(CapturePolicy.RejectsReadOnly(CaptureMode.Display));
     }
 
+    [Fact]
+    public void Only_replace_may_take_the_whole_field()
+    {
+        Assert.True(CapturePolicy.ReadsWholeField(CaptureMode.Replace));
+        Assert.False(CapturePolicy.ReadsWholeField(CaptureMode.Display));
+    }
+
     [Theory]
     [InlineData(CaptureMode.Replace, false, false, true)]
     [InlineData(CaptureMode.Replace, true, false, false)]

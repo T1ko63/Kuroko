@@ -21,7 +21,7 @@ public static class DefaultPrompts
         text.AppendLine("#   output   optional: wohin das Ergebnis geht, unabhängig von mode");
         text.AppendLine("#            \"replace\" (Standard): das Ergebnis ersetzt den markierten Text bzw. das ganze Feld");
         text.AppendLine("#            \"overlay\": das Ergebnis erscheint in einer kleinen Karte, der Text in der App bleibt unverändert.");
-        text.AppendLine("#                       Braucht eine Markierung (das ganze Feld wird nur in eindeutig bearbeitbaren Feldern gelesen),");
+        text.AppendLine("#                       Braucht eine Markierung (gelesen wird nur der markierte Text, nie das ganze Feld),");
         text.AppendLine("#                       funktioniert auch auf schreibgeschütztem Text wie Webseiten. Esc schließt die Karte,");
         text.AppendLine("#                       result_copy_hotkey (settings.toml) kopiert sie.");
         text.AppendLine("#   hotkey   optional, z. B. \"Ctrl+Alt+K\": führt den Prompt direkt aus, ohne Overlay");

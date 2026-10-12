@@ -24,7 +24,10 @@ public enum CaptureMode
     /// <summary>The result will replace the text: the field must be writable, and with nothing selected the whole field may be selected (Ctrl+A).</summary>
     Replace,
 
-    /// <summary>The result is only shown (overlay output): read-only targets are fine, and nothing is ever selected by the app.</summary>
+    /// <summary>
+    /// The result is only shown (overlay output): read-only targets are fine, nothing is ever selected by the app, and only
+    /// the user's selection is read, never the whole field.
+    /// </summary>
     Display,
 }
 
@@ -39,7 +42,13 @@ public static class CapturePolicy
     /// fully selected so that the next key press overwrites it.
     /// </summary>
     public static bool AllowsSelectAll(CaptureMode mode, bool isItemView, bool isNonTextControl)
-        => mode == CaptureMode.Replace && !isItemView && !isNonTextControl;
+        => ReadsWholeField(mode) && !isItemView && !isNonTextControl;
+
+    /// <summary>
+    /// Without a selection, only a replacement may take the whole field. A displayed result (card prompts) works on the
+    /// selection alone, so unselected text never leaves the field.
+    /// </summary>
+    public static bool ReadsWholeField(CaptureMode mode) => mode == CaptureMode.Replace;
 }
 
 public enum CaptureFailure
@@ -122,8 +131,8 @@ public interface ITextAccess
     /// <summary>
     /// Returns the text to work on. Without a probe it probes itself, which only works while the target has the
     /// focus. The clipboard strategy also needs the target to be the foreground window.
-    /// With <see cref="CaptureMode.Display"/> the app never selects anything (no Ctrl+A): no selection means no text,
-    /// except in a field UIA proves to be editable, whose whole text is read without any key press.
+    /// With <see cref="CaptureMode.Display"/> only the selection is read and the app never selects anything (no Ctrl+A):
+    /// no selection means no text, also in an editable field.
     /// </summary>
     Task<CaptureResult> CaptureAsync(
         TargetInfo? target, ReadStrategy allowed, FocusProbe? probe = null, CaptureMode mode = CaptureMode.Replace, CancellationToken ct = default);
