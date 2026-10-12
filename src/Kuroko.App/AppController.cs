@@ -95,6 +95,9 @@ public sealed class AppController
     /// <summary>Grey text in the empty search field ([appearance] placeholder); "" shows none.</summary>
     public void SetOverlayPlaceholder(string text) => _overlay.SetPlaceholder(text);
 
+    /// <summary>[mods] of settings.toml for the hotkeys the picker lists.</summary>
+    public void SetOverlayHotkeyMods(IReadOnlyDictionary<string, Kuroko.Core.Hotkeys.HotkeyModifiers> mods) => _overlay.SetHotkeyMods(mods);
+
     /// <summary>
     /// Hotkey that copies the result card, or the answer offered by the error pill after a failed paste (result_copy_hotkey);
     /// read when the card or pill opens and after a configuration reload.

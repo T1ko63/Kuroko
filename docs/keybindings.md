@@ -212,8 +212,9 @@ hotkey = "$card+S"                     # Ctrl+Alt+S
 * **Saving `[mods]`** applies at once and registers all hotkeys again, also the prompt hotkeys whose `prompts.toml`
   did not change. If a prompt still uses a variable you removed or renamed, the new `settings.toml` is rejected with an
   error that names the prompt, and the last working version stays active.
-* The log and the tray tooltip show hotkeys with the variables filled in (`Ctrl+Alt+S`). The prompt list in the
-  overlay shows the hotkey as written in `prompts.toml` (`$card+S`).
+* The log, the tray tooltip and the prompt list in the overlay show hotkeys with the variables filled in and in one
+  fixed spelling: `$card+s` in `prompts.toml` appears as `Ctrl+Alt+S`. A hotkey that cannot be read (for example
+  because of an unknown variable) is shown in the overlay as written.
 
 ### Main modifier and sub-modifiers
 

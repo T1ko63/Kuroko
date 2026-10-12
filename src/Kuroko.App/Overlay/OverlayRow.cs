@@ -1,3 +1,4 @@
+using Kuroko.Core.Hotkeys;
 using Kuroko.Core.Localization;
 using Kuroko.Core.Prompts;
 using Kuroko.Core.Search;
@@ -21,18 +22,19 @@ public sealed record OverlayRow
     /// <summary>Muted text after the name, with its leading gap: the command's tray label. Empty for prompts.</summary>
     public string Detail { get; private init; } = string.Empty;
 
-    /// <summary>Right-aligned subtle text: the prompt's own hotkey, or a command's on/off state.</summary>
+    /// <summary>Right-aligned subtle text: the prompt's own hotkey (with [mods] filled in), or a command's on/off state.</summary>
     public string Trailing { get; private init; } = string.Empty;
 
     /// <summary>Greyed out and skipped by the keys; Enter and click do nothing on it.</summary>
     public bool IsEnabled { get; private init; } = true;
 
-    public static OverlayRow For(PromptDefinition prompt, string number) => new()
+    /// <param name="mods">[mods] of settings.toml: the hotkey is shown filled in ("$card+S" as Ctrl+Alt+S), as in the log and tray.</param>
+    public static OverlayRow For(PromptDefinition prompt, string number, IReadOnlyDictionary<string, HotkeyModifiers>? mods = null) => new()
     {
         Prompt = prompt,
         Number = number,
         Name = prompt.Name,
-        Trailing = prompt.Hotkey ?? string.Empty,
+        Trailing = prompt.Hotkey is { } hotkey ? HotkeyGesture.Display(hotkey, mods, KeyLayouts.Current) : string.Empty,
     };
 
     /// <summary>The "/" list: the commands matching <paramref name="name"/>, in their fixed order.</summary>

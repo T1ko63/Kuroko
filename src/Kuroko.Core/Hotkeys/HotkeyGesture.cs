@@ -111,6 +111,13 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
         return false;
     }
 
+    /// <summary>
+    /// How a configured hotkey is shown to the user (overlay list): variables filled in and in canonical form, like the log
+    /// and the tray tooltip ("$card+s" → "Ctrl+Alt+S"). Text that does not parse is shown as written.
+    /// </summary>
+    public static string Display(string text, IReadOnlyDictionary<string, HotkeyModifiers>? mods, IKeyLayout? layout)
+        => TryParse(text, mods, layout, out var gesture, out _) ? gesture.ToString(layout) : text;
+
     /// <summary>Parses against <see cref="KeyLayouts.Current"/>.</summary>
     public static bool TryParse(string? text, out HotkeyGesture gesture, [NotNullWhen(false)] out string? error)
         => TryParse(text, KeyLayouts.Current, out gesture, out error);

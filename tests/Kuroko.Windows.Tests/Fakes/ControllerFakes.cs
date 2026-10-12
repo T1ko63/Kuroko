@@ -192,6 +192,13 @@ internal sealed class FakeOverlay : IOverlayView
     {
     }
 
+    public void SetHotkeyMods(IReadOnlyDictionary<string, Kuroko.Core.Hotkeys.HotkeyModifiers> mods)
+    {
+        HotkeyMods = mods;
+    }
+
+    public IReadOnlyDictionary<string, Kuroko.Core.Hotkeys.HotkeyModifiers>? HotkeyMods { get; private set; }
+
     /// <summary>The commands handed over by the last <see cref="Present"/>.</summary>
     public IReadOnlyList<AppCommand> Commands { get; private set; } = [];
 

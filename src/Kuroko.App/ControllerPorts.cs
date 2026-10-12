@@ -26,6 +26,9 @@ public interface IOverlayView
 
     void SetPlaceholder(string text);
 
+    /// <summary>[mods] of settings.toml, so prompt hotkeys are listed with their variables filled in.</summary>
+    void SetHotkeyMods(IReadOnlyDictionary<string, Kuroko.Core.Hotkeys.HotkeyModifiers> mods);
+
     void Present(IReadOnlyList<PromptDefinition> prompts, IReadOnlyList<AppCommand> commands);
 
     void ShowAnchored(Anchor anchor);
