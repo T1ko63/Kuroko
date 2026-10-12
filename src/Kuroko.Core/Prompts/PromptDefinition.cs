@@ -33,4 +33,12 @@ public sealed record PromptDefinition(
     string? Hotkey = null,
     string? Provider = null,
     string? Model = null,
-    PromptOutput Output = PromptOutput.Replace);
+    PromptOutput Output = PromptOutput.Replace)
+{
+    /// <summary>
+    /// The answer is open-ended (a question), not a rewrite of the input: its length does not follow the input, so the
+    /// output limit is the generous one of <see cref="PromptMode.Instruction"/> even when text is sent as material.
+    /// Not read from prompts.toml.
+    /// </summary>
+    public bool OpenEndedAnswer { get; init; }
+}

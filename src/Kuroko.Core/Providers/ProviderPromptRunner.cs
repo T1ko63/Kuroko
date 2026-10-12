@@ -39,7 +39,8 @@ public sealed class ProviderPromptRunner : IPromptRunner
         {
             var maxTokens = settings.MaxOutputTokens > 0
                 ? settings.MaxOutputTokens
-                : PromptBuilder.EstimateMaxOutputTokens(prompt.Mode, Input.Length, settings.Reasoning != "off");
+                : PromptBuilder.EstimateMaxOutputTokens(
+                    prompt.OpenEndedAnswer ? PromptMode.Instruction : prompt.Mode, Input.Length, settings.Reasoning != "off");
             var model = usePromptModel ? prompt.Model ?? settings.Model : settings.Model;
             return new LlmRequest(model, system, user, maxTokens, timings);
         }
