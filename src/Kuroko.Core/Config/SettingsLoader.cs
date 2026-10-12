@@ -43,9 +43,12 @@ public static class SettingsLoader
     /// <param name="getEnv">Reads an environment variable (api_key_env).</param>
     /// <param name="keyStore">Keys stored outside the file (Windows Credential Manager); asked only when neither api_key nor api_key_env gave a key.</param>
     /// <param name="fontExists">Whether a font family is installed, for [appearance] font; null skips that check.</param>
-    public static SettingsLoadResult Parse(string toml, Func<string, string?> getEnv, IKeyStore? keyStore = null, Func<string, bool>? fontExists = null)
+    /// <param name="keyLayout">Resolves hotkey keys written as a character; null uses <see cref="KeyLayouts.Current"/>.</param>
+    public static SettingsLoadResult Parse(
+        string toml, Func<string, string?> getEnv, IKeyStore? keyStore = null, Func<string, bool>? fontExists = null, IKeyLayout? keyLayout = null)
     {
         var issues = new List<ConfigIssue>();
+        var layout = keyLayout ?? KeyLayouts.Current;
 
         TomlTable root;
         try
@@ -67,7 +70,7 @@ public static class SettingsLoader
             reader.Issue(reader.LineOf(key), $"unknown setting '{key}'", isError: false);
         }
 
-        var overlayHotkey = ReadHotkey(root, reader, "overlay_hotkey", AppSettings.DefaultOverlayHotkey);
+        var overlayHotkey = ReadHotkey(root, reader, "overlay_hotkey", AppSettings.DefaultOverlayHotkey, layout);
 
         var markerStart = reader.Choice(root, "marker_start", "<<", null);
         var markerEnd = reader.Choice(root, "marker_end", ">>", null);
@@ -76,19 +79,19 @@ public static class SettingsLoader
             reader.Issue(reader.LineOf("marker_start"), "marker_start and marker_end must not be empty", isError: true);
         }
 
-        var undoHotkey = ReadHotkey(root, reader, "undo_hotkey", AppSettings.DefaultUndoHotkey);
+        var undoHotkey = ReadHotkey(root, reader, "undo_hotkey", AppSettings.DefaultUndoHotkey, layout);
         var undoHistory = reader.Int(root, "undo_history", AppSettings.DefaultUndoHistory);
         if (undoHistory is < 0 or > AppSettings.MaxUndoHistory)
         {
             reader.Issue(reader.LineOf("undo_history"), $"undo_history must be between 0 and {AppSettings.MaxUndoHistory} (0 = off)", isError: true);
         }
 
-        var resultCopyHotkey = ReadHotkey(root, reader, "result_copy_hotkey", AppSettings.DefaultResultCopyHotkey);
-        if (HotkeyGesture.TryParse(resultCopyHotkey, out var copyGesture, out _) && CollidesWithCapture(copyGesture))
+        var resultCopyHotkey = ReadHotkey(root, reader, "result_copy_hotkey", AppSettings.DefaultResultCopyHotkey, layout);
+        if (HotkeyGesture.TryParse(resultCopyHotkey, layout, out var copyGesture, out _) && CollidesWithCapture(copyGesture))
         {
             // The app itself sends exactly these keys to read the selection; RegisterHotKey would also catch those.
             reader.Issue(reader.LineOf("result_copy_hotkey"),
-                $"result_copy_hotkey: {copyGesture} is used by the app to read the selection (Ctrl+C, Ctrl+A, Ctrl+V); choose another hotkey", isError: true);
+                $"result_copy_hotkey: {copyGesture.ToString(layout)} is used by the app to read the selection (Ctrl+C, Ctrl+A, Ctrl+V); choose another hotkey", isError: true);
         }
 
         var resultPosition = reader.Choice(root, "result_position", AppSettings.DefaultResultPosition, ResultPositions);
@@ -240,12 +243,16 @@ public static class SettingsLoader
     public static bool CollidesWithCapture(HotkeyGesture gesture)
         => gesture.Modifiers == HotkeyModifiers.Ctrl && gesture.VirtualKey is 'A' or 'C' or 'V';
 
-    private static string ReadHotkey(TomlTable root, TomlReader reader, string key, string fallback)
+    private static string ReadHotkey(TomlTable root, TomlReader reader, string key, string fallback, IKeyLayout? layout)
     {
         var text = reader.Choice(root, key, fallback, null);
-        if (!HotkeyGesture.TryParse(text, out _, out var error))
+        if (!HotkeyGesture.TryParse(text, layout, out var gesture, out var error))
         {
             reader.Issue(reader.LineOf(key), $"{key}: {error}", isError: true);
+        }
+        else if (gesture.AltGrWarning(layout) is { } warning)
+        {
+            reader.Issue(reader.LineOf(key), $"{key}: {warning}", isError: false, show: true);
         }
 
         return text;

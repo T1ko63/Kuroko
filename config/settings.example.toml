@@ -8,6 +8,13 @@
 # configuration stays active and a message names the file and line.
 # Never put API keys in this template or in the repository.
 
+# Hotkeys: modifiers Ctrl, Alt, Shift, Win joined with + and one key. The key is A-Z, 0-9, F1-F24, a name
+# (Space, Enter, Num1, PrintScreen, VolumeUp, Oem102, ...), a key code (Ctrl+Alt+0xE2) or the character printed on the
+# key in your keyboard layout (Ctrl+Alt+ü, Ctrl+Alt+<, Ctrl+Alt+# on German; "++" ends a hotkey on the + key).
+# Only the key's own character: > or | (Shift/AltGr) is an error. On layouts with AltGr, Ctrl+Alt+<key> also takes
+# away the AltGr character of that key (Ctrl+Alt+Q = @ on German); the app warns about it.
+# All keys, codes and messages: docs/keybindings.md.
+
 # Global hotkey that opens the overlay.
 overlay_hotkey = "Ctrl+Shift+Space"
 

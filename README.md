@@ -64,6 +64,10 @@ The result lands in `publish\Kuroko` or `publish\Kuroko-selfcontained`, next to 
 | Copy the result card and close it | `Ctrl+Alt+C`, only while a card is visible |
 | Copy an answer that could not be pasted | `Ctrl+Alt+C` while the error pill is shown, later tray → **Copy last result** |
 
+All hotkeys can be changed in `settings.toml` and `prompts.toml`. Keys can be written as the character printed on them in your
+keyboard layout (`Ctrl+Alt+ü`, `Ctrl+Alt+<`), by name (`Num1`, `PrintScreen`, `VolumeUp`) or by key code (`Ctrl+Alt+0xE2`).
+[`docs/keybindings.md`](docs/keybindings.md) lists every key, how to find a key's code, which hotkeys to avoid and what each message means.
+
 Kuroko works on the selected text, or on the whole field if nothing is selected. The Universal prompt decides from the text:
 without a marker, the text is a task (“decline Friday’s game night”) and the answer replaces it; with a marker such as
 `<<shorter and friendlier>>`, the marker’s instruction is applied to the rest of the text. Prompts with
@@ -99,6 +103,7 @@ Details are in the German guide under [Datenschutz](docs/README.md#datenschutz).
 ## Documentation
 
 * [`docs/README.md`](docs/README.md): the full guide in German (all settings, result card, undo, appearance, troubleshooting, measurements).
+* [`docs/keybindings.md`](docs/keybindings.md): hotkeys in detail: every key, key codes, the AltGr trap, limits, all messages, migrating old hotkeys.
 * [`config/`](config): commented templates of `settings.toml` and `prompts.toml` with every key.
 * [`docs/refactoring-report.md`](docs/refactoring-report.md): code audit from October 2026 (German, written when Kuroko was still called Ghostwriter).
 
