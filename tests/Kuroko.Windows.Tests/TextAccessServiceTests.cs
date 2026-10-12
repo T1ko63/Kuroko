@@ -195,17 +195,19 @@ public class TextAccessServiceTests
     }
 
     [Fact]
-    public async Task Display_mode_sends_no_ctrl_c_to_a_web_editor_without_a_selection()
+    public async Task Display_mode_copies_the_selection_of_a_web_editor_whose_uia_reports_none()
     {
-        // VS Code: a plain Ctrl+C without selection would copy the current line, which is unselected text too.
+        // VSCodium with 1634 characters selected: UIA's helper element ('native-edit-context') still says "selected=0".
         _uia.Info = Uia(selected: string.Empty, whole: "fragment", web: true);
         _app.FieldText = "the whole document";
+        _app.Selection = "whole";
 
-        var result = await Service().CaptureAsync(Target("Code", "Chrome_WidgetWin_1"), ReadStrategy.Auto, mode: CaptureMode.Display);
+        var result = await Service().CaptureAsync(Target("VSCodium", "Chrome_WidgetWin_1"), ReadStrategy.Auto, mode: CaptureMode.Display);
 
-        Assert.Equal(CaptureFailure.NoText, result.Failure);
-        Assert.Empty(_app.Keys);
-        Assert.Equal(0, _app.Snapshots);
+        Assert.Equal("whole", result.Capture!.Text);
+        Assert.Equal(TextOrigin.Selection, result.Capture.Origin);
+        Assert.Equal(["C"], _app.Keys); // a plain copy, never Ctrl+A
+        Assert.Equal("user clipboard", _app.ClipboardText);
     }
 
     [Fact]

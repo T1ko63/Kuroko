@@ -80,10 +80,12 @@ public sealed class TextAccessService : ITextAccess
 
             if (uia?.IsReadOnly == true && CapturePolicy.RejectsReadOnly(mode)) return CaptureResult.Fail(CaptureFailure.ReadOnlyField);
 
-            // Display mode reads the selection only. In an editable field UIA's "caret, no selection" is trusted (the
-            // replace path below relies on it too), so there is nothing to send: no whole field, and no Ctrl+C either,
-            // which in VS Code would copy the current line. Checked before TooLong, which may describe the whole field.
-            if (!CapturePolicy.ReadsWholeField(mode) && uia is { SelectionKnown: true, SelectedText.Length: 0, IsEditable: true })
+            // Display mode reads the selection only. In a native editable field UIA's "caret, no selection" is trusted (the
+            // replace path below relies on it too), so there is nothing to send: no whole field, and no Ctrl+C either.
+            // Not in web engines: VS Code/VSCodium report an empty selection on their helper element even while text is
+            // selected, so there only a plain Ctrl+C can tell. Checked before TooLong, which may describe the whole field.
+            if (!CapturePolicy.ReadsWholeField(mode)
+                && uia is { SelectionKnown: true, SelectedText.Length: 0, IsEditable: true, IsWebEngine: false })
             {
                 return CaptureResult.Fail(CaptureFailure.NoText);
             }

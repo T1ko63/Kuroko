@@ -75,8 +75,9 @@ schreibgeschützten Inhalten, aber auch für Analysen in einem Entwurf, ohne ihn
 **Welcher Text gelesen wird (Overlay-Ausgabe):** nur die **Auswahl**, aus UI Automation oder über `Strg+C` (Zwischenablage gesichert und
 wiederhergestellt). Die App sendet dabei **nie `Strg+A`**: auf einer Webseite würde die ganze Seite markiert, in einem Feld bliebe alles
 markiert. Ohne Auswahl wird nie der Feldinhalt gelesen, auch nicht in bearbeitbaren Feldern; es erscheint „Kein Text markiert.“.
-Meldet UI Automation in einem bearbeitbaren Feld sicher „nichts markiert“, sendet die App auch kein `Strg+C` (VS Code würde sonst die
-aktuelle Zeile kopieren). Schreibgeschützte Ziele sind erlaubt. Weiterhin
+Meldet UI Automation in einem bearbeitbaren Windows-Feld sicher „nichts markiert“, sendet die App auch kein `Strg+C`. In Browsern und
+Electron-Editoren (VS Code, VSCodium) ist diese Meldung unzuverlässig; dort wird immer ein einfaches `Strg+C` gesendet, das in VS Code
+ohne Markierung die aktuelle Zeile kopiert. Schreibgeschützte Ziele sind erlaubt. Weiterhin
 abgelehnt werden Passwortfelder, Terminals und Administrator-Fenster; die Eingabe ist auf 50.000 Zeichen begrenzt. In der Palette
 (`Ctrl+Shift+Space`) erscheinen auch auf schreibgeschützten Zielen alle Prompts; ein Prompt mit `output = "replace"` bekommt dort wie bisher
 die Meldung „schreibgeschützt“.
