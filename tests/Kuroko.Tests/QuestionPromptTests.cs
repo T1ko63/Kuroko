@@ -1,4 +1,5 @@
 using Kuroko.Core.Prompts;
+using Kuroko.Core.Providers;
 
 namespace Kuroko.Tests;
 
@@ -59,4 +60,43 @@ public class QuestionPromptTests
         Assert.Contains("Markdown", QuestionPrompt.Role);
         Assert.Contains("\"- \"", QuestionPrompt.Role);
     }
+}
+
+public class QuestionAnswerLengthTests
+{
+    private static string Answer() => FakeHandler.Events(
+        ("message_start", "{\"type\":\"message_start\"}"),
+        ("content_block_delta", "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"OK\"}}"),
+        ("message_delta", "{\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"}}"),
+        ("message_stop", "{\"type\":\"message_stop\"}"));
+
+    private static async Task<int> MaxTokensFor(PromptDefinition prompt, string input)
+    {
+        var http = new FakeHandler().Respond(FakeHandler.Sse(Answer()));
+        var settings = ProviderTestHelpers.Settings(ProviderType.Anthropic, "https://api.anthropic.test");
+        var registry = new ProviderRegistry(new Dictionary<string, ProviderSettings> { [settings.Name] = settings }, settings.Name, new HttpClient(http));
+        await new ProviderPromptRunner(() => registry).RunAsync(prompt, input, CancellationToken.None);
+        return (int)Assert.Single(http.Calls).Json["max_tokens"]!;
+    }
+
+    [Fact]
+    public async Task A_question_about_a_short_selection_gets_the_generous_output_limit()
+    {
+        var (prompt, input) = QuestionPrompt.Build("Erklär das ausführlich.", "Kurzer Satz.");
+
+        Assert.True(prompt.OpenEndedAnswer);
+        Assert.Equal(PromptBuilder.EstimateMaxOutputTokens(PromptMode.Instruction, input.Length, false), await MaxTokensFor(prompt, input));
+    }
+
+    [Fact]
+    public async Task A_normal_transform_prompt_keeps_its_limit()
+    {
+        var prompt = new PromptDefinition("Fix", "Fix it.");
+
+        Assert.Equal(PromptBuilder.EstimateMaxOutputTokens(PromptMode.Transform, 12, false), await MaxTokensFor(prompt, "Kurzer Satz."));
+    }
+
+    [Fact]
+    public void The_role_does_not_ask_for_brevity()
+        => Assert.DoesNotContain("concise", QuestionPrompt.Role, StringComparison.OrdinalIgnoreCase);
 }

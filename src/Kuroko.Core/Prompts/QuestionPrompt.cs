@@ -13,7 +13,8 @@ public static class QuestionPrompt
     public const string Role =
         "You answer the user's question or carry out their instruction. Your answer is shown in a small card that displays "
         + "plain text only: do not use Markdown (no headings, bold, italics, tables, links or code fences). For a list, put each "
-        + "item on its own line starting with \"- \". Be concise. Answer in the language of the question unless it asks for another one.";
+        + "item on its own line starting with \"- \". Answer as fully as the question needs. Answer in the language of the question "
+        + "unless it asks for another one.";
 
     /// <summary>The fixed name shown in the progress pill and written to the log; the question itself never is.</summary>
     public static string Name => Loc.Get("question_name");
@@ -28,12 +29,12 @@ public static class QuestionPrompt
         question = question.Trim();
         if (string.IsNullOrEmpty(selectedText))
         {
-            return (new PromptDefinition(Name, Role, PromptMode.Instruction, Output: PromptOutput.Overlay), question);
+            return (new PromptDefinition(Name, Role, PromptMode.Instruction, Output: PromptOutput.Overlay) { OpenEndedAnswer = true }, question);
         }
 
         var prompt = $"{Role}\n\n"
             + "The question or instruction refers to the text of the user message:\n"
             + $"{question}";
-        return (new PromptDefinition(Name, prompt, PromptMode.Transform, Output: PromptOutput.Overlay), selectedText);
+        return (new PromptDefinition(Name, prompt, PromptMode.Transform, Output: PromptOutput.Overlay) { OpenEndedAnswer = true }, selectedText);
     }
 }
