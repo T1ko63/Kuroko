@@ -15,7 +15,7 @@
 #   output    optional: replace (default) | overlay. Where the result goes; independent of mode
 #               replace      the result replaces the selected text (or the whole field)
 #               overlay      the result is shown in a small card, the text in the app stays as it is.
-#                            Needs a selection (the whole field is only read in a field that is plainly editable),
+#                            Needs a selection (only the selected text is read, never the whole field),
 #                            works on read-only text such as web pages. Esc closes the card, result_copy_hotkey copies it
 #   hotkey    optional: runs the prompt directly, without the overlay
 #   provider  optional: name of a [providers.*] block in settings.toml

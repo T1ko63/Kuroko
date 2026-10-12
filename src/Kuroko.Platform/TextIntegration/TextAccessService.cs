@@ -6,7 +6,8 @@ namespace Kuroko.Platform.TextIntegration;
 /// <summary>
 /// Staged strategy:
 /// read  = (1) UI Automation selection, if the app exposes it; (2) Ctrl+C with a sentinel on the clipboard;
-///         (3) if nothing is selected, Ctrl+A then Ctrl+C (whole field).
+///         (3) if nothing is selected, Ctrl+A then Ctrl+C (whole field). Step (3) and any other whole-field read
+///         only happen in <see cref="CaptureMode.Replace"/>: <see cref="CaptureMode.Display"/> reads the selection only.
 /// write = delayed-render clipboard + Ctrl+V, then the user's clipboard is restored. Replacing always goes
 ///         through paste because UIA cannot replace a selection and ValuePattern would destroy formatting/undo.
 /// The user's text is only touched in the final paste; any failure before that leaves it untouched.
@@ -78,6 +79,15 @@ public sealed class TextAccessService : ITextAccess
             if (uia?.IsPassword == true) return CaptureResult.Fail(CaptureFailure.PasswordField);
 
             if (uia?.IsReadOnly == true && CapturePolicy.RejectsReadOnly(mode)) return CaptureResult.Fail(CaptureFailure.ReadOnlyField);
+
+            // Display mode reads the selection only. In an editable field UIA's "caret, no selection" is trusted (the
+            // replace path below relies on it too), so there is nothing to send: no whole field, and no Ctrl+C either,
+            // which in VS Code would copy the current line. Checked before TooLong, which may describe the whole field.
+            if (!CapturePolicy.ReadsWholeField(mode) && uia is { SelectionKnown: true, SelectedText.Length: 0, IsEditable: true })
+            {
+                return CaptureResult.Fail(CaptureFailure.NoText);
+            }
+
             if (uia?.TooLong == true) return CaptureResult.Fail(CaptureFailure.TooLong);
 
             // A positive UIA answer is trusted; an empty one is not (many apps report "no selection" wrongly).
@@ -91,8 +101,8 @@ public sealed class TextAccessService : ITextAccess
                 });
             }
 
-            // UIA says "caret, no selection" in a field it can prove to be editable: trust that negative and read
-            // the field directly. This avoids a Ctrl+C probe that would wait out its full timeout for a copy that
+            // Replace mode only (Display returned above). UIA says "caret, no selection" in a field it can prove to be
+            // editable: trust that negative and read the field directly. This avoids a Ctrl+C probe that would wait out its full timeout for a copy that
             // never comes. Fields that are not provably editable (documents, web pages) go through the clipboard.
             // Not in web engines: there the focused "Edit" can be a hidden helper textarea (VS Code/VSCodium's
             // Monaco) holding a fragment of the document, so "whole" would silently be only a few characters.
@@ -112,7 +122,8 @@ public sealed class TextAccessService : ITextAccess
         if (!allowed.HasFlag(ReadStrategy.Clipboard)) return CaptureResult.Fail(CaptureFailure.NoText);
 
         // Display mode never sends Ctrl+A (neither as "select all first" nor as fallback): with nothing selected it
-        // would select the whole page or leave a field fully selected. Without a selection the result is NoText.
+        // would select the whole page or leave a field fully selected. Only a plain Ctrl+C is sent, which copies the
+        // selection, if any; without one the result is NoText.
         var canSelectAll = CapturePolicy.AllowsSelectAll(mode, target.IsItemView, uia?.IsNonTextControl == true);
 
         // Web-engine editor with a known empty selection: UIA cannot be trusted for the content, and a plain Ctrl+C
