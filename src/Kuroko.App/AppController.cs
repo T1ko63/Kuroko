@@ -34,6 +34,7 @@ public sealed class AppController
     private readonly CardRun _cardRun;
     private readonly UndoRun _undo;
     private readonly AnchorPolicy _anchors = new();
+    private readonly SubmapSession _submap;
 
     /// <param name="prompts">Read on every use, so a reloaded prompts.toml is picked up without rebuilding anything.</param>
     /// <param name="hotkeys">Needed for the temporary hotkeys: Esc during a run, Esc and copy while the result card is up.</param>
@@ -60,6 +61,7 @@ public sealed class AppController
         _replaceRun = new ReplaceRun(text, status, runner, _desktop, _run, _anchors, _lastResult, History);
         _cardRun = new CardRun(text, status, runner, _desktop, _run, _anchors, _lastResult, _card, _latency);
         _undo = new UndoRun(text, status, _run, _anchors, History);
+        _submap = new SubmapSession(status, _desktop, hotkeys);
 
         _overlay.PromptChosen += prompt => _ = OnPromptChosenAsync(prompt);
         _overlay.CommandChosen += command => _ = OnCommandChosenAsync(command);
@@ -162,7 +164,7 @@ public sealed class AppController
     /// <summary>Environment.TickCount64 of the last hotkey or run; used to find out when the app has been idle for a while.</summary>
     public long LastActivityTick { get; private set; } = Environment.TickCount64;
 
-    public bool IsBusy => _run.Busy || _overlay.IsShown || _card.IsLive;
+    public bool IsBusy => _run.Busy || _overlay.IsShown || _card.IsLive || _submap.IsOpen;
 
     /// <summary>Raised on every hotkey, after <see cref="LastActivityTick"/> was updated.</summary>
     public event Action? Activity;
@@ -181,6 +183,7 @@ public sealed class AppController
     /// </summary>
     public void ShowNotice(string message, NoticeKind kind = NoticeKind.Error)
     {
+        _submap.Close(); // the notice takes the pill the submap's label is in
         if (_run.Busy || _card.IsLive)
         {
             AppLog.Info("Notice skipped: a run is active or a result is on screen.");
@@ -208,6 +211,7 @@ public sealed class AppController
     {
         MarkActivity();
         AppLog.Info("hotkey: overlay");
+        _submap.Close();
         _card.Close(); // a visible result card never blocks the next call
         if (_overlay.IsShown)
         {
@@ -297,6 +301,7 @@ public sealed class AppController
     {
         MarkActivity();
         AppLog.Info($"hotkey: prompt '{prompt.Name}'");
+        _submap.Close();
         _card.Close(); // a visible result card never blocks the next call; its temporary hotkeys are released before anything is read
         if (_run.Busy || _overlay.IsShown)
         {
@@ -313,6 +318,71 @@ public sealed class AppController
         _run.Busy = true;
         var session = new RunSession(target, _text.ProbeAsync(target!), anchor);
         _ = ExecuteAsync(session, prompt, restoreFocus: false, hotkeyTimestamp);
+    }
+
+    // ---- submaps ----
+
+    /// <summary>The submap that is open now, or null.</summary>
+    public SubmapDefinition? OpenSubmap => _submap.Current;
+
+    /// <summary>
+    /// The open hotkey of a submap: shows its label and takes its keys for its timeout. Pressed again while that submap is
+    /// open, it closes it. Ignored like the other hotkeys while a run is active or the overlay is up.
+    /// </summary>
+    public void OnSubmapHotkey(long hotkeyTimestamp, SubmapDefinition submap)
+    {
+        MarkActivity();
+        AppLog.Info($"hotkey: submap '{submap.Name}'");
+        var wasOpen = _submap.Current;
+        _submap.Close();
+        if (wasOpen is not null && wasOpen.Name.Equals(submap.Name, StringComparison.OrdinalIgnoreCase)) return;
+
+        _card.Close();
+        if (_run.Busy || _overlay.IsShown)
+        {
+            AppLog.Info($"Submap hotkey '{submap.Name}' ignored: busy.");
+            return;
+        }
+
+        var target = _desktop.CaptureTarget();
+        _submap.Open(submap, _anchors.ForPill(_anchors.ForTarget(target), target), OnSubmapKey);
+    }
+
+    /// <summary>
+    /// A key of the open submap, which has already closed: a prompt runs exactly as from its own hotkey, a command as
+    /// from the tray ("/undo" as the undo hotkey).
+    /// </summary>
+    private void OnSubmapKey(SubmapKey key, long hotkeyTimestamp)
+    {
+        AppLog.Info($"submap key {key.Key}: {key.Target}");
+        if (!key.IsCommand)
+        {
+            if (_prompts().FirstOrDefault(p => p.Name.Equals(key.Target, StringComparison.OrdinalIgnoreCase)) is { } prompt)
+            {
+                OnPromptHotkey(hotkeyTimestamp, prompt);
+            }
+            else
+            {
+                AppLog.Warn($"Submap key {key.Key}: no prompt named '{key.Target}'.");
+            }
+
+            return;
+        }
+
+        if (key.CommandName.Equals(CommandNames.Undo, StringComparison.OrdinalIgnoreCase))
+        {
+            OnUndoHotkey(hotkeyTimestamp);
+            return;
+        }
+
+        var command = _commands().FirstOrDefault(c => c.Name.Equals(key.CommandName, StringComparison.OrdinalIgnoreCase));
+        if (command is null || !command.Enabled)
+        {
+            AppLog.Info($"Submap key {key.Key}: command {key.Target} is {(command is null ? "unknown" : "not available now")}.");
+            return;
+        }
+
+        _desktop.Post(command.Run);
     }
 
     // ---- overlay flow ----
@@ -418,6 +488,7 @@ public sealed class AppController
     public void CopyLastResult()
     {
         AppLog.Info("tray: copy last result");
+        _submap.Close();
         _lastResult.Copy(Anchor.Resolve(null, OverlayPosition.Mouse), showPill: !_run.Busy && !_card.IsLive);
     }
 
@@ -426,7 +497,8 @@ public sealed class AppController
     /// <summary>A click on the pill: closes a card, or cancels a run that is still reading or waiting.</summary>
     private void OnStatusCancelRequested()
     {
-        if (_card.IsLive) _card.Close();
+        if (_submap.IsOpen) _submap.Close();
+        else if (_card.IsLive) _card.Close();
         else _run.Cancel();
     }
 
@@ -436,6 +508,7 @@ public sealed class AppController
     /// </summary>
     public void ReleaseResultHotkeys()
     {
+        _submap.Close(); // an open submap closes on a reload; it is not opened again
         _card.ReleaseForReload();
         _run.ReleaseForReload();
         _lastResult.ReleaseForReload();
@@ -459,6 +532,7 @@ public sealed class AppController
     {
         MarkActivity();
         AppLog.Info("hotkey: undo");
+        _submap.Close();
         _card.Close();
         if (_run.Busy || _overlay.IsShown)
         {

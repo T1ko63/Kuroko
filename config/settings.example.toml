@@ -106,6 +106,28 @@ fallback_provider = ""
 [mods]
 
 
+# Submaps: one hotkey opens a small set of plain keys for a moment (like a leader key). While the submap is open,
+# the pill shows its label and each listed key runs its prompt (as its own hotkey would) or its /command (as the
+# tray does). Esc or the timeout closes it; keys that are not listed type as usual. One [submaps.<name>] per submap:
+#   open    = hotkey that opens it ($mods work; pressing it again closes the submap)
+#   label   = text in the pill (default: the name)
+#   timeout = milliseconds it stays open, 100-60000 (default 2000)
+#   keys    = key = target. Keys without modifiers (P, 5, F5, Space, "<", "ü", 0xE2), not Esc. Target: a prompt name
+#             from prompts.toml, or /undo, /copy, /prompts, /settings, /folder, /reload, /keys, /test, /autostart, /about, /quit.
+# None by default. Example (the prompts must exist in prompts.toml):
+#   [submaps.tone]
+#   open = "$replace+^"
+#   label = "Ton: P professionell · L locker · K kürzer · A ausführlicher"
+#   timeout = 3000
+#   keys = { P = "Professioneller", L = "Lockerer", K = "Kürzen", A = "Ausführlicher" }
+#
+#   [submaps.tools]
+#   open = "Ctrl+Alt+Shift+K"
+#   label = "U undo · C copy last result · R reload"
+#   keys = { U = "/undo", C = "/copy", R = "/reload" }
+[submaps]
+
+
 [appearance]
 placeholder = "Kuroko"      # grey text in the empty search field; "" = none
 transparency = 50           # 0-100 percent: 0 = opaque, 100 = fully transparent

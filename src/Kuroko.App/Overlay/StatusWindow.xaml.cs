@@ -210,6 +210,19 @@ public partial class StatusWindow : Window, IStatusView
     }
 
     /// <summary>
+    /// The label of an open submap: plain text without a bar that stays until <see cref="HideStatus"/>. A click raises
+    /// <see cref="CancelRequested"/>, like on a progress pill, so the submap closes with it.
+    /// </summary>
+    public void ShowSubmap(string text, Anchor anchor)
+    {
+        EndAction();
+        LeaveResultMode();
+        _isProgress = true;
+        _autoHide.Stop();
+        Present(text, anchor, showBar: false);
+    }
+
+    /// <summary>
     /// An error pill that offers something the user can still do, through a temporary hotkey the caller holds (copy an
     /// answer that could not be pasted). It stays longer than a plain error; <see cref="ActionEnded"/> tells the caller
     /// when to release the hotkey.

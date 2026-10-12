@@ -18,6 +18,9 @@ internal sealed class TomlReader
 
     public void Issue(int? line, string message, bool isError, bool show = false) => _issues.Add(new ConfigIssue(_file, line, message, isError, show));
 
+    /// <summary>Errors reported so far, to see whether reading one block added any.</summary>
+    public int ErrorCount => _issues.Count(i => i.IsError);
+
     /// <summary>
     /// First 1-based line in [from, to] that defines <paramref name="key"/> (or a table header containing it).
     /// </summary>

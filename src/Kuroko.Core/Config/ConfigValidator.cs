@@ -3,7 +3,7 @@ using Kuroko.Core.Prompts;
 
 namespace Kuroko.Core.Config;
 
-/// <summary>Checks that need both files at once: providers named by prompts, hotkeys used twice.</summary>
+/// <summary>Checks that need both files at once: providers named by prompts, hotkeys used twice, prompts named by submaps.</summary>
 public static class ConfigValidator
 {
     /// <param name="keyLayout">Resolves hotkey keys written as a character; null uses <see cref="KeyLayouts.Current"/>.</param>
@@ -64,6 +64,28 @@ public static class ConfigValidator
         foreach (var prompt in prompts.Where(p => p.Hotkey is not null))
         {
             Claim(prompt.Hotkey!, $"prompt '{prompt.Name}'", PromptsLoader.FileName, LineOf(prompt.Name));
+        }
+
+        foreach (var submap in settings.Submaps) Claim(submap.Open, $"submap '{submap.Name}'", SettingsLoader.FileName, submap.Line);
+
+        foreach (var submap in settings.Submaps)
+        {
+            foreach (var key in submap.Keys)
+            {
+                // A configured hotkey without modifiers (F1-F24) is already registered, so the submap could never take that key.
+                if (owners.TryGetValue(new HotkeyGesture(HotkeyModifiers.None, key.VirtualKey), out var owner))
+                {
+                    issues.Add(new ConfigIssue(SettingsLoader.FileName, key.Line,
+                        $"[submaps.{submap.Name}] key '{key.Key}' is also the hotkey of {owner}; give one of them another key", IsError: true));
+                }
+
+                if (!key.IsCommand && !prompts.Any(p => p.Name.Equals(key.Target, StringComparison.OrdinalIgnoreCase)))
+                {
+                    issues.Add(new ConfigIssue(SettingsLoader.FileName, key.Line,
+                        $"[submaps.{submap.Name}] key '{key.Key}' runs '{key.Target}', but prompts.toml has no prompt of that name "
+                        + $"(prompts: {string.Join(", ", prompts.Select(p => p.Name))}; a command starts with /, e.g. \"/undo\")", IsError: true));
+                }
+            }
         }
 
         return issues;

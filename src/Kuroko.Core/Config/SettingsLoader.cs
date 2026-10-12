@@ -29,7 +29,7 @@ public static class SettingsLoader
     {
         "overlay_hotkey", "marker_start", "marker_end", "theme", "autostart", "overlay_position", "language",
         "idle_trim_seconds", "default_provider", "fallback_provider", "providers", "accent", "undo_hotkey", "undo_history",
-        "appearance", "mods", "result_copy_hotkey", "result_position", "result_font_size",
+        "appearance", "mods", "submaps", "result_copy_hotkey", "result_position", "result_font_size",
         "result_width", "result_max_height", "result_min_height", "result_fixed_position", "result_screen_margin",
         "overlay_fixed_position", "overlay_screen_margin", "overlay_width", "overlay_min_height", "overlay_max_height", "overlay_font_size",
         "pill_position", "pill_fixed_position", "pill_screen_margin", "pill_min_width", "pill_max_width", "pill_min_height", "pill_font_size", "pill_duration",
@@ -150,6 +150,7 @@ public static class SettingsLoader
         }
 
         var appearance = AppearanceLoader.Read(root, reader, fontExists);
+        var submaps = ReadSubmaps(root, reader, layout, mods);
 
         var providers = new Dictionary<string, ProviderSettings>(StringComparer.OrdinalIgnoreCase);
         if (root.TryGetValue("providers", out var providersValue))
@@ -204,6 +205,7 @@ public static class SettingsLoader
         {
             Appearance = appearance,
             Mods = mods,
+            Submaps = submaps,
             PillPosition = pillPosition,
             PillFixedPosition = pillFixedPosition,
             PillScreenMargin = pillScreenMargin,
@@ -246,19 +248,24 @@ public static class SettingsLoader
         => gesture.Modifiers == HotkeyModifiers.Ctrl && gesture.VirtualKey is 'A' or 'C' or 'V';
 
     /// <summary>The hotkey with its [mods] variables filled in, so everything that uses it later sees plain modifiers.</summary>
+    /// <param name="line">Finds the line of a key; null looks it up in the whole file.</param>
+    /// <param name="label">Names the setting in messages; <paramref name="key"/> when null.</param>
     private static string ReadHotkey(
-        TomlTable root, TomlReader reader, string key, string fallback, IKeyLayout? layout, IReadOnlyDictionary<string, HotkeyModifiers> mods)
+        TomlTable root, TomlReader reader, string key, string fallback, IKeyLayout? layout, IReadOnlyDictionary<string, HotkeyModifiers> mods,
+        Func<string, int?>? line = null, string? label = null)
     {
-        var text = reader.Choice(root, key, fallback, null);
+        line ??= k => reader.LineOf(k);
+        label ??= key;
+        var text = reader.Choice(root, key, fallback, null, line);
         if (!HotkeyGesture.TryParse(text, mods, layout, out var gesture, out var error))
         {
-            reader.Issue(reader.LineOf(key), $"{key}: {error}", isError: true);
+            reader.Issue(line(key), $"{label}: {error}", isError: true);
             return text;
         }
 
         if (gesture.AltGrWarning(layout) is { } warning)
         {
-            reader.Issue(reader.LineOf(key), $"{key}: {warning}", isError: false, show: true);
+            reader.Issue(line(key), $"{label}: {warning}", isError: false, show: true);
         }
 
         return HotkeyMods.TryExpand(text, mods, out var expanded, out _) ? expanded : text;
@@ -311,6 +318,138 @@ public static class SettingsLoader
 
         return mods;
     }
+
+    private static readonly HashSet<string> SubmapFields = new(StringComparer.Ordinal) { "open", "label", "timeout", "keys" };
+
+    /// <summary>
+    /// [submaps.name]: open (hotkey), label (pill text, the name when missing), timeout (ms) and keys (key = target). Prompt
+    /// targets are checked against prompts.toml later (<see cref="ConfigValidator"/>); "/command" targets are checked here.
+    /// </summary>
+    private static List<SubmapDefinition> ReadSubmaps(TomlTable root, TomlReader reader, IKeyLayout? layout, IReadOnlyDictionary<string, HotkeyModifiers> mods)
+    {
+        var submaps = new List<SubmapDefinition>();
+        if (!root.TryGetValue("submaps", out var value)) return submaps;
+        if (value is not TomlTable all)
+        {
+            reader.Issue(reader.LineOf("submaps"), "submaps must contain tables: [submaps.name] with open, label, timeout and keys", isError: true);
+            return submaps;
+        }
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, raw) in all)
+        {
+            var block = reader.Block($"[submaps.{name}]") ?? reader.Block($"[submaps.\"{name}\"]");
+            int? Line(string key) => block is { } b ? reader.LineOf(key, b.Start, b.End) ?? b.Start : reader.LineOf(name);
+            void Error(int? line, string message) => reader.Issue(line, $"[submaps.{name}] {message}", isError: true);
+
+            if (raw is not TomlTable table)
+            {
+                reader.Issue(reader.LineOf(name), $"submaps.{name} must be a table ([submaps.{name}])", isError: true);
+                continue;
+            }
+
+            if (!IsValidSubmapName(name))
+            {
+                Error(block?.Start ?? reader.LineOf(name), $"name '{name}' is not allowed: use letters, digits, _ and -.{HotkeyGesture.DocsHint}");
+                continue;
+            }
+
+            if (!names.Add(name))
+            {
+                Error(block?.Start, $"name '{name}' is used twice (names are not case-sensitive)");
+                continue;
+            }
+
+            foreach (var key in table.Keys.Where(k => !SubmapFields.Contains(k)))
+            {
+                reader.Issue(Line(key), $"[submaps.{name}] unknown setting '{key}'{MisplacedHint(key)}", isError: false);
+            }
+
+            var errorsBefore = reader.ErrorCount;
+            var open = string.Empty;
+            if (!table.ContainsKey("open"))
+            {
+                Error(block?.Start, "open is missing: the hotkey that opens the submap, e.g. open = \"Ctrl+Alt+T\"");
+            }
+            else
+            {
+                open = ReadHotkey(table, reader, "open", string.Empty, layout, mods, Line, $"[submaps.{name}] open");
+            }
+
+            var label = reader.Choice(table, "label", name, null, Line).Trim();
+            if (label.Length == 0)
+            {
+                Error(Line("label"), "label must not be empty: it is the text the pill shows while the submap is open (leave it out to show the name)");
+            }
+
+            var timeout = reader.Int(table, "timeout", SubmapDefinition.DefaultTimeoutMs, Line);
+            if (timeout is < SubmapDefinition.MinTimeoutMs or > SubmapDefinition.MaxTimeoutMs)
+            {
+                Error(Line("timeout"), $"timeout must be between {SubmapDefinition.MinTimeoutMs} and {SubmapDefinition.MaxTimeoutMs} (milliseconds)");
+            }
+
+            var keys = ReadSubmapKeys(name, table, reader, layout, block, Line);
+            if (reader.ErrorCount == errorsBefore) submaps.Add(new SubmapDefinition(name, open, label, timeout, keys, block?.Start));
+        }
+
+        return submaps;
+    }
+
+    private static List<SubmapKey> ReadSubmapKeys(
+        string name, TomlTable table, TomlReader reader, IKeyLayout? layout, (int Start, int End)? block, Func<string, int?> line)
+    {
+        var keys = new List<SubmapKey>();
+        void Error(int? at, string message) => reader.Issue(at, $"[submaps.{name}] {message}", isError: true);
+
+        if (!table.TryGetValue("keys", out var value) || value is not TomlTable entries || entries.Count == 0)
+        {
+            Error(table.ContainsKey("keys") ? line("keys") : block?.Start,
+                "keys must list at least one key and what it runs, e.g. keys = { P = \"Professioneller\", U = \"/undo\" }");
+            return keys;
+        }
+
+        // keys = { … } stands on one line; a [submaps.name.keys] table has one line per key.
+        var keysBlock = reader.Block($"[submaps.{name}.keys]");
+        int? KeyLine(string key) => keysBlock is { } kb
+            ? reader.LineOf(key, kb.Start, kb.End) ?? reader.LineOf($"\"{key}\"", kb.Start, kb.End) ?? kb.Start
+            : line("keys");
+
+        var seen = new Dictionary<int, string>();
+        foreach (var (key, raw) in entries)
+        {
+            if (!HotkeyGesture.TryParseSubmapKey(key, layout, out var vk, out var error))
+            {
+                Error(KeyLine(key), error);
+                continue;
+            }
+
+            if (seen.TryGetValue(vk, out var other))
+            {
+                Error(KeyLine(key), $"key '{key}' is listed twice (also as '{other}')");
+                continue;
+            }
+
+            seen[vk] = key;
+            var target = (raw as string)?.Trim() ?? string.Empty;
+            if (target.Length == 0 || target == "/")
+            {
+                Error(KeyLine(key), $"key '{key}' must name a prompt from prompts.toml or a command such as \"/undo\"");
+                continue;
+            }
+
+            if (target.StartsWith('/') && !CommandNames.IsKnown(target[1..]))
+            {
+                Error(KeyLine(key), $"key '{key}': unknown command '{target}' (commands: {string.Join(", ", CommandNames.All.Select(c => "/" + c))})");
+                continue;
+            }
+
+            keys.Add(new SubmapKey(key, vk, target, KeyLine(key)));
+        }
+
+        return keys;
+    }
+
+    private static bool IsValidSubmapName(string name) => name.Length > 0 && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-');
 
     private static ProviderSettings? ReadProvider(string name, TomlTable table, TomlReader reader, Func<string, string?> getEnv, IKeyStore? keyStore)
     {
