@@ -13,6 +13,7 @@
 # key in your keyboard layout (Ctrl+Alt+ü, Ctrl+Alt+<, Ctrl+Alt+# on German; "++" ends a hotkey on the + key).
 # Only the key's own character: > or | (Shift/AltGr) is an error. On layouts with AltGr, Ctrl+Alt+<key> also takes
 # away the AltGr character of that key (Ctrl+Alt+Q = @ on German); the app warns about it.
+# Modifiers can also come from a variable of the [mods] table below: "$card+S" (see there).
 # All keys, codes and messages: docs/keybindings.md.
 
 # Global hotkey that opens the overlay.
@@ -93,6 +94,16 @@ default_provider = "gemini"
 # never more than one step, and never by local providers (their text stays on the PC unless their own block says otherwise).
 # A provider block can override it with its own fallback_provider ("" = no fallback for that provider).
 fallback_provider = ""
+
+
+# Modifier variables: a name for a modifier combination, used in any hotkey (here and in prompts.toml) as $name.
+# Change one line and every hotkey that uses it moves along. Names: letters, digits and _, not case-sensitive.
+# Values: modifiers only (Ctrl, Alt, Shift, Win), no key and no other variable. Empty by default.
+# Example:
+#   main = "Ctrl"            # "$main+Alt+K" is Ctrl+Alt+K, "$main+Shift+K" is Ctrl+Shift+K
+#   replace = "Shift+Alt"    # prompts that replace the text: "$replace+C"
+#   card = "Ctrl+Alt"        # prompts that show a card: "$card+S"
+[mods]
 
 
 [appearance]

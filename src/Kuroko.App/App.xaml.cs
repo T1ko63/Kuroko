@@ -455,13 +455,16 @@ public partial class App : Application
 
         void Register(string gesture, string label, Action<long> callback)
         {
+            var shown = gesture;
             try
             {
-                var parsed = HotkeyGesture.Parse(gesture);
+                // Prompt hotkeys may still hold [mods] variables ("$card+S"); settings hotkeys come already filled in.
+                var parsed = HotkeyGesture.Parse(gesture, settings.Mods, KeyLayouts.Current);
+                shown = parsed.ToString();
                 var result = _hotkeys.Register(parsed, callback);
                 if (result.Success)
                 {
-                    AppLog.Info($"Hotkey registered: {parsed} ({label})");
+                    AppLog.Info($"Hotkey registered: {shown} ({label})");
                     return;
                 }
 
@@ -472,7 +475,7 @@ public partial class App : Application
                 AppLog.Error($"Hotkey '{gesture}' ({label}) is invalid: {ex.Message}");
             }
 
-            failures.Add(Loc.Get("err_hotkey_in_use", gesture, label));
+            failures.Add(Loc.Get("err_hotkey_in_use", shown, label));
         }
 
         Register(settings.OverlayHotkey, "Overlay", _controller!.OnOverlayHotkey);

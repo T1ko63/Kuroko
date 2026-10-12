@@ -36,7 +36,19 @@ public static class ConfigValidator
         var owners = new Dictionary<HotkeyGesture, string>();
         void Claim(string hotkey, string owner, string file, int? line)
         {
-            if (!HotkeyGesture.TryParse(hotkey, layout, out var gesture, out _)) return; // syntax errors are reported by the loaders
+            // Plain hotkeys were checked by the loaders; "$name" prompt hotkeys are first checked here, against [mods].
+            var usesMods = HotkeyMods.UsesVariables(hotkey);
+            if (!HotkeyGesture.TryParse(hotkey, settings.Mods, layout, out var gesture, out var error))
+            {
+                if (usesMods) issues.Add(new ConfigIssue(file, line, $"{owner}: {error}", IsError: true));
+                return;
+            }
+
+            if (usesMods && gesture.AltGrWarning(layout) is { } warning)
+            {
+                issues.Add(new ConfigIssue(file, line, $"{owner}: {warning}", IsError: false, Show: true));
+            }
+
             if (owners.TryGetValue(gesture, out var existing))
             {
                 issues.Add(new ConfigIssue(file, line, $"hotkey {gesture.ToString(layout)} is used twice: {existing} and {owner}", IsError: true));

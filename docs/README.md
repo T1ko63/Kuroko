@@ -362,7 +362,8 @@ Alle Hotkeys (`overlay_hotkey`, `undo_hotkey`, `result_copy_hotkey` und die der 
 vorkommen, sonst meldet die App den Fehler mit Datei und Zeile. Ein Beispiel für einen Overlay-Prompt steht in `config/prompts.example.toml`.
 
 Tasten dürfen als das Zeichen auf der Taste im aktiven Tastaturlayout geschrieben werden (`Ctrl+Alt+ü`, `Ctrl+Alt+<`, `Ctrl+Alt++`),
-mit Namen (`Num1`, `PrintScreen`, `VolumeUp`) oder als Tastencode (`Ctrl+Alt+0xE2`). Alle Tasten, die Codetabelle für deutsche
+mit Namen (`Num1`, `PrintScreen`, `VolumeUp`) oder als Tastencode (`Ctrl+Alt+0xE2`). Modifier-Kombinationen bekommen in `[mods]` einen Namen
+(`card = "Ctrl+Alt"`) und werden in jedem Hotkey als `$card+S` geschrieben. Alle Tasten, die Codetabelle für deutsche
 Tastaturen, die AltGr-Falle (`Ctrl+Alt+Q` nimmt das `@` weg) und alle Meldungen: [`keybindings.md`](keybindings.md) (englisch).
 
 ## Datenschutz
