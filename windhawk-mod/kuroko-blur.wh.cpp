@@ -2,7 +2,7 @@
 // @id              kuroko-blur
 // @name            Kuroko Blur
 // @description     Blur (WindhawkBlur-style) and freely rounded corners (any radius, also on Acrylic/Mica) for the Kuroko overlay, each with its own switch
-// @version         0.2.0
+// @version         0.2.1
 // @author          T
 // @include         Kuroko.exe
 // @include         dwm.exe
@@ -1509,6 +1509,10 @@ void HideHelper(HWND target) {
     }
 }
 
+bool IsTopmost(HWND hwnd) {
+    return (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
+}
+
 // Puts the helper window directly below the Kuroko window, with the same bounds and a matching rounded clip.
 void Sync(HWND target) {
     Kind kind = ClassifyWindow(target);
@@ -1553,14 +1557,25 @@ void Sync(HWND target) {
     }
 
     // The helper must be topmost exactly when the Kuroko window is; then it is placed right below it.
-    bool targetTopmost = (GetWindowLongPtrW(target, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
-    bool helperTopmost = (GetWindowLongPtrW(helper.hwnd, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
-    if (targetTopmost != helperTopmost) {
+    bool targetTopmost = IsTopmost(target);
+    if (targetTopmost != IsTopmost(helper.hwnd)) {
         SetWindowPos(helper.hwnd, targetTopmost ? HWND_TOPMOST : HWND_NOTOPMOST, rect.left, rect.top,
                      width, height, SWP_NOACTIVATE);
     }
     SetWindowPos(helper.hwnd, target, rect.left, rect.top, width, height,
                  SWP_NOACTIVATE | SWP_SHOWWINDOW);
+
+    if (targetTopmost && !IsTopmost(helper.hwnd)) {
+        // Seen with the helper of the status pill / result card: Windows accepted HWND_TOPMOST but left the helper in
+        // the normal band, so the blur sat behind the other apps and the card looked unblurred. Leaving the band and
+        // entering it again from the top of the z-order does take; then the helper goes right below the window again.
+        constexpr UINT zOnly = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+        SetWindowPos(helper.hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, zOnly);
+        SetWindowPos(helper.hwnd, HWND_TOP, 0, 0, 0, 0, zOnly);
+        SetWindowPos(helper.hwnd, HWND_TOPMOST, 0, 0, 0, 0, zOnly);
+        SetWindowPos(helper.hwnd, target, 0, 0, 0, 0, zOnly);
+        Wh_Log(L"Helper was not topmost; second attempt: %s", IsTopmost(helper.hwnd) ? L"ok" : L"failed");
+    }
 }
 
 void CALLBACK OnWinEvent(HWINEVENTHOOK, DWORD event, HWND hwnd, LONG idObject, LONG idChild, DWORD,
@@ -1640,6 +1655,15 @@ bool ShutdownQueue(winrt::Windows::System::DispatcherQueueController const& queu
 DWORD WINAPI WorkerMain(void*) {
     // Window bounds are physical pixels, and so is everything positioned from them.
     SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
+    // The helpers never take text input. Without this, the thread's default IME window ends up owned by a helper and
+    // is dragged along in its z-order. Only this thread: Kuroko's own windows keep their IME.
+    if (HMODULE imm = LoadLibraryExW(L"imm32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32)) {
+        using ImmDisableIME_t = BOOL(WINAPI*)(DWORD);
+        if (auto disable = reinterpret_cast<ImmDisableIME_t>(GetProcAddress(imm, "ImmDisableIME"))) {
+            disable(GetCurrentThreadId());
+        }
+    }
 
     MSG msg;
     PeekMessageW(&msg, nullptr, WM_USER, WM_USER, PM_NOREMOVE);  // creates this thread's message queue
