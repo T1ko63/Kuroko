@@ -244,6 +244,10 @@ internal sealed class FakeStatus : IStatusView
 
     public string CardText { get; private set; } = string.Empty;
 
+    public PillLayout? PillLayout { get; private set; }
+
+    public void SetPillLayout(PillLayout layout) => PillLayout = layout;
+
     public void SetResultSize(double width, double minHeight, double maxHeight)
     {
     }

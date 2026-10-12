@@ -52,7 +52,8 @@ internal sealed class CardRun(
         {
             if (restoreFocus && !await _desktop.RestoreFocusAsync(target))
             {
-                _status.ShowError(Loc.Get("err_focus"), session.Anchor);
+                // A card prompt's pill sits where its card would appear.
+                _status.ShowError(Loc.Get("err_focus"), _anchors.ForResult(target, null, session.Anchor));
                 return;
             }
 

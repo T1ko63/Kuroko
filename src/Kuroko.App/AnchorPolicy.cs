@@ -27,24 +27,44 @@ internal sealed class AnchorPolicy
     /// <summary>result_screen_margin: distance of the card to the screen edge, in device-independent pixels.</summary>
     public double ResultScreenMargin { get; set; } = AppSettings.DefaultResultScreenMargin;
 
-    /// <summary>Where the overlay and the pills go for the current target: a fixed place, or at the text cursor / mouse.</summary>
+    /// <summary>pill_position: where the status pill goes (follow = where the picker opens).</summary>
+    public PillPlacement PillPlacement { get; set; } = PillPlacement.Follow;
+
+    /// <summary>pill_fixed_position: used when <see cref="PillPlacement"/> is <see cref="PillPlacement.Fixed"/>.</summary>
+    public CardSpot PillSpot { get; set; } = CardSpot.TopThird;
+
+    /// <summary>Where the overlay goes for the current target (and the pills with pill_position = "follow"): a fixed place, or at the text cursor / mouse.</summary>
     public Anchor ForTarget(TargetInfo? target)
         => Position == OverlayPosition.Fixed
             ? Anchor.ResolveSpot(target, OverlaySpot, OverlayScreenMargin)
             : Anchor.Resolve(target, Position) with { MarginDip = OverlayScreenMargin };
 
     /// <summary>Moves a mouse-based anchor to the text cursor if UI Automation found it.</summary>
-    public Anchor Refine(Anchor anchor, TargetInfo? target, FocusProbe probe, OverlayPosition? position = null)
-        => (position ?? Position) == OverlayPosition.Caret && target?.CaretScreenPos is null && probe.Info?.CaretPoint is { } caret
+    public Anchor Refine(Anchor anchor, TargetInfo? target, FocusProbe? probe, OverlayPosition? position = null)
+        => (position ?? Position) == OverlayPosition.Caret && target?.CaretScreenPos is null && probe?.Info?.CaretPoint is { } caret
             ? Anchor.AtCaret(caret)
             : anchor;
 
     /// <summary>Where the card opens: a fixed place, like the picker (follow), at the text cursor, or at the mouse.</summary>
-    public Anchor ForResult(TargetInfo target, FocusProbe probe, Anchor pickerAnchor) => ResultPlacement switch
+    public Anchor ForResult(TargetInfo? target, FocusProbe? probe, Anchor pickerAnchor) => ResultPlacement switch
     {
         ResultPlacement.Fixed => Anchor.ResolveSpot(target, ResultSpot, ResultScreenMargin),
         ResultPlacement.Caret => Refine(Anchor.Resolve(target, OverlayPosition.Caret), target, probe, OverlayPosition.Caret) with { MarginDip = ResultScreenMargin },
         ResultPlacement.Mouse => Anchor.Resolve(target, OverlayPosition.Mouse) with { MarginDip = ResultScreenMargin },
         _ => Refine(pickerAnchor, target, probe) with { MarginDip = ResultScreenMargin },
+    };
+
+    /// <summary>
+    /// Where a pill goes, given where the picker opened (or would open) for this target: there (follow), at the text cursor,
+    /// at the mouse, at a fixed place (with overlay_screen_margin) or where the card would appear. A card prompt's pill does
+    /// not come here: it sits where its card will appear (<see cref="ForResult"/>), because it turns into the card.
+    /// </summary>
+    public Anchor ForPill(Anchor pickerAnchor, TargetInfo? target, FocusProbe? probe = null) => PillPlacement switch
+    {
+        PillPlacement.Fixed => Anchor.ResolveSpot(target, PillSpot, OverlayScreenMargin),
+        PillPlacement.Caret => Refine(Anchor.Resolve(target, OverlayPosition.Caret), target, probe, OverlayPosition.Caret) with { MarginDip = OverlayScreenMargin },
+        PillPlacement.Mouse => Anchor.Resolve(target, OverlayPosition.Mouse) with { MarginDip = OverlayScreenMargin },
+        PillPlacement.Card => ForResult(target, probe, pickerAnchor),
+        _ => pickerAnchor,
     };
 }

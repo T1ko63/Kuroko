@@ -132,6 +132,23 @@ public sealed class AppController
     /// <summary>result_width, result_min_height and result_max_height: size of the card; used for the next card that opens.</summary>
     public void SetResultSize(double width, double minHeight, double maxHeight) => _status.SetResultSize(width, minHeight, maxHeight);
 
+    /// <summary>pill_position: where the status pill appears.</summary>
+    public PillPlacement PillPlacement
+    {
+        get => _anchors.PillPlacement;
+        set => _anchors.PillPlacement = value;
+    }
+
+    /// <summary>pill_fixed_position.</summary>
+    public CardSpot PillSpot
+    {
+        get => _anchors.PillSpot;
+        set => _anchors.PillSpot = value;
+    }
+
+    /// <summary>pill_min_width, pill_max_width, pill_min_height, pill_font_size and pill_duration; used for the next pill.</summary>
+    public void SetPillLayout(PillLayout layout) => _status.SetPillLayout(layout);
+
     /// <summary>Environment.TickCount64 of the last hotkey or run; used to find out when the app has been idle for a while.</summary>
     public long LastActivityTick { get; private set; } = Environment.TickCount64;
 
@@ -161,7 +178,7 @@ public sealed class AppController
         }
 
         AppLog.Info($"Notice: {message}");
-        var anchor = Anchor.Resolve(null, OverlayPosition.Mouse);
+        var anchor = _anchors.ForPill(Anchor.Resolve(null, OverlayPosition.Mouse), null);
         switch (kind)
         {
             case NoticeKind.Progress:
@@ -197,7 +214,7 @@ public sealed class AppController
         // Read-only targets are fine here: whether that matters is decided once a prompt is chosen (overlay output works, replace does not).
         var target = _desktop.CaptureTarget();
         var anchor = _anchors.ForTarget(target);
-        if (Reject(_text.PreCheck(target, null, CaptureMode.Display), target, anchor)) return;
+        if (Reject(_text.PreCheck(target, null, CaptureMode.Display), target, _anchors.ForPill(anchor, target))) return;
 
         _run.Busy = true;
 
@@ -234,7 +251,7 @@ public sealed class AppController
         _session = null;
         _overlay.HideOverlay();
         _run.Busy = false;
-        _status.ShowError(Unexpected(ex), session.Anchor);
+        _status.ShowError(Unexpected(ex), _anchors.ForPill(session.Anchor, session.Target));
     }
 
     private async Task ShowOverlayCoreAsync(RunSession session, long hotkeyTimestamp)
@@ -279,7 +296,9 @@ public sealed class AppController
 
         var target = _desktop.CaptureTarget();
         var anchor = _anchors.ForTarget(target);
-        if (Reject(_text.PreCheck(target, null, ModeOf(prompt)), target, anchor)) return;
+        // A card prompt's pill sits where its card would appear.
+        var pillAnchor = prompt.Output == PromptOutput.Overlay ? _anchors.ForResult(target, null, anchor) : _anchors.ForPill(anchor, target);
+        if (Reject(_text.PreCheck(target, null, ModeOf(prompt)), target, pillAnchor)) return;
 
         _run.Busy = true;
         var session = new RunSession(target, _text.ProbeAsync(target!), anchor);
@@ -308,7 +327,7 @@ public sealed class AppController
 
         // A password field can only be recognised by UIA, i.e. after the overlay is already up. A read-only field is not
         // rejected here (overlay output works there); a replace prompt chosen for it is refused by the capture later.
-        if (Reject(_text.PreCheck(session.Target, probe, CaptureMode.Display), session.Target, session.Anchor))
+        if (Reject(_text.PreCheck(session.Target, probe, CaptureMode.Display), session.Target, _anchors.ForPill(session.Anchor, session.Target, probe)))
         {
             _overlay.HideOverlay();
             _session = null;
@@ -439,10 +458,10 @@ public sealed class AppController
 
         var target = _desktop.CaptureTarget();
         var anchor = _anchors.ForTarget(target);
-        if (Reject(_text.PreCheck(target, null), target, anchor)) return;
+        if (Reject(_text.PreCheck(target, null), target, _anchors.ForPill(anchor, target))) return;
         if (History.Count == 0)
         {
-            _status.ShowInfo(Loc.Get("undo_nothing"), anchor);
+            _status.ShowInfo(Loc.Get("undo_nothing"), _anchors.ForPill(anchor, target));
             return;
         }
 
@@ -452,6 +471,7 @@ public sealed class AppController
 
     // ---- helpers ----
 
+    /// <param name="anchor">Where the error pill goes (see <see cref="AnchorPolicy.ForPill"/>).</param>
     private bool Reject(CaptureResult? failure, TargetInfo? target, Anchor anchor)
     {
         if (failure is null) return false;

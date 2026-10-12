@@ -21,7 +21,7 @@ internal sealed class UndoRun(ITextAccess text, IStatusView status, RunState run
         try
         {
             var probe = await session.Probe;
-            session = session with { Anchor = anchors.Refine(session.Anchor, target, probe) };
+            session = session with { Anchor = anchors.ForPill(anchors.Refine(session.Anchor, target, probe), target, probe) };
 
             // Read what is in the field right now (selection, otherwise the whole field), exactly as for a normal run.
             var captured = await Task.Run(() => text.CaptureAsync(target, ReadStrategy.Auto, probe, ct: cts.Token));

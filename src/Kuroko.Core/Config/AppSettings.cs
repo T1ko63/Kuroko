@@ -32,6 +32,40 @@ public sealed record AppSettings(
     double OverlayMaxHeight = AppSettings.DefaultOverlayMaxHeight,
     double OverlayFontSize = AppSettings.DefaultOverlayFontSize)
 {
+    /// <summary>
+    /// Where the status pill appears (pill_position): "follow" (where the prompt picker opens), "caret", "mouse", "fixed"
+    /// (at pill_fixed_position) or "card" (where the result card appears). For card prompts it always sits where the card will appear.
+    /// </summary>
+    public string PillPosition { get; init; } = DefaultPillPosition;
+
+    /// <summary>The fixed place of the pill (pill_fixed_position).</summary>
+    public string PillFixedPosition { get; init; } = DefaultPillFixedPosition;
+
+    /// <summary>Width limits, minimum height and font size of the pill in device-independent pixels.</summary>
+    public double PillMinWidth { get; init; } = DefaultPillMinWidth;
+
+    public double PillMaxWidth { get; init; } = DefaultPillMaxWidth;
+
+    public double PillMinHeight { get; init; } = DefaultPillMinHeight;
+
+    public double PillFontSize { get; init; } = DefaultPillFontSize;
+
+    /// <summary>How long an info pill stays, in seconds (pill_duration). Errors and pills with an action keep their own times.</summary>
+    public double PillDuration { get; init; } = DefaultPillDuration;
+
+    public const string DefaultPillPosition = "follow";
+    public const string DefaultPillFixedPosition = "top-third";
+    public const double DefaultPillMinWidth = 200;
+    public const double DefaultPillMaxWidth = 420;
+    public const double MinPillWidth = 100;
+    public const double MaxPillWidth = 1600;
+    public const double DefaultPillMinHeight = 0;
+    public const double MaxPillMinHeight = 400;
+    public const double DefaultPillFontSize = 13;
+    public const double DefaultPillDuration = 2;
+    public const double MinPillDuration = 0.5;
+    public const double MaxPillDuration = 60;
+
     /// <summary>Look of the windows ([appearance] in settings.toml). Defaults when the block is missing.</summary>
     public AppearanceSettings Appearance { get; init; } = AppearanceSettings.Default;
 

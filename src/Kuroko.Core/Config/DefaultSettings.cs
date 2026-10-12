@@ -52,6 +52,22 @@ public static class DefaultSettings
             result_min_height = {{AppSettings.DefaultResultMinHeight}}
             result_max_height = {{AppSettings.DefaultResultMaxHeight}}
 
+            # Wo die Pille (Fortschritt, Hinweise, Fehler) erscheint: "follow" (dort, wo sich die Prompt-Auswahl öffnet, Standard)
+            # | "caret" (am Textcursor, sonst an der Maus) | "mouse" (an der Maus) | "fixed" (an pill_fixed_position, Abstand overlay_screen_margin)
+            # | "card" (dort, wo die Ergebnis-Karte erscheint, siehe result_position). Bei Prompts mit Ergebnis-Karte steht die Pille immer am Platz der Karte.
+            pill_position = "{{AppSettings.DefaultPillPosition}}"
+            # Der feste Platz: dieselben Werte wie bei result_fixed_position.
+            pill_fixed_position = "{{AppSettings.DefaultPillFixedPosition}}"
+            # Breite der Pille in Pixeln: mindestens pill_min_width, höchstens pill_max_width (je 100 bis 1600); längerer Text bricht um.
+            pill_min_width = {{AppSettings.DefaultPillMinWidth}}
+            pill_max_width = {{AppSettings.DefaultPillMaxWidth}}
+            # Mindesthöhe in Pixeln, 0 bis 400 (0 = so hoch wie der Text; sonst steht der Text mittig, und die Pille wächst, wenn er umbricht).
+            pill_min_height = {{AppSettings.DefaultPillMinHeight}}
+            # Schriftgröße der Pille, 8 bis 32.
+            pill_font_size = {{AppSettings.DefaultPillFontSize}}
+            # So viele Sekunden steht ein Hinweis wie „Rückgängig gemacht“ (0.5 bis 60). Fehler bleiben 5 s, die Pille nach einem gescheiterten Einfügen 15 s.
+            pill_duration = {{AppSettings.DefaultPillDuration}}
+
             # Marker für einmalige Anweisungen im Text, z. B.:  <<kürzer und freundlicher>> Hallo ...
             # Sie wirken in Prompts mit mode = "universal" (siehe prompts.toml): ohne Marker ist der ganze Text ein Auftrag,
             # mit Marker wird dessen Inhalt auf den übrigen Text angewendet. Der Marker steht nie im Ergebnis.
@@ -63,7 +79,7 @@ public static class DefaultSettings
             # Akzentfarbe für Textcursor, Textmarkierung und Fortschrittslinie (die Auswahlzeile färbt [appearance] selection): "none" (neutral, Standard) | "system" (Windows-Akzent) | Hex wie "#3B82F6".
             accent = "none"
             overlay_position = "caret"  # caret (am Textcursor, sonst Maus) | mouse | fixed (fester Platz, siehe unten)
-            # Prompt-Auswahl (und Fortschrittspille): fester Platz und Größe wie bei der Ergebnis-Karte. Der feste Platz (overlay_position = "fixed"):
+            # Prompt-Auswahl (und die Pille bei pill_position = "follow"): fester Platz und Größe wie bei der Ergebnis-Karte. Der feste Platz (overlay_position = "fixed"):
             # top-third | center | bottom-third | top-left | bottom-left | top-right | bottom-right | left | right | top | bottom.
             # Das Menü wächst vom Bildschirmrand weg. Der Abstand zum Bildschirmrand gilt in Pixeln (0 bis 200).
             overlay_fixed_position = "{{AppSettings.DefaultOverlayFixedPosition}}"

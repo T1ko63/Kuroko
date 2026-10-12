@@ -288,6 +288,12 @@ public partial class App : Application
             _controller.ResultScreenMargin = settings.ResultScreenMargin;
             _controller.ResultFontSize = settings.ResultFontSize;
             _controller.SetResultSize(settings.ResultWidth, settings.ResultMinHeight, settings.ResultMaxHeight);
+            _controller.PillPlacement = Enum.TryParse<PillPlacement>(settings.PillPosition, ignoreCase: true, out var pill)
+                ? pill
+                : PillPlacement.Follow;
+            _controller.PillSpot = ParseSpot(settings.PillFixedPosition, CardSpot.TopThird);
+            _controller.SetPillLayout(new PillLayout(
+                settings.PillMinWidth, settings.PillMaxWidth, settings.PillMinHeight, settings.PillFontSize, TimeSpan.FromSeconds(settings.PillDuration)));
 
             // A fresh registry for the new provider settings; the HttpClient (and its warm connections) is kept.
             _providers = new ProviderRegistry(settings.Providers, settings.DefaultProvider, _http);

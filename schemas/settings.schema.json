@@ -74,6 +74,52 @@
       "default": 360,
       "description": "Maximum height of the result card; longer text scrolls."
     },
+    "pill_position": {
+      "type": "string",
+      "enum": ["follow", "caret", "mouse", "fixed", "card"],
+      "default": "follow",
+      "description": "Where the status pill appears. follow: where the prompt picker opens. caret: at the text cursor, otherwise at the mouse. mouse: at the mouse. fixed: at pill_fixed_position (with overlay_screen_margin). card: where the result card appears. For prompts with a result card the pill always sits where the card will appear."
+    },
+    "pill_fixed_position": {
+      "allOf": [{ "$ref": "#/definitions/spot" }],
+      "default": "top-third",
+      "description": "The fixed place of the status pill (pill_position = \"fixed\")."
+    },
+    "pill_min_width": {
+      "type": "number",
+      "minimum": 100,
+      "maximum": 1600,
+      "default": 200,
+      "description": "Minimum width of the status pill in pixels. Must not be larger than pill_max_width."
+    },
+    "pill_max_width": {
+      "type": "number",
+      "minimum": 100,
+      "maximum": 1600,
+      "default": 420,
+      "description": "Maximum width of the status pill in pixels; longer text wraps."
+    },
+    "pill_min_height": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 400,
+      "default": 0,
+      "description": "Minimum height of the status pill (0 = as high as the text). The text is centred; the pill grows when it wraps."
+    },
+    "pill_font_size": {
+      "type": "number",
+      "minimum": 8,
+      "maximum": 32,
+      "default": 13,
+      "description": "Font size of the status pill."
+    },
+    "pill_duration": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 60,
+      "default": 2,
+      "description": "Seconds a note such as \"Undone\" stays. Errors keep 5 s, the pill after a failed paste 15 s."
+    },
     "marker_start": {
       "type": "string",
       "minLength": 1,

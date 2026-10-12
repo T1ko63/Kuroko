@@ -173,6 +173,48 @@ public class SettingsLoaderTests
     }
 
     [Fact]
+    public void Pill_settings_have_todays_values_as_defaults()
+    {
+        var s = Parse("theme = \"dark\"\n").Settings!;
+
+        Assert.Equal(("follow", "top-third"), (s.PillPosition, s.PillFixedPosition));
+        Assert.Equal((200d, 420d, 0d, 13d, 2d), (s.PillMinWidth, s.PillMaxWidth, s.PillMinHeight, s.PillFontSize, s.PillDuration));
+    }
+
+    [Fact]
+    public void Pill_settings_are_read()
+    {
+        var s = Parse("""
+            pill_position = "card"
+            pill_fixed_position = "bottom-right"
+            pill_min_width = 150
+            pill_max_width = 600.5
+            pill_min_height = 48
+            pill_font_size = 15
+            pill_duration = 3.5
+            """).Settings!;
+
+        Assert.Equal(("card", "bottom-right"), (s.PillPosition, s.PillFixedPosition));
+        Assert.Equal((150d, 600.5, 48d, 15d, 3.5), (s.PillMinWidth, s.PillMaxWidth, s.PillMinHeight, s.PillFontSize, s.PillDuration));
+    }
+
+    [Theory]
+    [InlineData("pill_position = \"center\"", "pill_position")]
+    [InlineData("pill_fixed_position = \"middle\"", "pill_fixed_position")]
+    [InlineData("pill_min_width = 50", "pill_min_width must be a number")]
+    [InlineData("pill_max_width = 2000", "pill_max_width must be a number")]
+    [InlineData("pill_min_height = -1", "pill_min_height must be a number")]
+    [InlineData("pill_font_size = 40", "pill_font_size must be a number")]
+    [InlineData("pill_duration = 0", "pill_duration must be a number")]
+    [InlineData("pill_min_width = 500\npill_max_width = 300", "pill_min_width must not be larger")]
+    public void Invalid_pill_settings_are_errors(string lines, string expectedMessagePart)
+    {
+        var result = Parse(lines + "\n");
+        Assert.False(result.Ok);
+        Assert.Contains(expectedMessagePart, Error(result).Message);
+    }
+
+    [Fact]
     public void Accent_defaults_to_none()
     {
         Assert.Equal("none", Parse("theme = \"dark\"\n").Settings!.Accent);
