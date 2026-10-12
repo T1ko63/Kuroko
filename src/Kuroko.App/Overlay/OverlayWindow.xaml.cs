@@ -41,7 +41,6 @@ public partial class OverlayWindow : Window, IOverlayView
     public OverlayWindow()
     {
         InitializeComponent();
-        Placeholder.Text = Loc.Get("search_placeholder");
         NoResults.Text = Loc.Get("no_results");
         QuestionHint.Text = Loc.Get("question_hint");
         WindowSkin.Prepare(this, Panel);
@@ -137,6 +136,9 @@ public partial class OverlayWindow : Window, IOverlayView
     {
         WindowSkin.ApplyLook(_hwnd, dark, backdrop, nativeCornerPx, customRadius);
     }
+
+    /// <summary>Grey text in the empty search field ([appearance] placeholder); "" shows none. Takes effect the next time the picker opens.</summary>
+    public void SetPlaceholder(string text) => Placeholder.Text = text;
 
     /// <summary>
     /// Width, height limits and font size of the picker (overlay_width, overlay_min_height, overlay_max_height, overlay_font_size).
@@ -246,7 +248,7 @@ public partial class OverlayWindow : Window, IOverlayView
     private void Refresh()
     {
         var input = OverlayInput.Parse(Search.Text);
-        Placeholder.Visibility = Search.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        Placeholder.Visibility = Search.Text.Length == 0 && Placeholder.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         if (input.Kind != OverlayInputKind.Search)
         {
@@ -311,11 +313,6 @@ public partial class OverlayWindow : Window, IOverlayView
         if (!row.IsEnabled) return;
         if (row.Prompt is { } prompt) PromptChosen?.Invoke(prompt);
         else if (row.Command is { } command) CommandChosen?.Invoke(command);
-        else if (row.IsQuestion)
-        {
-            Search.Text = "//";
-            Search.CaretIndex = Search.Text.Length;
-        }
     }
 
     /// <summary>Enter after "//": a non-empty question is sent, an empty one does nothing.</summary>

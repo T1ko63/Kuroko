@@ -92,6 +92,9 @@ public sealed class AppController
     public void SetOverlayLayout(double width, double minHeight, double maxHeight, double fontSize)
         => _overlay.SetLayout(width, minHeight, maxHeight, fontSize);
 
+    /// <summary>Grey text in the empty search field ([appearance] placeholder); "" shows none.</summary>
+    public void SetOverlayPlaceholder(string text) => _overlay.SetPlaceholder(text);
+
     /// <summary>
     /// Hotkey that copies the result card, or the answer offered by the error pill after a failed paste (result_copy_hotkey);
     /// read when the card or pill opens and after a configuration reload.

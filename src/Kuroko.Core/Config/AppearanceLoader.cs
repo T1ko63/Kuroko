@@ -8,7 +8,7 @@ namespace Kuroko.Core.Config;
 /// </summary>
 internal static class AppearanceLoader
 {
-    private static readonly HashSet<string> Keys = new(StringComparer.Ordinal) { "transparency", "radius", "blur", "border", "custom_corners", "dark", "light" };
+    private static readonly HashSet<string> Keys = new(StringComparer.Ordinal) { "placeholder", "transparency", "radius", "blur", "border", "custom_corners", "dark", "light" };
     private static readonly HashSet<string> ColorKeys = new(StringComparer.Ordinal) { "background", "foreground", "selection" };
 
     public static AppearanceSettings Read(TomlTable root, TomlReader reader)
@@ -35,7 +35,8 @@ internal static class AppearanceLoader
         var customCorners = ReadBool(table, "custom_corners", AppearanceSettings.DefaultCustomCorners, reader, Line);
         var dark = ReadColors("dark", table, AppearanceSettings.DefaultDark, reader);
         var light = ReadColors("light", table, AppearanceSettings.DefaultLight, reader);
-        return new AppearanceSettings(transparency, radius, blur, dark, light, border, customCorners);
+        var placeholder = ReadText(table, "placeholder", AppearanceSettings.DefaultPlaceholder, reader, Line);
+        return new AppearanceSettings(transparency, radius, blur, dark, light, border, customCorners) { Placeholder = placeholder };
     }
 
     private static void Warn(TomlReader reader, int? line, string message) => reader.Issue(line, message, isError: false, show: true);
@@ -64,6 +65,15 @@ internal static class AppearanceLoader
         if (value is bool flag) return flag;
 
         Warn(reader, line(key), $"[appearance] {key} must be true or false; using {(fallback ? "true" : "false")}");
+        return fallback;
+    }
+
+    private static string ReadText(TomlTable table, string key, string fallback, TomlReader reader, Func<string, int?> line)
+    {
+        if (!table.TryGetValue(key, out var value)) return fallback;
+        if (value is string text) return text;
+
+        Warn(reader, line(key), $"[appearance] {key} must be a text in quotes; using \"{fallback}\"");
         return fallback;
     }
 

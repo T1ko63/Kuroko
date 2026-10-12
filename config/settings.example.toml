@@ -77,6 +77,7 @@ fallback_provider = ""
 
 
 [appearance]
+placeholder = "Kuroko"      # grey text in the empty search field; "" = none
 transparency = 50           # 0-100 percent: 0 = opaque, 100 = fully transparent
 radius = 10                 # corner radius in px, 0-100
 blur = "acrylic"            # acrylic | blur | mica | micaalt | none

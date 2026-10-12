@@ -16,6 +16,10 @@ public sealed record ThemeColors(Rgba Background, Rgba Foreground, Rgba Selectio
 public sealed record AppearanceSettings(
     int Transparency, int Radius, BlurMode Blur, ThemeColors Dark, ThemeColors Light, bool Border = true, bool CustomCorners = false)
 {
+    /// <summary>Grey text in the empty search field of the prompt picker; "" shows none.</summary>
+    public string Placeholder { get; init; } = DefaultPlaceholder;
+
+    public const string DefaultPlaceholder = "Kuroko";
     public const int DefaultTransparency = 50;
     public const int DefaultRadius = 10;
     public const BlurMode DefaultBlur = BlurMode.Acrylic;

@@ -93,6 +93,8 @@ public static class DefaultSettings
             # Aussehen des Overlays. Fehlt ein Wert, gilt der hier gezeigte Standard. Ein ungültiger Wert wird gemeldet und durch den Standard ersetzt.
             # Gilt der Block des aktiven Themes (theme oben): [appearance.dark] oder [appearance.light].
             [appearance]
+            # Grauer Text im leeren Suchfeld der Prompt-Auswahl ("" = kein Platzhalter).
+            placeholder = "{{AppearanceSettings.DefaultPlaceholder}}"
             # Durchsichtigkeit der Fensterfläche in Prozent: 0 = deckend, 100 = vollständig durchsichtig. Text bleibt immer voll lesbar.
             # Über 90 leidet die Lesbarkeit (der Hintergrund scheint fast ungehindert durch).
             transparency = {{AppearanceSettings.DefaultTransparency}}

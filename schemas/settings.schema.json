@@ -194,6 +194,11 @@
       "additionalProperties": false,
       "description": "Look of the overlay and the result card. A bad value only gives a warning; the default is used for it.",
       "properties": {
+        "placeholder": {
+          "type": "string",
+          "default": "Kuroko",
+          "description": "Grey text in the empty search field of the prompt picker. \"\" = no placeholder."
+        },
         "transparency": {
           "type": "integer",
           "minimum": 0,

@@ -24,6 +24,8 @@ public interface IOverlayView
 
     void SetLayout(double width, double minHeight, double maxHeight, double fontSize);
 
+    void SetPlaceholder(string text);
+
     void Present(IReadOnlyList<PromptDefinition> prompts, IReadOnlyList<AppCommand> commands);
 
     void ShowAnchored(Anchor anchor);
