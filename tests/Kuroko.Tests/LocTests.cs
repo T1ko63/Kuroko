@@ -4,6 +4,14 @@ using Kuroko.Core.Localization;
 
 namespace Kuroko.Tests;
 
+/// <summary>
+/// These tests switch the process-wide <see cref="Loc.Language"/>. Their collection never runs in parallel with other tests,
+/// which read localized texts (e.g. StartupHint, QuestionPrompt) and would see the language change mid-test.
+/// </summary>
+[CollectionDefinition(nameof(LanguageSwitching), DisableParallelization = true)]
+public sealed class LanguageSwitching;
+
+[Collection(nameof(LanguageSwitching))]
 public class LocTests
 {
     [Theory]
