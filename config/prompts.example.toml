@@ -25,7 +25,7 @@
 [[prompt]]
 name = "Universal"
 mode = "universal"
-hotkey = "Ctrl+Alt+M"
+hotkey = "Ctrl+Alt+U"
 prompt = """
 You are a writing assistant. Write naturally and match the purpose and tone. Use plain text without Markdown.
 Output only the resulting text, without any introduction or comment.
