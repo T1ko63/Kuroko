@@ -5,7 +5,7 @@
         SizeToContent="Height" Width="{StaticResource Status.MinWidth}"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" ShowActivated="False" Focusable="False"
         Background="Transparent" Foreground="{DynamicResource TextBrush}"
-        FontFamily="{StaticResource Font.Family}" FontSize="{StaticResource Font.Status}"
+        FontFamily="{DynamicResource Font.Family}" FontSize="{StaticResource Font.Status}"
         TextOptions.TextFormattingMode="Ideal" UseLayoutRounding="True" SnapsToDevicePixels="True"
         MouseLeftButtonUp="OnClick">
 

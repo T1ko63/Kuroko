@@ -116,7 +116,7 @@ public partial class App : Application
         }
 
         // Both files are read before any window exists; a broken file never prevents the start.
-        _config = new ConfigManager(_configDir, Environment.GetEnvironmentVariable, _keyStore);
+        _config = new ConfigManager(_configDir, Environment.GetEnvironmentVariable, _keyStore, FontCheck.IsInstalled);
         var firstRun = !File.Exists(_config.SettingsPath);
         var loaded = _config.Load();
         LogIssues(loaded);

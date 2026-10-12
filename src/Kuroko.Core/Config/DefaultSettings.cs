@@ -105,8 +105,16 @@ public static class DefaultSettings
             # Bei acrylic, blur und mica rundet Windows die Ecken selbst (0, 4 oder 8 px); nur "none" nutzt den Radius exakt.
             # Ohne Windows-11-Unterstützung entsteht automatisch eine halbtransparente einfarbige Fläche.
             blur = "acrylic"
-            # Feiner Rand um das Fenster: true | false.
+            # Feiner Rand um das Fenster: true | false, und seine Breite in px (0 bis 4; border = false heißt 0).
+            # Bei acrylic, blur und mica rundet Windows die Ecken selbst; ein breiter Rand kann dort an den Ecken unsauber aussehen (außer mit custom_corners).
             border = true
+            border_width = {{AppearanceSettings.DefaultLineWidth}}
+            # Trennlinie unter der Eingabezeile: true | false, und ihre Höhe in px (0 bis 4).
+            separator = true
+            separator_width = {{AppearanceSettings.DefaultLineWidth}}
+            # Schrift für Prompt-Auswahl, Pille, Ergebnis-Karte und das Fenster für die API-Schlüssel. Mehrere Namen mit Komma getrennt:
+            # Es gilt der erste installierte. Ein Name, den Windows nicht kennt, wird gemeldet.
+            font = "{{AppearanceSettings.DefaultFont}}"
             # true: der Radius gilt auch bei acrylic/blur/mica exakt. Braucht den Windhawk-Mod "Kuroko Blur" (Teil "Ecken", läuft in dwm.exe);
             # Windows selbst kennt dort nur 0, 4 und 8 px. Ohne Mod bleibt es bei der Rundung von Windows. false: wie bisher.
             custom_corners = false
@@ -118,6 +126,9 @@ public static class DefaultSettings
             # Achtung: Das Alpha steht VORNE (wie bei Windows/WPF), nicht hinten wie im CSS-Format #RRGGBBAA. Editoren wie VS Code zeigen #AARRGGBB deshalb falsch an;
             # deren Farbwähler schreibt rgb(...)/rgba(...), das hier eindeutig ist und ebenfalls funktioniert.
             selection  = "#40FFFFFF"
+            # Farbe von Rand und Trennlinie als #RRGGBB oder rgb(r, g, b). Ohne Angabe werden sie aus foreground abgeleitet, z. B.:
+            # border_color    = "#3D3D3D"
+            # separator_color = "#2E2E2E"
 
             [appearance.light]
             background = "#FFFFFF"

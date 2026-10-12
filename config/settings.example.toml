@@ -82,12 +82,18 @@ transparency = 50           # 0-100 percent: 0 = opaque, 100 = fully transparent
 radius = 10                 # corner radius in px, 0-100
 blur = "acrylic"            # acrylic | blur | mica | micaalt | none
 border = true               # thin border around the window
+border_width = 1            # border width in px, 0-4 (border = false means 0)
+separator = true            # line under the search field
+separator_width = 1         # its height in px, 0-4
+font = "Segoe UI Variable Text, Segoe UI"   # overlay, pill, result card and API key window; first installed name wins
 custom_corners = false         # true: apply the radius exactly on Acrylic/Mica too (needs the Windhawk mod, corners part); false: Windows snaps to 0, 4 or 8 px
 
 [appearance.dark]
 background = "#000000"      # #RRGGBB or rgb(r, g, b)
 foreground = "#F0F0F0"      # main text colour
 selection  = "#40FFFFFF"    # selected row: #AARRGGBB (alpha first), #RRGGBB or rgba(r, g, b, a)
+# border_color    = "#3D3D3D"   # optional, #RRGGBB or rgb(r, g, b); derived from foreground when missing
+# separator_color = "#2E2E2E"   # optional, likewise
 
 [appearance.light]
 background = "#FFFFFF"

@@ -118,7 +118,9 @@ public class SchemaTests
 
         Assert.Equal(Keys(schema, schema).Order(), example.Keys.Order());
         Assert.Equal(Keys(schema, definitions.GetProperty("appearance")).Order(), appearance.Keys.Order());
-        Assert.Equal(Keys(schema, definitions.GetProperty("themeColors")).Order(), ((TomlTable)appearance["dark"]).Keys.Order());
+        // border_color and separator_color are derived when missing, so the example only names them in its comments.
+        var colorKeys = ((TomlTable)appearance["dark"]).Keys.Append("border_color").Append("separator_color").ToHashSet();
+        Assert.Equal(Keys(schema, definitions.GetProperty("themeColors")).Order(), colorKeys.Order());
 
         // The example leaves out api_key (never in a template), max_output_tokens and fallback_provider; all are listed in its comments.
         var providerKeys = providers.SelectMany(p => p.Keys).Append("api_key").Append("max_output_tokens").Append("fallback_provider").ToHashSet();

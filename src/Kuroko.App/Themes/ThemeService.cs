@@ -116,7 +116,9 @@ public sealed class ThemeService
 
         _app.Resources["Window.Radius"] = new CornerRadius(WindowRadius);
         _app.Resources["Row.Radius"] = new CornerRadius(_appearance.RowRadius);
-        _app.Resources["Window.BorderThickness"] = new Thickness(_appearance.Border ? 1 : 0);
+        _app.Resources["Window.BorderThickness"] = new Thickness(_appearance.BorderThickness);
+        _app.Resources["Separator.Height"] = (double)_appearance.SeparatorThickness;
+        _app.Resources["Font.Family"] = new FontFamily(_appearance.Font);
 
         Changed?.Invoke();
     }

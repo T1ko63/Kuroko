@@ -40,7 +40,8 @@ public static class SettingsLoader
 
     /// <param name="getEnv">Reads an environment variable (api_key_env).</param>
     /// <param name="keyStore">Keys stored outside the file (Windows Credential Manager); asked only when neither api_key nor api_key_env gave a key.</param>
-    public static SettingsLoadResult Parse(string toml, Func<string, string?> getEnv, IKeyStore? keyStore = null)
+    /// <param name="fontExists">Whether a font family is installed, for [appearance] font; null skips that check.</param>
+    public static SettingsLoadResult Parse(string toml, Func<string, string?> getEnv, IKeyStore? keyStore = null, Func<string, bool>? fontExists = null)
     {
         var issues = new List<ConfigIssue>();
 
@@ -128,7 +129,7 @@ public static class SettingsLoader
             reader.Issue(reader.LineOf("idle_trim_seconds"), "idle_trim_seconds must not be negative (0 = never)", isError: true);
         }
 
-        var appearance = AppearanceLoader.Read(root, reader);
+        var appearance = AppearanceLoader.Read(root, reader, fontExists);
 
         var providers = new Dictionary<string, ProviderSettings>(StringComparer.OrdinalIgnoreCase);
         if (root.TryGetValue("providers", out var providersValue))

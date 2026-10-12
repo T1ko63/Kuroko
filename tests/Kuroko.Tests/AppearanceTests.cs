@@ -358,6 +358,134 @@ public class AppearanceLoaderTests
     }
 
     [Fact]
+    public void Border_and_separator_are_one_pixel_by_default()
+    {
+        var a = Appearance("theme = \"dark\"\n");
+
+        Assert.True(a.Separator);
+        Assert.Equal((1, 1), (a.BorderWidth, a.SeparatorWidth));
+        Assert.Equal((1, 1), (a.BorderThickness, a.SeparatorThickness));
+        Assert.Equal("Segoe UI Variable Text, Segoe UI", a.Font);
+    }
+
+    [Fact]
+    public void Widths_and_the_separator_switch_are_read()
+    {
+        var a = Appearance("[appearance]\nborder_width = 3\nseparator_width = 0\n");
+        var off = Appearance("[appearance]\nseparator = false\nseparator_width = 2\n");
+
+        Assert.Equal((3, 0), (a.BorderThickness, a.SeparatorThickness));
+        Assert.False(off.Separator);
+        Assert.Equal(0, off.SeparatorThickness);
+    }
+
+    [Fact]
+    public void Border_false_still_means_no_border_whatever_the_width()
+    {
+        var a = Appearance("[appearance]\nborder = false\nborder_width = 4\n");
+
+        Assert.Equal(4, a.BorderWidth);
+        Assert.Equal(0, a.BorderThickness);
+    }
+
+    [Theory]
+    [InlineData("border_width = 5")]
+    [InlineData("separator_width = -1")]
+    [InlineData("border_width = 1.5")]
+    [InlineData("separator = \"no\"")]
+    public void An_invalid_line_value_is_reported_and_replaced_by_the_default(string line)
+    {
+        var result = Parse($"[appearance]\nradius = 4\n{line}\n");
+
+        var a = result.Settings!.Appearance;
+        Assert.Equal((1, 1, true), (a.BorderThickness, a.SeparatorThickness, a.Separator));
+        Assert.Equal(4, a.Radius);
+        Assert.Equal(3, Assert.Single(Shown(result)).Line);
+    }
+
+    [Fact]
+    public void Border_and_separator_colours_are_read_per_theme_and_otherwise_derived()
+    {
+        var a = Appearance("""
+            [appearance.dark]
+            border_color = "#FF0000"
+            separator_color = "rgb(0, 128, 0)"
+            """);
+
+        var dark = AppearancePalette.Derive(a, dark: true);
+        var light = AppearancePalette.Derive(a, dark: false);
+        var derived = AppearancePalette.Derive(AppearanceSettings.Default, dark: false);
+
+        Assert.Equal(Rgba.Opaque(0xFF, 0, 0), dark.Edge);
+        Assert.Equal(Rgba.Opaque(0, 128, 0), dark.Separator);
+        Assert.Equal((derived.Edge, derived.Separator), (light.Edge, light.Separator));
+    }
+
+    [Fact]
+    public void An_invalid_border_colour_is_reported_and_derived()
+    {
+        var result = Parse("[appearance.light]\nborder_color = \"red\"\n");
+
+        Assert.Null(result.Settings!.Appearance.Light.Border);
+        Assert.Contains("border_color", Assert.Single(Shown(result)).Message);
+    }
+
+    [Fact]
+    public void Alpha_in_a_separator_colour_is_ignored_and_reported()
+    {
+        var result = Parse("[appearance.dark]\nseparator_color = \"#80FF0000\"\n");
+
+        Assert.Equal(Rgba.Opaque(0xFF, 0, 0), result.Settings!.Appearance.Dark.Separator);
+        Assert.Contains("alpha ignored", Assert.Single(Shown(result)).Message);
+    }
+
+    [Fact]
+    public void The_font_is_read_and_its_list_tidied()
+    {
+        Assert.Equal("Arial, Segoe UI", Appearance("[appearance]\nfont = \" Arial ,Segoe UI \"\n").Font);
+    }
+
+    private static SettingsLoadResult ParseWithFonts(string toml, params string[] installed)
+        => SettingsLoader.Parse(toml, NoEnv, fontExists: name => installed.Contains(name));
+
+    [Fact]
+    public void An_unknown_font_is_reported_and_replaced_by_the_default()
+    {
+        var result = ParseWithFonts("[appearance]\nfont = \"Comic Nonsense\"\n", "Segoe UI");
+
+        Assert.Equal(AppearanceSettings.DefaultFont, result.Settings!.Appearance.Font);
+        var issue = Assert.Single(Shown(result));
+        Assert.Equal(2, issue.Line);
+        Assert.Contains("Comic Nonsense", issue.Message);
+    }
+
+    [Fact]
+    public void An_unknown_font_in_a_list_is_reported_but_the_list_stays()
+    {
+        var result = ParseWithFonts("[appearance]\nfont = \"Comic Nonsense, Arial\"\n", "Arial");
+
+        Assert.Equal("Comic Nonsense, Arial", result.Settings!.Appearance.Font);
+        Assert.Contains("next font", Assert.Single(Shown(result)).Message);
+    }
+
+    [Fact]
+    public void Installed_fonts_and_a_missing_font_key_give_no_message()
+    {
+        Assert.Empty(Shown(ParseWithFonts("[appearance]\nfont = \"Arial\"\n", "Arial")));
+        Assert.Empty(Shown(ParseWithFonts("[appearance]\nradius = 4\n")));
+        Assert.Empty(Shown(ParseWithFonts("[appearance]\nfont = \"Segoe UI Variable Text, Segoe UI\"\n")));
+    }
+
+    [Fact]
+    public void An_empty_font_is_reported_and_replaced_by_the_default()
+    {
+        var result = Parse("[appearance]\nfont = \" , \"\n");
+
+        Assert.Equal(AppearanceSettings.DefaultFont, result.Settings!.Appearance.Font);
+        Assert.Single(Shown(result));
+    }
+
+    [Fact]
     public void An_invalid_colour_type_is_reported()
     {
         var result = Parse("[appearance.dark]\nselection = 5\n");
