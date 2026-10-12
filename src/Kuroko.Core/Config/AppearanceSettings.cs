@@ -9,9 +9,16 @@ public enum BlurMode
     None,
 }
 
+/// <summary>How the selected row is marked (selection_style): a filled area, or only a frame.</summary>
+public enum SelectionStyle
+{
+    Fill,
+    Border,
+}
+
 /// <summary>
-/// The colours of one theme. Background and foreground are opaque; selection may carry its own alpha. Border and
-/// separator are optional (border_color, separator_color): when missing they are derived from the foreground.
+/// The colours of one theme, all opaque (the selected row's opacity is selection_opacity). Border and separator are
+/// optional (border_color, separator_color): when missing they are derived from the foreground.
 /// </summary>
 public sealed record ThemeColors(Rgba Background, Rgba Foreground, Rgba Selection, Rgba? Border = null, Rgba? Separator = null);
 
@@ -21,6 +28,17 @@ public sealed record AppearanceSettings(
 {
     /// <summary>Grey text in the empty search field of the prompt picker; "" shows none.</summary>
     public string Placeholder { get; init; } = DefaultPlaceholder;
+
+    /// <summary>How the selected row is marked (selection_style).</summary>
+    public SelectionStyle SelectionStyle { get; init; } = DefaultSelectionStyle;
+
+    /// <summary>Opacity of the selected row in percent (selection_opacity), for both styles; hover has half of it.</summary>
+    public int SelectionOpacity { get; init; } = DefaultSelectionOpacity;
+
+    public const SelectionStyle DefaultSelectionStyle = SelectionStyle.Fill;
+
+    /// <summary>25 % is alpha 0x40, the alpha of the old default selection colours (#40FFFFFF, #40000000).</summary>
+    public const int DefaultSelectionOpacity = 25;
 
     /// <summary>The line under the search field (separator).</summary>
     public bool Separator { get; init; } = DefaultSeparator;
@@ -58,10 +76,10 @@ public sealed record AppearanceSettings(
     public const bool DefaultCustomCorners = false;
 
     public static readonly ThemeColors DefaultDark = new(
-        Rgba.Opaque(0x00, 0x00, 0x00), Rgba.Opaque(0xF0, 0xF0, 0xF0), new Rgba(0x40, 0xFF, 0xFF, 0xFF));
+        Rgba.Opaque(0x00, 0x00, 0x00), Rgba.Opaque(0xF0, 0xF0, 0xF0), Rgba.Opaque(0xFF, 0xFF, 0xFF));
 
     public static readonly ThemeColors DefaultLight = new(
-        Rgba.Opaque(0xFF, 0xFF, 0xFF), Rgba.Opaque(0x1A, 0x1A, 0x1A), new Rgba(0x40, 0x00, 0x00, 0x00));
+        Rgba.Opaque(0xFF, 0xFF, 0xFF), Rgba.Opaque(0x1A, 0x1A, 0x1A), Rgba.Opaque(0x00, 0x00, 0x00));
 
     public static AppearanceSettings Default { get; } = new(DefaultTransparency, DefaultRadius, DefaultBlur, DefaultDark, DefaultLight, DefaultBorder);
 
@@ -94,11 +112,15 @@ public sealed record AppearanceSettings(
         => (byte)Math.Round(Math.Clamp(percent, 0, 100) * 255 / 100.0, MidpointRounding.AwayFromZero);
 }
 
-/// <summary>The colours the UI needs, all derived from the three configured ones. The text parts only differ in the opacity of the foreground.</summary>
+/// <summary>
+/// The colours the UI needs, all derived from the configured ones. The text parts only differ in the opacity of the foreground.
+/// A row is marked by its area (RowSelected, RowHover) or its frame (RowSelectedEdge, RowHoverEdge), whichever selection_style
+/// asks for; the other one is transparent, so the frame is always there and the text never moves.
+/// </summary>
 public sealed record AppearancePalette(
     Rgba Surface, Rgba Edge, Rgba Text, Rgba Muted, Rgba Subtle, Rgba Placeholder, Rgba Separator,
     Rgba RowSelected, Rgba RowHover, Rgba ScrollThumb, Rgba Progress, Rgba Caret, Rgba TextSelection,
-    bool BackgroundIsDark)
+    bool BackgroundIsDark, Rgba RowSelectedEdge = default, Rgba RowHoverEdge = default)
 {
     // Opacity of the foreground colour for each secondary use.
     public const double MutedOpacity = 0.62;
@@ -115,6 +137,10 @@ public sealed record AppearancePalette(
         var colors = appearance.For(dark);
         var fg = colors.Foreground;
         var bg = colors.Background;
+        var selected = colors.Selection.WithAlpha(AppearanceSettings.OpacityToAlpha(appearance.SelectionOpacity));
+        var hover = selected.Scaled(0.5);
+        var clear = selected.WithAlpha(0);
+        var framed = appearance.SelectionStyle == SelectionStyle.Border;
         return new AppearancePalette(
             Surface: bg.WithAlpha(appearance.SurfaceAlpha),
             Edge: colors.Border ?? fg.Scaled(EdgeOpacity).Over(bg),
@@ -123,12 +149,14 @@ public sealed record AppearancePalette(
             Subtle: fg.Scaled(SubtleOpacity),
             Placeholder: fg.Scaled(PlaceholderOpacity),
             Separator: colors.Separator ?? fg.Scaled(SeparatorOpacity),
-            RowSelected: colors.Selection,
-            RowHover: colors.Selection.Scaled(0.5),
+            RowSelected: framed ? clear : selected,
+            RowHover: framed ? clear : hover,
             ScrollThumb: fg.Scaled(ScrollThumbOpacity),
             Progress: fg.Scaled(ProgressOpacity),
             Caret: fg,
             TextSelection: fg.Scaled(TextSelectionOpacity),
-            BackgroundIsDark: bg.Luminance < 0.5);
+            BackgroundIsDark: bg.Luminance < 0.5,
+            RowSelectedEdge: framed ? selected : clear,
+            RowHoverEdge: framed ? hover : clear);
     }
 }

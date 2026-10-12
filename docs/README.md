@@ -280,6 +280,8 @@ placeholder  = "Kuroko"     # grauer Text im leeren Suchfeld; "" = kein Platzhal
 transparency = 50           # 0-100 %: 0 = deckend, 100 = vollständig durchsichtig (über 90 leidet die Lesbarkeit)
 radius       = 10           # Eckenradius in px, 0-100
 blur         = "acrylic"    # acrylic | blur | mica | micaalt | none
+selection_style = "fill"    # ausgewählte Zeile: fill (Fläche) | border (nur Rahmen, der Text verschiebt sich nicht)
+selection_opacity = 25      # Deckkraft der Auswahl in %, 0-100, für beide Stile; Hover = halbe Deckkraft
 border       = true         # feiner Rand um das Fenster: true | false
 border_width = 1            # Breite des Rands in px, 0-4 (border = false heißt 0)
 separator    = true         # Trennlinie unter der Eingabezeile: true | false
@@ -290,14 +292,14 @@ custom_corners = false   # true: der Radius gilt auch bei acrylic/mica exakt (br
 [appearance.dark]           # gilt, wenn das aktive Theme dunkel ist
 background = "#000000"      # #RRGGBB oder rgb(r, g, b); ein Alpha-Anteil wird ignoriert und gemeldet
 foreground = "#F0F0F0"      # Haupttext, daraus werden alle Nebenfarben abgeleitet
-selection  = "#40FFFFFF"    # ausgewählte Zeile: #AARRGGBB (Alpha ZUERST, wie WPF, nicht wie CSS), #RRGGBB oder rgba(r, g, b, a); Hover = halbe Deckkraft
+selection  = "#FFFFFF"      # Farbe der ausgewählten Zeile: #RRGGBB oder rgb(r, g, b); Deckkraft über selection_opacity
 # border_color    = "#3D3D3D"   # optional: Farbe des Rands, #RRGGBB oder rgb(r, g, b); fehlt sie, wird sie aus foreground abgeleitet
 # separator_color = "#2E2E2E"   # optional: Farbe der Trennlinie (auch die Spur der Fortschrittslinie in der Pille)
 
 [appearance.light]
 background = "#FFFFFF"
 foreground = "#1A1A1A"
-selection  = "#40000000"
+selection  = "#000000"
 ```
 
 * **transparency** wirkt nur auf die Fensterfläche (Deckkraft = 100 − transparency, auf `background` angewendet; bei `acrylic` ist das
@@ -318,6 +320,11 @@ selection  = "#40000000"
   `[appearance.dark]` bzw. `[appearance.light]`; ohne sie werden beide wie bisher aus `foreground` abgeleitet. Auf Acrylic, Blur und
   Mica rundet Windows die Ecken selbst (0, 4 oder 8 px), ein breiter Rand kann dort an den Ecken unsauber aussehen, außer mit
   `custom_corners` und dem Windhawk-Mod.
+* **Auswahlzeile:** `selection_style = "fill"` färbt die Fläche der ausgewählten Zeile, `"border"` nur einen 1-px-Rahmen; der Text
+  verschiebt sich dabei nicht. `selection_opacity` (0-100, Standard 25) ist die Deckkraft für beide Stile, die Zeile unter der Maus hat
+  die halbe. `selection` ist eine normale Farbe wie `background`. Ältere Werte mit Alpha (`#40FFFFFF`, `rgba(...)`) funktionieren
+  weiter: Das Alpha wird ignoriert, und eine Meldung weist auf `selection_opacity` hin. 25 entspricht dem alten `#40`, das Aussehen
+  bleibt also gleich.
 * **font:** eine Schrift für Prompt-Auswahl, Pille, Ergebnis-Karte und das Fenster für die API-Schlüssel (das Tray-Menü behält die
   Windows-Schrift). Mehrere Namen mit Komma: Es gilt der erste installierte. Ist ein Name nicht installiert, kommt eine Meldung; ist
   keiner installiert, gilt der Standard.

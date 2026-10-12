@@ -121,6 +121,10 @@ public static class DefaultSettings
             # Bei acrylic, blur und mica rundet Windows die Ecken selbst (0, 4 oder 8 px); nur "none" nutzt den Radius exakt.
             # Ohne Windows-11-Unterstützung entsteht automatisch eine halbtransparente einfarbige Fläche.
             blur = "acrylic"
+            # Markierung der ausgewählten Zeile: "fill" (Fläche, Standard) | "border" (nur ein Rahmen, der Text verschiebt sich nicht).
+            selection_style = "fill"
+            # Deckkraft der Markierung in Prozent, 0 bis 100, für beide Stile; die Zeile unter der Maus hat die halbe Deckkraft.
+            selection_opacity = {{AppearanceSettings.DefaultSelectionOpacity}}
             # Feiner Rand um das Fenster: true | false, und seine Breite in px (0 bis 4; border = false heißt 0).
             # Bei acrylic, blur und mica rundet Windows die Ecken selbst; ein breiter Rand kann dort an den Ecken unsauber aussehen (außer mit custom_corners).
             border = true
@@ -138,10 +142,7 @@ public static class DefaultSettings
             [appearance.dark]
             background = "#000000"     # Farbe der Fensterfläche als #RRGGBB oder rgb(r, g, b), ohne Transparenz (die steuert transparency)
             foreground = "#F0F0F0"     # Haupttext; gedämpfter Text, Trennlinie und Scrollbar werden daraus abgeleitet
-            # Hervorhebung der ausgewählten Zeile (Mauszeiger darüber: halbe Deckkraft). Erlaubt: #AARRGGBB, #RRGGBB oder rgba(r, g, b, a) mit a von 0 bis 1.
-            # Achtung: Das Alpha steht VORNE (wie bei Windows/WPF), nicht hinten wie im CSS-Format #RRGGBBAA. Editoren wie VS Code zeigen #AARRGGBB deshalb falsch an;
-            # deren Farbwähler schreibt rgb(...)/rgba(...), das hier eindeutig ist und ebenfalls funktioniert.
-            selection  = "#40FFFFFF"
+            selection  = "#FFFFFF"     # Farbe der ausgewählten Zeile; ihre Deckkraft steuert selection_opacity
             # Farbe von Rand und Trennlinie als #RRGGBB oder rgb(r, g, b). Ohne Angabe werden sie aus foreground abgeleitet, z. B.:
             # border_color    = "#3D3D3D"
             # separator_color = "#2E2E2E"
@@ -149,7 +150,7 @@ public static class DefaultSettings
             [appearance.light]
             background = "#FFFFFF"
             foreground = "#1A1A1A"
-            selection  = "#40000000"
+            selection  = "#000000"
 
             # Pro Anbieter: type, model und ein API-Schlüssel (api_key direkt ODER api_key_env = Name einer Umgebungsvariable).
             # Ohne beides gilt der Schlüssel aus der Windows-Anmeldeinformationsverwaltung (Tray-Symbol → API-Schlüssel …).
