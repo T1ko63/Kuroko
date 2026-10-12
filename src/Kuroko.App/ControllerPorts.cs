@@ -14,6 +14,8 @@ public interface IOverlayView
 
     event Action<AppCommand>? CommandChosen;
 
+    event Action<string>? QuestionAsked;
+
     event Action? Cancelled;
 
     event Action? Dismissed;

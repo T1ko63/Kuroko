@@ -85,6 +85,8 @@ internal sealed class FakeRunner : IPromptRunner
 
     public List<string> Inputs { get; } = new();
 
+    public List<PromptDefinition> Prompts { get; } = new();
+
     /// <summary>Reported through onFallback before answering.</summary>
     public ProviderFallback? Fallback { get; set; }
 
@@ -106,6 +108,7 @@ internal sealed class FakeRunner : IPromptRunner
         PromptDefinition prompt, string input, CancellationToken ct, LlmTimings? timings = null, Action<ProviderFallback>? onFallback = null)
     {
         Inputs.Add(input);
+        Prompts.Add(prompt);
         LastToken = ct;
         ct.ThrowIfCancellationRequested();
         if (Fallback is { } used) onFallback?.Invoke(used);
@@ -134,6 +137,7 @@ internal sealed class FakeRunner : IPromptRunner
         Action<ProviderFallback>? onFallback = null)
     {
         Inputs.Add(input);
+        Prompts.Add(prompt);
         LastToken = ct;
         if (Fallback is { } used) onFallback?.Invoke(used);
         Waiting = true;
@@ -167,6 +171,8 @@ internal sealed class FakeOverlay : IOverlayView
     public event Action<PromptDefinition>? PromptChosen;
 
     public event Action<AppCommand>? CommandChosen;
+
+    public event Action<string>? QuestionAsked;
 
     public event Action? Cancelled;
 
@@ -204,6 +210,8 @@ internal sealed class FakeOverlay : IOverlayView
     public void Choose(PromptDefinition prompt) => PromptChosen?.Invoke(prompt);
 
     public void Choose(AppCommand command) => CommandChosen?.Invoke(command);
+
+    public void Ask(string question) => QuestionAsked?.Invoke(question);
 
     public void Cancel() => Cancelled?.Invoke();
 

@@ -51,6 +51,10 @@
                 </ListBox>
                 <TextBlock x:Name="NoResults" Height="{DynamicResource Row.Height}" Margin="20,1" VerticalAlignment="Top"
                            Padding="0,10,0,0" Foreground="{DynamicResource MutedBrush}" Visibility="Collapsed"/>
+                <!-- After "//": no list, only how to send the question. -->
+                <TextBlock x:Name="QuestionHint" Height="{DynamicResource Row.Height}" Margin="20,1" VerticalAlignment="Top"
+                           Padding="0,10,0,0" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis"
+                           Visibility="Collapsed"/>
             </Grid>
         </StackPanel>
     </Border>

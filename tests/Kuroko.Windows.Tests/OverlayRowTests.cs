@@ -40,6 +40,25 @@ public class OverlayRowTests
         Assert.Equal(("Fix", "1", "Ctrl+Alt+K", ""), (promptRow.Name, promptRow.Number, promptRow.Trailing, promptRow.Detail));
     }
 
+    [Fact]
+    public void The_question_entry_leads_the_command_list_until_a_name_is_typed()
+    {
+        AppCommand[] commands =
+        [
+            new("copy", "Copy", () => { }, CommandFocus.Field),
+            new("quit", "Quit", () => { }, CommandFocus.None),
+        ];
+
+        var all = OverlayRow.ForCommands(commands, "");
+        var filtered = OverlayRow.ForCommands(commands, "q");
+
+        Assert.Equal(["//", "/copy", "/quit"], all.Select(r => r.Name));
+        Assert.True(all[0].IsQuestion);
+        Assert.True(all[0].IsEnabled);
+        Assert.Equal(Loc.Get("question_row"), all[0].Detail.Trim());
+        Assert.Equal(["/quit"], filtered.Select(r => r.Name));
+    }
+
     [Theory]
     [InlineData(new[] { true, true }, 0)]
     [InlineData(new[] { false, false, true }, 2)]
