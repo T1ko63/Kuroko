@@ -364,6 +364,99 @@ public class AppControllerTests
         Assert.Single(_text.Replacements);
     });
 
+    // ---- overlay commands ("/") ----
+
+    private AppController ControllerWith(params AppCommand[] commands)
+        => new(_text, _overlay, _status, _runner, () => [Fix, Explain], hotkeys: _hotkeys, clipboard: _clipboard, desktop: _desktop,
+            commands: () => commands);
+
+    [Fact]
+    public void The_overlay_gets_the_commands_each_time_it_opens() => UiThread.Run(async () =>
+    {
+        var copy = new AppCommand("copy", "Copy", () => { }, CommandFocus.Field);
+        var controller = ControllerWith(copy);
+
+        controller.OnOverlayHotkey(0);
+        await UiThread.Until(() => _overlay.Activated, "overlay active");
+
+        Assert.Equal([copy], _overlay.Commands);
+    });
+
+    [Fact]
+    public void A_field_command_runs_only_after_the_overlay_closed_the_focus_came_back_and_busy_was_released() => UiThread.Run(async () =>
+    {
+        AppController? controller = null;
+        (bool OverlayShown, bool Busy, int FocusRestores)? seen = null;
+        var test = new AppCommand("test", "Test", () => seen = (_overlay.IsShown, controller!.IsBusy, _desktop.FocusRestores), CommandFocus.Field);
+        controller = ControllerWith(test);
+        controller.OnOverlayHotkey(0);
+        await UiThread.Until(() => _overlay.Activated, "overlay active");
+
+        _overlay.Choose(test);
+        await Idle(controller);
+        Assert.Null(seen); // queued, not run inside the overlay's flow
+
+        _desktop.RunPosted();
+
+        Assert.Equal((false, false, 1), seen);
+        Assert.Empty(_runner.Inputs);
+    });
+
+    [Fact]
+    public void A_window_command_does_not_give_the_focus_back() => UiThread.Run(async () =>
+    {
+        var ran = 0;
+        var settings = new AppCommand("settings", "Settings", () => ran++, CommandFocus.Window);
+        var controller = ControllerWith(settings);
+        controller.OnOverlayHotkey(0);
+        await UiThread.Until(() => _overlay.Activated, "overlay active");
+
+        _overlay.Choose(settings);
+        await Idle(controller);
+        _desktop.RunPosted();
+
+        Assert.Equal(1, ran);
+        Assert.Equal(0, _desktop.FocusRestores);
+        Assert.False(_overlay.IsShown);
+    });
+
+    [Fact]
+    public void A_disabled_command_does_nothing_and_leaves_the_overlay_open() => UiThread.Run(async () =>
+    {
+        var ran = 0;
+        var copy = new AppCommand("copy", "Copy", () => ran++, CommandFocus.Field) { IsEnabled = () => false };
+        var controller = ControllerWith(copy);
+        controller.OnOverlayHotkey(0);
+        await UiThread.Until(() => _overlay.Activated, "overlay active");
+
+        _overlay.Choose(copy);
+        await UiThread.Settle();
+
+        Assert.True(_overlay.IsShown);
+        Assert.Empty(_desktop.Posted);
+        Assert.Equal(0, ran);
+    });
+
+    [Fact]
+    public void A_command_does_not_block_the_next_hotkey_or_its_notices() => UiThread.Run(async () =>
+    {
+        AppController? controller = null;
+        var notice = new AppCommand("reload", "Reload", () => controller!.ShowNotice("reloaded", NoticeKind.Info), CommandFocus.Field);
+        controller = ControllerWith(notice);
+        _runner.AutoAnswer = "the text";
+        controller.OnOverlayHotkey(0);
+        await UiThread.Until(() => _overlay.Activated, "overlay active");
+
+        _overlay.Choose(notice);
+        await Idle(controller);
+        _desktop.RunPosted();
+        controller.OnPromptHotkey(0, Fix);
+        await Idle(controller);
+
+        Assert.Contains(_status.Shown, s => s.Contains("reloaded"));
+        Assert.Single(_text.Replacements);
+    });
+
     [Fact]
     public void Closing_the_overlay_gives_the_focus_back_and_frees_the_controller() => UiThread.Run(async () =>
     {

@@ -21,6 +21,7 @@ public sealed class AppController
     private readonly IOverlayView _overlay;
     private readonly IStatusView _status;
     private readonly Func<IReadOnlyList<PromptDefinition>> _prompts;
+    private readonly Func<IReadOnlyList<AppCommand>> _commands;
 
     private RunSession? _session;
     private readonly Action? _warmUp;
@@ -38,15 +39,18 @@ public sealed class AppController
     /// <param name="hotkeys">Needed for the temporary hotkeys: Esc during a run, Esc and copy while the result card is up.</param>
     /// <param name="clipboard">Needed to copy the text of the result card and the last result.</param>
     /// <param name="desktop">Target window, focus, timer resolution and foreground watch; <see cref="Win32Desktop"/> when not given.</param>
+    /// <param name="commands">The app commands for the overlay's "/" list (the same list as the tray menu); read on every use.</param>
     public AppController(
         ITextAccess text, IOverlayView overlay, IStatusView status, IPromptRunner runner,
         Func<IReadOnlyList<PromptDefinition>> prompts, Action? warmUp = null,
-        IHotkeyRegistry? hotkeys = null, IClipboard? clipboard = null, IDesktop? desktop = null)
+        IHotkeyRegistry? hotkeys = null, IClipboard? clipboard = null, IDesktop? desktop = null,
+        Func<IReadOnlyList<AppCommand>>? commands = null)
     {
         _text = text;
         _overlay = overlay;
         _status = status;
         _prompts = prompts;
+        _commands = commands ?? (() => []);
         _warmUp = warmUp;
         _desktop = desktop ?? new Win32Desktop();
         _run = new RunState(_desktop, hotkeys);
@@ -58,6 +62,7 @@ public sealed class AppController
         _undo = new UndoRun(text, status, _run, _anchors, History);
 
         _overlay.PromptChosen += prompt => _ = OnPromptChosenAsync(prompt);
+        _overlay.CommandChosen += command => _ = OnCommandChosenAsync(command);
         _overlay.Cancelled += () => _ = CloseOverlayAsync(restoreFocus: true);
         _overlay.Dismissed += () => _ = CloseOverlayAsync(restoreFocus: false);
         _status.CancelRequested += OnStatusCancelRequested;
@@ -246,7 +251,7 @@ public sealed class AppController
         }
 
         _session = session;
-        _overlay.Present(_prompts());
+        _overlay.Present(_prompts(), _commands());
         _overlay.ShowAnchored(session.Anchor);
         _latency.OverlayShown(hotkeyTimestamp, session.Target!.ProcessName, anchorKind);
 
@@ -317,6 +322,20 @@ public sealed class AppController
         _session = null;
         _overlay.HideOverlay();
         await ExecuteAsync(session, prompt, restoreFocus: true, hotkeyTimestamp: null);
+    }
+
+    /// <summary>
+    /// A command from the "/" list. The order is the point: close the overlay, give the focus back only when the command
+    /// works in the text field, release "busy", and only then run the command, queued on the UI thread. So the command
+    /// runs exactly as from the tray: its notices show (they are skipped while busy), and a blocking window such as the
+    /// info box does not hold up the overlay's flow or the next hotkey.
+    /// </summary>
+    private async Task OnCommandChosenAsync(AppCommand command)
+    {
+        if (_session is null || !command.Enabled) return;
+        AppLog.Info($"overlay: command /{command.Name}");
+        await CloseOverlayAsync(restoreFocus: command.FocusAfter == CommandFocus.Field);
+        _desktop.Post(command.Run);
     }
 
     private async Task CloseOverlayAsync(bool restoreFocus)

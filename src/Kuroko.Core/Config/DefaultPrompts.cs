@@ -11,7 +11,7 @@ public static class DefaultPrompts
         var text = new StringBuilder();
         text.AppendLine("# Kuroko - Prompts. Änderungen werden nach dem Speichern automatisch übernommen.");
         text.AppendLine("# Bearbeiten, löschen und ergänzen ist ausdrücklich erwünscht. Pro Prompt ein [[prompt]]-Block:");
-        text.AppendLine("#   name     Anzeigename im Overlay (Pflicht, eindeutig)");
+        text.AppendLine("#   name     Anzeigename im Overlay (Pflicht, eindeutig, nicht mit \"/\" am Anfang: das ist für Befehle)");
         text.AppendLine("#   prompt   die Anweisung an die KI (Pflicht); sie soll nur den reinen Ergebnistext verlangen");
         text.AppendLine("#   mode     \"transform\" (Standard): der markierte Text bzw. das ganze Feld wird bearbeitet");
         text.AppendLine("#            \"instruction\": der Text im Feld ist selbst die Anweisung (Auftrag)");

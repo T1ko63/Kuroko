@@ -14,6 +14,17 @@ public class FuzzyMatcherTests
     }
 
     [Fact]
+    public void Keep_filters_without_reordering()
+    {
+        string[] commands = ["copy", "prompts", "settings", "folder", "reload", "keys", "test", "autostart", "about", "quit"];
+
+        Assert.Equal(commands, FuzzyMatcher.Keep(commands, "", c => c));
+        Assert.Equal(["settings", "test", "autostart"], FuzzyMatcher.Keep(commands, "st", c => c));
+        Assert.Equal(["prompts", "autostart", "about"], FuzzyMatcher.Keep(commands, "ot", c => c));
+        Assert.Empty(FuzzyMatcher.Keep(commands, "xyz", c => c));
+    }
+
+    [Fact]
     public void Non_matching_query_returns_nothing()
     {
         Assert.Empty(FuzzyMatcher.Filter(Names, "xyz", n => n));

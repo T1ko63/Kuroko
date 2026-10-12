@@ -166,6 +166,8 @@ internal sealed class FakeOverlay : IOverlayView
 {
     public event Action<PromptDefinition>? PromptChosen;
 
+    public event Action<AppCommand>? CommandChosen;
+
     public event Action? Cancelled;
 
     public event Action? Dismissed;
@@ -180,9 +182,10 @@ internal sealed class FakeOverlay : IOverlayView
     {
     }
 
-    public void Present(IReadOnlyList<PromptDefinition> prompts)
-    {
-    }
+    /// <summary>The commands handed over by the last <see cref="Present"/>.</summary>
+    public IReadOnlyList<AppCommand> Commands { get; private set; } = [];
+
+    public void Present(IReadOnlyList<PromptDefinition> prompts, IReadOnlyList<AppCommand> commands) => Commands = commands;
 
     public void ShowAnchored(Anchor anchor)
     {
@@ -199,6 +202,8 @@ internal sealed class FakeOverlay : IOverlayView
     }
 
     public void Choose(PromptDefinition prompt) => PromptChosen?.Invoke(prompt);
+
+    public void Choose(AppCommand command) => CommandChosen?.Invoke(command);
 
     public void Cancel() => Cancelled?.Invoke();
 
@@ -375,6 +380,18 @@ internal sealed class FakeDesktop : IDesktop
 
     public void AfterNextFrame(Action action)
     {
+    }
+
+    /// <summary>Actions queued with <see cref="Post"/>; a test runs them with <see cref="RunPosted"/>, so it can check what happened before.</summary>
+    public List<Action> Posted { get; } = [];
+
+    public void Post(Action action) => Posted.Add(action);
+
+    public void RunPosted()
+    {
+        var actions = Posted.ToList();
+        Posted.Clear();
+        foreach (var action in actions) action();
     }
 
     /// <summary>Another window came to the front.</summary>

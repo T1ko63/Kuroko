@@ -127,6 +127,17 @@ public class PromptsLoaderTests
     }
 
     [Fact]
+    public void A_name_starting_with_a_slash_is_an_error_on_its_line()
+    {
+        // "/" in the overlay switches to the command list, so such a prompt could never be found.
+        var result = Parse("[[prompt]]\nname = \"Fix\"\nprompt = \"a\"\n\n[[prompt]]\nprompt = \"b\"\nname = \"/copy\"\n");
+        var issue = OnlyError(result);
+        Assert.Contains("must not start with '/'", issue.Message);
+        Assert.Equal(7, issue.Line);
+        Assert.Null(result.Prompts); // like every error: the last valid prompt list stays active
+    }
+
+    [Fact]
     public void Single_bracket_table_is_explained()
     {
         var result = Parse("[prompt]\nname = \"A\"\nprompt = \"x\"\n");

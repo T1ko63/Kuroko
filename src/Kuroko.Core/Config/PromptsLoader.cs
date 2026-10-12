@@ -108,6 +108,13 @@ public static class PromptsLoader
             return null;
         }
 
+        // "/" at the start of the overlay's search field switches to the command list, so such a prompt could not be found.
+        if (name.StartsWith('/'))
+        {
+            reader.Issue(Line("name"), $"prompt name '{name}' must not start with '/' (reserved for commands in the overlay)", isError: true);
+            return null;
+        }
+
         var text = reader.Choice(table, "prompt", string.Empty, null, Line);
         if (string.IsNullOrWhiteSpace(text))
         {

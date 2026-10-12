@@ -24,6 +24,12 @@ Audit-Bericht vom Oktober 2026 in [`refactoring-report.md`](refactoring-report.m
 **Im Overlay:** sofort tippen filtert (Fuzzy-Suche), `↑`/`↓` und `Enter` wählen, `1`–`9` wählen direkt,
 Mausklick geht auch, `Esc` bricht ab. Danach liegt der Fokus wieder genau dort, wo du warst.
 
+**Befehle im Overlay:** Beginnt die Eingabe mit `/`, zeigt die Liste statt der Prompts die Einträge des Tray-Menüs als Befehle:
+`/copy`, `/prompts`, `/settings`, `/folder`, `/reload`, `/keys`, `/test`, `/autostart` (zeigt „an“/„aus“), `/about`, `/quit`.
+Weiteres Tippen filtert, die Reihenfolge bleibt fest. Nicht verfügbare Befehle (z. B. `/copy` ohne letztes Ergebnis) sind ausgegraut
+und werden übersprungen. `Enter` schließt das Overlay und führt den Befehl aus wie im Tray; Befehle, die ein Fenster öffnen, geben den
+Fokus an dieses Fenster, die übrigen ins Textfeld zurück. Ein Prompt-Name darf deshalb nicht mit `/` beginnen.
+
 **Was bearbeitet wird:** der markierte Text; ist nichts markiert, der gesamte Inhalt des Feldes.
 
 **Universal (ein Prompt zum Schreiben und Bearbeiten):** Ein Prompt mit `mode = "universal"` entscheidet am Text:

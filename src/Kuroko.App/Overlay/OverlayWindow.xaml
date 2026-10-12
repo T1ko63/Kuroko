@@ -14,7 +14,7 @@
             <Grid Height="{DynamicResource Search.Height}">
                 <TextBlock x:Name="Placeholder" Margin="{StaticResource Search.Padding}" VerticalAlignment="Center"
                            FontSize="{DynamicResource Font.Search}" Foreground="{DynamicResource PlaceholderBrush}"
-                           IsHitTestVisible="False"/>
+                           TextTrimming="CharacterEllipsis" IsHitTestVisible="False"/>
                 <TextBox x:Name="Search" Margin="{StaticResource Search.Padding}" VerticalAlignment="Center"
                          FontSize="{DynamicResource Font.Search}" Background="Transparent" BorderThickness="0" Padding="0"
                          Foreground="{DynamicResource TextBrush}" CaretBrush="{DynamicResource CaretBrush}"
@@ -37,9 +37,13 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="{Binding Number}" FontSize="{DynamicResource Font.Number}"
                                            Foreground="{DynamicResource SubtleBrush}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis"
-                                           Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2" Text="{Binding Hotkey}" FontSize="{DynamicResource Font.Hotkey}"
+                                <!-- Prompt name; for a command "/copy" followed by its muted tray label. -->
+                                <TextBlock Grid.Column="1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
+                                    <Run Text="{Binding Name, Mode=OneWay}" Foreground="{DynamicResource TextBrush}"/><Run
+                                         Text="{Binding Detail, Mode=OneWay}"
+                                         Foreground="{DynamicResource MutedBrush}"/>
+                                </TextBlock>
+                                <TextBlock Grid.Column="2" Text="{Binding Trailing}" FontSize="{DynamicResource Font.Hotkey}"
                                            Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="16,0,0,0"/>
                             </Grid>
                         </DataTemplate>

@@ -12,6 +12,8 @@ public interface IOverlayView
 {
     event Action<PromptDefinition>? PromptChosen;
 
+    event Action<AppCommand>? CommandChosen;
+
     event Action? Cancelled;
 
     event Action? Dismissed;
@@ -20,7 +22,7 @@ public interface IOverlayView
 
     void SetLayout(double width, double minHeight, double maxHeight, double fontSize);
 
-    void Present(IReadOnlyList<PromptDefinition> prompts);
+    void Present(IReadOnlyList<PromptDefinition> prompts, IReadOnlyList<AppCommand> commands);
 
     void ShowAnchored(Anchor anchor);
 
@@ -85,6 +87,9 @@ public interface IDesktop
 
     /// <summary>Calls <paramref name="action"/> once the next frame has been rendered.</summary>
     void AfterNextFrame(Action action);
+
+    /// <summary>Runs <paramref name="action"/> later on the UI thread, after the current work (e.g. closing the overlay) has finished.</summary>
+    void Post(Action action);
 }
 
 /// <summary>The real <see cref="IDesktop"/>.</summary>
@@ -108,4 +113,6 @@ public sealed class Win32Desktop : IDesktop
         };
         CompositionTarget.Rendering += handler;
     }
+
+    public void Post(Action action) => System.Windows.Application.Current.Dispatcher.BeginInvoke(action);
 }
