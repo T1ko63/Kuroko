@@ -49,7 +49,7 @@ Building requires the .NET 10 SDK:
 powershell -File tools\publish.ps1                 # small build, needs the .NET 10 Desktop Runtime
 powershell -File tools\publish.ps1 -SelfContained  # ~150 MB, runs anywhere
 ```
-The result lands in `publish\Kuroko` or `publish\Kuroko-selfcontained`. The small build is the same one as in the release zip; the self-contained build runs on PCs where the .NET 10 Desktop Runtime cannot be installed.
+The result lands in `publish\Kuroko` or `publish\Kuroko-selfcontained`, next to a zip named after the version in `Directory.Build.props` (`publish\Kuroko-<version>-win-x64.zip`, or `...-win-x64-selfcontained.zip`). The small build is the same one as in the release zip; the self-contained build runs on PCs where the .NET 10 Desktop Runtime cannot be installed.
 
 ## Usage
 
