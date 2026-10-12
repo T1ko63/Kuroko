@@ -178,7 +178,7 @@ public partial class OverlayWindow : Window, IOverlayView
         // What is not the list: shadow, border, search line, separator, list padding.
         var listPadding = (Thickness)FindResource("List.Padding");
         var chrome = 2 * shadow + Panel.BorderThickness.Top + Panel.BorderThickness.Bottom
-            + (double)FindResource("Search.Height") + 1 + listPadding.Top + listPadding.Bottom;
+            + (double)FindResource("Search.Height") + (double)FindResource("Separator.Height") + listPadding.Top + listPadding.Bottom;
         List.MaxHeight = Math.Max((double)FindResource("Row.Height") + 2, totalMax - chrome);
         List.MinHeight = Math.Max(0, totalMin - chrome);
         Width = innerWidth + 2 * shadow;

@@ -8,10 +8,14 @@ namespace Kuroko.Core.Config;
 /// </summary>
 internal static class AppearanceLoader
 {
-    private static readonly HashSet<string> Keys = new(StringComparer.Ordinal) { "placeholder", "transparency", "radius", "blur", "border", "custom_corners", "dark", "light" };
-    private static readonly HashSet<string> ColorKeys = new(StringComparer.Ordinal) { "background", "foreground", "selection" };
+    private static readonly HashSet<string> Keys = new(StringComparer.Ordinal) {
+        "placeholder", "transparency", "radius", "blur", "border", "border_width", "separator", "separator_width", "font", "custom_corners", "dark", "light",
+    };
 
-    public static AppearanceSettings Read(TomlTable root, TomlReader reader)
+    private static readonly HashSet<string> ColorKeys = new(StringComparer.Ordinal) { "background", "foreground", "selection", "border_color", "separator_color" };
+
+    /// <param name="fontExists">Whether a font family is installed; null skips the check (Kuroko.Core cannot ask Windows itself).</param>
+    public static AppearanceSettings Read(TomlTable root, TomlReader reader, Func<string, bool>? fontExists = null)
     {
         if (!root.TryGetValue("appearance", out var value)) return AppearanceSettings.Default;
         if (value is not TomlTable table)
@@ -36,7 +40,18 @@ internal static class AppearanceLoader
         var dark = ReadColors("dark", table, AppearanceSettings.DefaultDark, reader);
         var light = ReadColors("light", table, AppearanceSettings.DefaultLight, reader);
         var placeholder = ReadText(table, "placeholder", AppearanceSettings.DefaultPlaceholder, reader, Line);
-        return new AppearanceSettings(transparency, radius, blur, dark, light, border, customCorners) { Placeholder = placeholder };
+        var separator = ReadBool(table, "separator", AppearanceSettings.DefaultSeparator, reader, Line);
+        var borderWidth = ReadInt(table, "border_width", AppearanceSettings.DefaultLineWidth, 0, AppearanceSettings.MaxLineWidth, reader, Line);
+        var separatorWidth = ReadInt(table, "separator_width", AppearanceSettings.DefaultLineWidth, 0, AppearanceSettings.MaxLineWidth, reader, Line);
+        var font = ReadFont(table, reader, Line, fontExists);
+        return new AppearanceSettings(transparency, radius, blur, dark, light, border, customCorners)
+        {
+            Placeholder = placeholder,
+            Separator = separator,
+            BorderWidth = borderWidth,
+            SeparatorWidth = separatorWidth,
+            Font = font,
+        };
     }
 
     private static void Warn(TomlReader reader, int? line, string message) => reader.Issue(line, message, isError: false, show: true);
@@ -77,6 +92,41 @@ internal static class AppearanceLoader
         return fallback;
     }
 
+    /// <summary>
+    /// A font name or a comma-separated list of them. An unknown name falls back silently in WPF, so it is reported here:
+    /// when no name of the list is installed the default is used, otherwise the list stays (WPF takes the next name).
+    /// </summary>
+    private static string ReadFont(TomlTable table, TomlReader reader, Func<string, int?> line, Func<string, bool>? fontExists)
+    {
+        var font = ReadText(table, "font", AppearanceSettings.DefaultFont, reader, line);
+        var names = font.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (names.Length == 0)
+        {
+            Warn(reader, line("font"), $"[appearance] font must name a font; using \"{AppearanceSettings.DefaultFont}\"");
+            return AppearanceSettings.DefaultFont;
+        }
+
+        // The default list is not checked: Segoe UI Variable only exists on Windows 11, and Segoe UI stands behind it.
+        var list = string.Join(", ", names);
+        if (fontExists is null || list == AppearanceSettings.DefaultFont) return list;
+
+        var missing = names.Where(n => !fontExists(n)).ToList();
+        if (missing.Count == names.Length)
+        {
+            Warn(reader, line("font"), $"[appearance] font: {Quote(missing)} is not installed; using \"{AppearanceSettings.DefaultFont}\"");
+            return AppearanceSettings.DefaultFont;
+        }
+
+        if (missing.Count > 0)
+        {
+            Warn(reader, line("font"), $"[appearance] font: {Quote(missing)} is not installed; the next font in the list is used");
+        }
+
+        return list;
+    }
+
+    private static string Quote(IEnumerable<string> names) => string.Join(", ", names.Select(n => $"\"{n}\""));
+
     private static BlurMode ReadBlur(TomlTable table, TomlReader reader, Func<string, int?> line)
     {
         if (!table.TryGetValue("blur", out var value)) return AppearanceSettings.DefaultBlur;
@@ -115,7 +165,23 @@ internal static class AppearanceLoader
         var background = ReadColor(table, "background", defaults.Background, alphaAllowed: false, header, reader, Line);
         var foreground = ReadColor(table, "foreground", defaults.Foreground, alphaAllowed: false, header, reader, Line);
         var selection = ReadColor(table, "selection", defaults.Selection, alphaAllowed: true, header, reader, Line);
-        return new ThemeColors(background, foreground, selection);
+        var border = ReadOptionalColor(table, "border_color", header, reader, Line);
+        var separator = ReadOptionalColor(table, "separator_color", header, reader, Line);
+        return new ThemeColors(background, foreground, selection, border, separator);
+    }
+
+    /// <summary>A colour that is derived when missing: an invalid one is reported and derived as well.</summary>
+    private static Rgba? ReadOptionalColor(TomlTable table, string key, string header, TomlReader reader, Func<string, int?> line)
+    {
+        if (!table.TryGetValue(key, out var value)) return null;
+        if (!ColorParser.TryParse(value as string, out var color, out var hasAlpha))
+        {
+            Warn(reader, line(key), $"{header} {key} is not a valid colour (expected #RRGGBB or rgb(r, g, b)); derived from foreground");
+            return null;
+        }
+
+        if (hasAlpha) Warn(reader, line(key), $"{header} {key}: alpha ignored (use #RRGGBB or rgb())");
+        return Rgba.Opaque(color.R, color.G, color.B);
     }
 
     private static Rgba ReadColor(

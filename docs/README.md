@@ -268,12 +268,18 @@ transparency = 50           # 0-100 %: 0 = deckend, 100 = vollständig durchsich
 radius       = 10           # Eckenradius in px, 0-100
 blur         = "acrylic"    # acrylic | blur | mica | micaalt | none
 border       = true         # feiner Rand um das Fenster: true | false
+border_width = 1            # Breite des Rands in px, 0-4 (border = false heißt 0)
+separator    = true         # Trennlinie unter der Eingabezeile: true | false
+separator_width = 1         # ihre Höhe in px, 0-4
+font         = "Segoe UI Variable Text, Segoe UI"   # Schrift für Auswahl, Pille, Karte und API-Schlüssel-Fenster
 custom_corners = false   # true: der Radius gilt auch bei acrylic/mica exakt (braucht den Windhawk-Mod, Teil "Ecken"); sonst rastet Windows auf 0, 4 oder 8 px
 
 [appearance.dark]           # gilt, wenn das aktive Theme dunkel ist
 background = "#000000"      # #RRGGBB oder rgb(r, g, b); ein Alpha-Anteil wird ignoriert und gemeldet
 foreground = "#F0F0F0"      # Haupttext, daraus werden alle Nebenfarben abgeleitet
 selection  = "#40FFFFFF"    # ausgewählte Zeile: #AARRGGBB (Alpha ZUERST, wie WPF, nicht wie CSS), #RRGGBB oder rgba(r, g, b, a); Hover = halbe Deckkraft
+# border_color    = "#3D3D3D"   # optional: Farbe des Rands, #RRGGBB oder rgb(r, g, b); fehlt sie, wird sie aus foreground abgeleitet
+# separator_color = "#2E2E2E"   # optional: Farbe der Trennlinie (auch die Spur der Fortschrittslinie in der Pille)
 
 [appearance.light]
 background = "#FFFFFF"
@@ -294,6 +300,14 @@ selection  = "#40000000"
   Tönung zwischen `background` (0) und reinem Mica (100); es scheint nichts durch. Die Status-Pille ist nie aktiv und zeigt bei Mica
   eine einfarbige Ersatzfläche.
 * **custom_corners:** Mit `true` fordert die App den exakten Radius auch bei den Windows-Materialien an: Sie zeichnet den Rand mit dem echten Radius und gibt ihn an den Windhawk-Mod `kuroko-blur` weiter, dessen Teil "Ecken" (Schalter *Enable rounded corners*) in `dwm.exe` den Radius statt 0, 4 oder 8 px verwendet. Ohne laufenden Mod rundet Windows weiter selbst, der Rand der App passt dann nicht ganz dazu. Blur (für `blur = "none"`) und Ecken sind im Mod getrennt schaltbar.
+* **Rand und Trennlinie:** `border_width` und `separator_width` (0-4 px) bestimmen die Breite, `separator = false` blendet die Trennlinie
+  unter der Eingabezeile aus, `border = false` den Rand. Die Farben `border_color` und `separator_color` stehen je Theme in
+  `[appearance.dark]` bzw. `[appearance.light]`; ohne sie werden beide wie bisher aus `foreground` abgeleitet. Auf Acrylic, Blur und
+  Mica rundet Windows die Ecken selbst (0, 4 oder 8 px), ein breiter Rand kann dort an den Ecken unsauber aussehen, außer mit
+  `custom_corners` und dem Windhawk-Mod.
+* **font:** eine Schrift für Prompt-Auswahl, Pille, Ergebnis-Karte und das Fenster für die API-Schlüssel (das Tray-Menü behält die
+  Windows-Schrift). Mehrere Namen mit Komma: Es gilt der erste installierte. Ist ein Name nicht installiert, kommt eine Meldung; ist
+  keiner installiert, gilt der Standard.
 * **radius:** Windows schneidet das Fenster bei Acrylic, Blur und Mica selbst zu und kennt nur 0, 4 und 8 px; der Wert rastet dort auf die
   nächste dieser Stufen ein. Bei `none` und im Fallback gilt der Radius exakt. Die Ecken der Zeilen-Hervorhebung sind aus `radius`
   abgeleitet (etwa 60 %).

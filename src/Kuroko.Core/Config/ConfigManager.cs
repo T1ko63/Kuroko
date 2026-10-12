@@ -24,17 +24,20 @@ public sealed class ConfigManager
 {
     private readonly Func<string, string?> _getEnv;
     private readonly IKeyStore? _keyStore;
+    private readonly Func<string, bool>? _fontExists;
     private readonly object _gate = new();
     private ConfigSnapshot _current = new(AppSettings.Fallback, BuiltInPrompts.All);
     private string? _settingsText;
     private string? _promptsText;
     private IReadOnlyDictionary<string, int> _promptLines = new Dictionary<string, int>();
 
-    public ConfigManager(string directory, Func<string, string?> getEnv, IKeyStore? keyStore = null)
+    /// <param name="fontExists">Whether a font family is installed, for [appearance] font; null skips that check.</param>
+    public ConfigManager(string directory, Func<string, string?> getEnv, IKeyStore? keyStore = null, Func<string, bool>? fontExists = null)
     {
         Directory = directory;
         _getEnv = getEnv;
         _keyStore = keyStore;
+        _fontExists = fontExists;
     }
 
     public string Directory { get; }
@@ -83,7 +86,7 @@ public sealed class ConfigManager
                 }
                 else
                 {
-                    var parsed = SettingsLoader.Parse(settingsText, _getEnv, _keyStore);
+                    var parsed = SettingsLoader.Parse(settingsText, _getEnv, _keyStore, _fontExists);
                     issues.AddRange(parsed.Issues);
                     newSettings = parsed.Settings;
                 }

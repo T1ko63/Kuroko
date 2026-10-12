@@ -5,7 +5,7 @@
         Width="{StaticResource Overlay.Width}" SizeToContent="Height"
         WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True" ShowActivated="False"
         Background="Transparent" Foreground="{DynamicResource TextBrush}"
-        FontFamily="{StaticResource Font.Family}" FontSize="{DynamicResource Font.Row}"
+        FontFamily="{DynamicResource Font.Family}" FontSize="{DynamicResource Font.Row}"
         TextOptions.TextFormattingMode="Ideal" UseLayoutRounding="True" SnapsToDevicePixels="True"
         PreviewKeyDown="OnPreviewKeyDown" Deactivated="OnDeactivated">
 
@@ -22,7 +22,7 @@
                          TextChanged="OnSearchChanged"/>
                 <!-- Execution progress would sit here as a thin line; it is shown by the status pill (see StatusWindow). -->
             </Grid>
-            <Border Height="1" Background="{DynamicResource SeparatorBrush}"/>
+            <Border Height="{DynamicResource Separator.Height}" Background="{DynamicResource SeparatorBrush}"/>
 
             <Grid Margin="{StaticResource List.Padding}">
                 <ListBox x:Name="List" Style="{StaticResource PromptList}" MaxHeight="{StaticResource List.MaxHeight}"

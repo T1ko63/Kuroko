@@ -12,7 +12,8 @@
     <sys:Double x:Key="Status.MinWidth">200</sys:Double>
     <sys:Double x:Key="Status.MaxWidth">420</sys:Double>
     <CornerRadius x:Key="Window.Radius">10</CornerRadius>   <!-- default; the real values come from [appearance] radius (ThemeService) -->
-    <Thickness x:Key="Window.BorderThickness">1</Thickness>   <!-- default; [appearance] border = false makes it 0 -->
+    <Thickness x:Key="Window.BorderThickness">1</Thickness>   <!-- default; [appearance] border_width, border = false makes it 0 -->
+    <sys:Double x:Key="Separator.Height">1</sys:Double>       <!-- default; [appearance] separator_width, separator = false makes it 0 -->
     <sys:Double x:Key="Window.ShadowMargin">16</sys:Double>      <!-- room for the soft shadow when we draw it ourselves -->
     <sys:Double x:Key="Search.Height">56</sys:Double>
     <Thickness x:Key="Search.Padding">20,0,20,0</Thickness>
@@ -38,7 +39,7 @@
     <sys:Double x:Key="Result.BulletIndent">16</sys:Double>       <!-- width of the bullet column; wrapped lines hang behind it -->
 
     <!-- ===== Typography ===== -->
-    <FontFamily x:Key="Font.Family">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="Font.Family">Segoe UI Variable Text, Segoe UI</FontFamily>   <!-- default; [appearance] font -->
     <sys:Double x:Key="Font.Search">16</sys:Double>
     <sys:Double x:Key="Font.Row">14.5</sys:Double>
     <sys:Double x:Key="Font.Hotkey">12</sys:Double>

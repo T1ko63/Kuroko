@@ -9,8 +9,11 @@ public enum BlurMode
     None,
 }
 
-/// <summary>The three colours of one theme. Background and foreground are opaque; selection may carry its own alpha.</summary>
-public sealed record ThemeColors(Rgba Background, Rgba Foreground, Rgba Selection);
+/// <summary>
+/// The colours of one theme. Background and foreground are opaque; selection may carry its own alpha. Border and
+/// separator are optional (border_color, separator_color): when missing they are derived from the foreground.
+/// </summary>
+public sealed record ThemeColors(Rgba Background, Rgba Foreground, Rgba Selection, Rgba? Border = null, Rgba? Separator = null);
 
 /// <summary>The [appearance] block of settings.toml, validated, with defaults for everything that is missing or invalid.</summary>
 public sealed record AppearanceSettings(
@@ -19,7 +22,29 @@ public sealed record AppearanceSettings(
     /// <summary>Grey text in the empty search field of the prompt picker; "" shows none.</summary>
     public string Placeholder { get; init; } = DefaultPlaceholder;
 
+    /// <summary>The line under the search field (separator).</summary>
+    public bool Separator { get; init; } = DefaultSeparator;
+
+    /// <summary>Width of the window border in px (border_width); <see cref="BorderThickness"/> is what is drawn.</summary>
+    public int BorderWidth { get; init; } = DefaultLineWidth;
+
+    /// <summary>Height of the line under the search field in px (separator_width); <see cref="SeparatorThickness"/> is what is drawn.</summary>
+    public int SeparatorWidth { get; init; } = DefaultLineWidth;
+
+    /// <summary>Font of the overlay, the status pill, the result card and the API key window; a comma-separated list falls back in order.</summary>
+    public string Font { get; init; } = DefaultFont;
+
+    /// <summary>The border as drawn: border = false means 0, whatever border_width says.</summary>
+    public int BorderThickness => Border ? BorderWidth : 0;
+
+    /// <summary>The separator as drawn: separator = false means 0.</summary>
+    public int SeparatorThickness => Separator ? SeparatorWidth : 0;
+
     public const string DefaultPlaceholder = "Kuroko";
+    public const bool DefaultSeparator = true;
+    public const int DefaultLineWidth = 1;
+    public const int MaxLineWidth = 4;
+    public const string DefaultFont = "Segoe UI Variable Text, Segoe UI";
     public const int DefaultTransparency = 50;
     public const int DefaultRadius = 10;
     public const BlurMode DefaultBlur = BlurMode.Acrylic;
@@ -92,12 +117,12 @@ public sealed record AppearancePalette(
         var bg = colors.Background;
         return new AppearancePalette(
             Surface: bg.WithAlpha(appearance.SurfaceAlpha),
-            Edge: fg.Scaled(EdgeOpacity).Over(bg),
+            Edge: colors.Border ?? fg.Scaled(EdgeOpacity).Over(bg),
             Text: fg,
             Muted: fg.Scaled(MutedOpacity),
             Subtle: fg.Scaled(SubtleOpacity),
             Placeholder: fg.Scaled(PlaceholderOpacity),
-            Separator: fg.Scaled(SeparatorOpacity),
+            Separator: colors.Separator ?? fg.Scaled(SeparatorOpacity),
             RowSelected: colors.Selection,
             RowHover: colors.Selection.Scaled(0.5),
             ScrollThumb: fg.Scaled(ScrollThumbOpacity),

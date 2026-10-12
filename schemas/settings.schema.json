@@ -221,7 +221,32 @@
         "border": {
           "type": "boolean",
           "default": true,
-          "description": "Thin border around the window."
+          "description": "Thin border around the window. false means a width of 0, whatever border_width says."
+        },
+        "border_width": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "default": 1,
+          "description": "Width of the window border in px."
+        },
+        "separator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Line under the search field."
+        },
+        "separator_width": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4,
+          "default": 1,
+          "description": "Height of the line under the search field in px."
+        },
+        "font": {
+          "type": "string",
+          "minLength": 1,
+          "default": "Segoe UI Variable Text, Segoe UI",
+          "description": "Font of the prompt picker, the status pill, the result card and the API key window. Several names separated by commas: the first installed one is used. An unknown name is reported."
         },
         "custom_corners": {
           "type": "boolean",
@@ -249,6 +274,14 @@
           "pattern": "^\\s*(#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{8}|[Rr][Gg][Bb][Aa]?\\(\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*,\\s*\\d{1,3}\\s*(,\\s*\\d*\\.?\\d+%?\\s*)?\\))\\s*$",
           "description": "Selected row: #AARRGGBB (alpha first), #RRGGBB or rgba(r, g, b, a) with a from 0 to 1.",
           "examples": ["#40FFFFFF", "rgba(255, 255, 255, 0.25)"]
+        },
+        "border_color": {
+          "allOf": [{ "$ref": "#/definitions/opaqueColor" }],
+          "description": "Window border: #RRGGBB or rgb(r, g, b). Derived from foreground when missing."
+        },
+        "separator_color": {
+          "allOf": [{ "$ref": "#/definitions/opaqueColor" }],
+          "description": "Line under the search field (also the track of the pill's progress line): #RRGGBB or rgb(r, g, b). Derived from foreground when missing."
         }
       }
     },
