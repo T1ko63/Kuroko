@@ -336,7 +336,13 @@ public class TextAccessServiceTests
         _app.Selection = "late text";
         _app.CopiesInTwoSteps = true;
 
-        var result = await Service().CaptureAsync(Target(), ReadStrategy.Auto);
+        // The second update comes from a pool thread after 20 ms; on a busy CI runner that can take longer than the
+        // fast test window. The read still ends as soon as the text arrives, so a wide window costs nothing.
+        var service = new TextAccessService(_app, _app, _uia)
+        {
+            Timings = Fast with { CopyTimeout = TimeSpan.FromSeconds(2), CopyFollowUp = TimeSpan.FromSeconds(1) },
+        };
+        var result = await service.CaptureAsync(Target(), ReadStrategy.Auto);
 
         Assert.Equal("late text", result.Capture!.Text);
         Assert.Equal(["C"], _app.Keys);
