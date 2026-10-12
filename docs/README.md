@@ -30,8 +30,7 @@ Weiteres Tippen filtert, die Reihenfolge bleibt fest. Nicht verfügbare Befehle 
 und werden übersprungen. `Enter` schließt das Overlay und führt den Befehl aus wie im Tray; Befehle, die ein Fenster öffnen, geben den
 Fokus an dieses Fenster, die übrigen ins Textfeld zurück. Ein Prompt-Name darf deshalb nicht mit `/` beginnen.
 
-**Frage zum Text mit `//`:** Alles nach `//` ist eine eigene Frage oder Anweisung (die erste Zeile der `/`-Liste, „// Frage zum Text“,
-setzt `//` ein). `Enter` schließt das Overlay, liest erst dann die Markierung und zeigt die Antwort in der Ergebnis-Karte; ersetzt wird
+**Frage zum Text mit `//`:** Alles nach `//` ist eine eigene Frage oder Anweisung. `Enter` schließt das Overlay, liest erst dann die Markierung und zeigt die Antwort in der Ergebnis-Karte; ersetzt wird
 nichts. Mit markiertem Text bezieht sich die Frage darauf, das klappt auch auf Webseiten, in PDFs und schreibgeschützten Feldern. Ohne
 Markierung geht nur die Frage hinaus, ohne Fehlermeldung; aus dem Feld wird dann nichts mitgeschickt. Es antwortet der Standard-Anbieter
 (`default_provider`) mit einer festen Rolle; der Universal-Prompt bleibt davon unberührt. Ins Log kommt nur der Name „Frage“, nie die Frage selbst.
@@ -264,6 +263,7 @@ Was das für den Datenschutz heißt, steht unter [Datenschutz](#datenschutz).
 
 ```toml
 [appearance]
+placeholder  = "Kuroko"     # grauer Text im leeren Suchfeld; "" = kein Platzhalter
 transparency = 50           # 0-100 %: 0 = deckend, 100 = vollständig durchsichtig (über 90 leidet die Lesbarkeit)
 radius       = 10           # Eckenradius in px, 0-100
 blur         = "acrylic"    # acrylic | blur | mica | micaalt | none

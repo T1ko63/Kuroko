@@ -41,7 +41,7 @@ public class OverlayRowTests
     }
 
     [Fact]
-    public void The_question_entry_leads_the_command_list_until_a_name_is_typed()
+    public void The_command_list_holds_only_the_commands_and_filters_by_name()
     {
         AppCommand[] commands =
         [
@@ -52,10 +52,7 @@ public class OverlayRowTests
         var all = OverlayRow.ForCommands(commands, "");
         var filtered = OverlayRow.ForCommands(commands, "q");
 
-        Assert.Equal(["//", "/copy", "/quit"], all.Select(r => r.Name));
-        Assert.True(all[0].IsQuestion);
-        Assert.True(all[0].IsEnabled);
-        Assert.Equal(Loc.Get("question_row"), all[0].Detail.Trim());
+        Assert.Equal(["/copy", "/quit"], all.Select(r => r.Name));
         Assert.Equal(["/quit"], filtered.Select(r => r.Name));
     }
 

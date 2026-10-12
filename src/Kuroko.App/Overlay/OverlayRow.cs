@@ -4,15 +4,13 @@ using Kuroko.Core.Search;
 
 namespace Kuroko.App.Overlay;
 
-/// <summary>One line of the picker: a prompt or, after "/", an app command or the question entry.</summary>
+/// <summary>One line of the picker: a prompt or, after "/", an app command.</summary>
 public sealed record OverlayRow
 {
     public PromptDefinition? Prompt { get; private init; }
 
     public AppCommand? Command { get; private init; }
 
-    /// <summary>The "// Frage zum Text" entry at the top of the "/" list: choosing it starts a question.</summary>
-    public bool IsQuestion { get; private init; }
 
     /// <summary>Quick-select digit; empty when the row has none.</summary>
     public string Number { get; private init; } = string.Empty;
@@ -37,23 +35,9 @@ public sealed record OverlayRow
         Trailing = prompt.Hotkey ?? string.Empty,
     };
 
-    /// <summary>
-    /// The "/" list: the commands matching <paramref name="name"/>, in their fixed order. While no name is typed yet, the
-    /// question entry comes first, so "//" can be found.
-    /// </summary>
+    /// <summary>The "/" list: the commands matching <paramref name="name"/>, in their fixed order.</summary>
     public static List<OverlayRow> ForCommands(IReadOnlyList<AppCommand> commands, string name)
-    {
-        var rows = name.Length == 0 ? [ForQuestion()] : new List<OverlayRow>();
-        rows.AddRange(FuzzyMatcher.Keep(commands, name, c => c.Name).Select(For));
-        return rows;
-    }
-
-    public static OverlayRow ForQuestion() => new()
-    {
-        IsQuestion = true,
-        Name = "//",
-        Detail = "  " + Loc.Get("question_row"),
-    };
+        => FuzzyMatcher.Keep(commands, name, c => c.Name).Select(For).ToList();
 
     /// <summary>Reads the command's enabled state and on/off state now, i.e. each time the list is built.</summary>
     public static OverlayRow For(AppCommand command) => new()

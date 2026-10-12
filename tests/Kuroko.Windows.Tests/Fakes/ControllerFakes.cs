@@ -188,6 +188,10 @@ internal sealed class FakeOverlay : IOverlayView
     {
     }
 
+    public void SetPlaceholder(string text)
+    {
+    }
+
     /// <summary>The commands handed over by the last <see cref="Present"/>.</summary>
     public IReadOnlyList<AppCommand> Commands { get; private set; } = [];
 

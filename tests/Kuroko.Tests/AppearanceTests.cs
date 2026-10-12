@@ -333,6 +333,30 @@ public class AppearanceLoaderTests
         Assert.Contains("border", issue.Message);
     }
 
+    [Theory]
+    [InlineData("theme = \"dark\"\n", "Kuroko")]
+    [InlineData("[appearance]\nplaceholder = \"Was soll ich tun?\"\n", "Was soll ich tun?")]
+    [InlineData("[appearance]\nplaceholder = \"\"\n", "")]
+    public void The_placeholder_is_Kuroko_by_default_and_may_be_empty(string toml, string expected)
+    {
+        var result = Parse(toml);
+
+        Assert.Empty(Shown(result));
+        Assert.Equal(expected, result.Settings!.Appearance.Placeholder);
+    }
+
+    [Fact]
+    public void A_placeholder_that_is_not_a_text_is_reported_and_replaced_by_the_default()
+    {
+        var result = Parse("[appearance]\nradius = 4\nplaceholder = 5\n");
+
+        Assert.Equal("Kuroko", result.Settings!.Appearance.Placeholder);
+        Assert.Equal(4, result.Settings.Appearance.Radius);
+        var issue = Assert.Single(Shown(result));
+        Assert.Equal(3, issue.Line);
+        Assert.Contains("placeholder", issue.Message);
+    }
+
     [Fact]
     public void An_invalid_colour_type_is_reported()
     {

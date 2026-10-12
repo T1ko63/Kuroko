@@ -280,6 +280,7 @@ public partial class App : Application
             _controller.OverlaySpot = ParseSpot(settings.OverlayFixedPosition, CardSpot.TopThird);
             _controller.OverlayScreenMargin = settings.OverlayScreenMargin;
             _controller.SetOverlayLayout(settings.OverlayWidth, settings.OverlayMinHeight, settings.OverlayMaxHeight, settings.OverlayFontSize);
+            _controller.SetOverlayPlaceholder(settings.Appearance.Placeholder);
             _controller.ResultPlacement = Enum.TryParse<ResultPlacement>(settings.ResultPosition, ignoreCase: true, out var placement)
                 ? placement
                 : ResultPlacement.Fixed;
