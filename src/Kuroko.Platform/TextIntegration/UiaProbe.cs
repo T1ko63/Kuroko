@@ -40,6 +40,13 @@ public sealed record UiaFocusInfo(
     };
 
     public bool IsNonTextControl => NonTextControls.Contains(ControlType);
+
+    /// <summary>
+    /// Chromium (Chrome, Edge, Electron apps) answers the first UIA query after a pause with its root pane while it
+    /// builds its accessibility tree; a moment later the real field has the focus. That pane is not the field, so it
+    /// cannot tell whether the focus moved.
+    /// </summary>
+    public bool IsFocusPlaceholder => IsWebEngine && ControlType == "ControlType.Pane";
 }
 
 /// <summary>

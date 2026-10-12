@@ -160,7 +160,8 @@ public sealed class TextAccessService : ITextAccess
                 ? CaptureResult.Fail(CaptureFailure.NoText)
                 : CaptureResult.Ok(new TextCapture(text, origin, ReadStrategy.Clipboard, target, stopwatch.Elapsed)
                 {
-                    FocusElement = uia?.Element,
+                    // A placeholder would always look "moved" once the real field shows up and cancel a valid paste.
+                    FocusElement = uia is { IsFocusPlaceholder: false } ? uia.Element : null,
                 });
         }
         finally

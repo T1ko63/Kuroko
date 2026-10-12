@@ -227,6 +227,36 @@ public class TextAccessServiceTests
     }
 
     [Fact]
+    public async Task A_chromium_placeholder_pane_is_not_used_to_detect_a_focus_change()
+    {
+        // First UIA query after a pause: Chromium reports its root pane, later the real field has the focus.
+        _uia.Info = Uia(selectionKnown: false, editable: false, web: true, controlType: "ControlType.Pane");
+        _app.Selection = "selected text";
+        var capture = (await Service().CaptureAsync(Target("claude", "Chrome_WidgetWin_1"), ReadStrategy.Auto)).Capture!;
+        _uia.ElementHasFocus = false;
+
+        var result = await Service().ReplaceAsync(capture, "new");
+
+        Assert.True(result.Success);
+        Assert.Equal("new", _app.Pasted);
+        Assert.DoesNotContain("has focus", _uia.Calls);
+    }
+
+    [Fact]
+    public async Task A_web_field_read_through_the_clipboard_still_detects_a_focus_change()
+    {
+        _uia.Info = Uia(selectionKnown: false, web: true);
+        _app.Selection = "selected text";
+        var capture = (await Service().CaptureAsync(Target("claude", "Chrome_WidgetWin_1"), ReadStrategy.Auto)).Capture!;
+        _uia.ElementHasFocus = false;
+
+        var result = await Service().ReplaceAsync(capture, "new");
+
+        Assert.Equal(ReplaceFailure.TargetChanged, result.Failure);
+        Assert.Null(_app.Pasted);
+    }
+
+    [Fact]
     public async Task An_app_that_clears_the_clipboard_first_is_given_a_follow_up_window()
     {
         _app.Selection = "late text";
