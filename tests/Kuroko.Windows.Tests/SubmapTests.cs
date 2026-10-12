@@ -11,6 +11,7 @@ namespace Kuroko.Windows.Tests;
 /// Submaps in AppController: the label in the pill, the keys and Esc as temporary hotkeys, and that every way out
 /// (a listed key, Esc, the timeout, a click, another hotkey, a reload, an error) releases all of them.
 /// </summary>
+[Collection(UiThread.Collection)]
 public class SubmapTests
 {
     private static readonly PromptDefinition Professional = new("Professioneller", "Make it professional.");

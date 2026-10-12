@@ -8,6 +8,13 @@ namespace Kuroko.Windows.Tests.Fakes;
 /// </summary>
 internal static class UiThread
 {
+    /// <summary>
+    /// The test collection of every class that uses <see cref="Run"/>. Run blocks one of xUnit's worker threads while its
+    /// loop pumps; two such classes in parallel can leave too few workers on a small CI runner for the async tests of other
+    /// classes, whose time budgets then run out. In one collection they take turns.
+    /// </summary>
+    public const string Collection = "UI thread";
+
     public static void Run(Func<Task> test)
     {
         var previous = SynchronizationContext.Current;

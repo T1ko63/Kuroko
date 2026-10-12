@@ -13,6 +13,7 @@ namespace Kuroko.Windows.Tests;
 /// pasted, the fallback note and the overlay paths. Windows, hotkeys, clipboard and the AI are fakes; every test runs on
 /// one thread with a message loop, like the UI thread.
 /// </summary>
+[Collection(UiThread.Collection)]
 public class AppControllerTests
 {
     private static readonly PromptDefinition Fix = new("Fix", "Fix the spelling.");
