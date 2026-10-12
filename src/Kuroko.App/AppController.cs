@@ -146,6 +146,13 @@ public sealed class AppController
         set => _anchors.PillSpot = value;
     }
 
+    /// <summary>pill_screen_margin.</summary>
+    public double PillScreenMargin
+    {
+        get => _anchors.PillScreenMargin;
+        set => _anchors.PillScreenMargin = value;
+    }
+
     /// <summary>pill_min_width, pill_max_width, pill_min_height, pill_font_size and pill_duration; used for the next pill.</summary>
     public void SetPillLayout(PillLayout layout) => _status.SetPillLayout(layout);
 

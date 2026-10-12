@@ -41,6 +41,11 @@ public sealed record AppSettings(
     /// <summary>The fixed place of the pill (pill_fixed_position).</summary>
     public string PillFixedPosition { get; init; } = DefaultPillFixedPosition;
 
+    /// <summary>Distance of the pill to the screen edge in device-independent pixels (pill_screen_margin), for fixed, caret and mouse.</summary>
+    public double PillScreenMargin { get; init; } = DefaultPillScreenMargin;
+
+    public const double DefaultPillScreenMargin = 8;
+
     /// <summary>Width limits, minimum height and font size of the pill in device-independent pixels.</summary>
     public double PillMinWidth { get; init; } = DefaultPillMinWidth;
 

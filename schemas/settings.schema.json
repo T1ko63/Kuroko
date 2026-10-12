@@ -78,12 +78,19 @@
       "type": "string",
       "enum": ["follow", "caret", "mouse", "fixed", "card"],
       "default": "follow",
-      "description": "Where the status pill appears. follow: where the prompt picker opens. caret: at the text cursor, otherwise at the mouse. mouse: at the mouse. fixed: at pill_fixed_position (with overlay_screen_margin). card: where the result card appears. For prompts with a result card the pill always sits where the card will appear."
+      "description": "Where the status pill appears. follow: where the prompt picker opens. caret: at the text cursor, otherwise at the mouse. mouse: at the mouse. fixed: at pill_fixed_position (with pill_screen_margin). card: where the result card appears. For prompts with a result card the pill always sits where the card will appear."
     },
     "pill_fixed_position": {
       "allOf": [{ "$ref": "#/definitions/spot" }],
       "default": "top-third",
       "description": "The fixed place of the status pill (pill_position = \"fixed\")."
+    },
+    "pill_screen_margin": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 200,
+      "default": 8,
+      "description": "Distance of the status pill to the screen edge in pixels, for pill_position fixed, caret and mouse."
     },
     "pill_min_width": {
       "type": "number",
@@ -257,6 +264,13 @@
           "maximum": 100,
           "default": 25,
           "description": "Opacity of the selected row in percent, for both styles. The row under the mouse has half of it."
+        },
+        "selection_border_width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "default": 1,
+          "description": "Width of the frame in px with selection_style = \"border\"."
         },
         "transparency": {
           "type": "integer",

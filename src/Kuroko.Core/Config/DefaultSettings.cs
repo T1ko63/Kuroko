@@ -53,11 +53,13 @@ public static class DefaultSettings
             result_max_height = {{AppSettings.DefaultResultMaxHeight}}
 
             # Wo die Pille (Fortschritt, Hinweise, Fehler) erscheint: "follow" (dort, wo sich die Prompt-Auswahl öffnet, Standard)
-            # | "caret" (am Textcursor, sonst an der Maus) | "mouse" (an der Maus) | "fixed" (an pill_fixed_position, Abstand overlay_screen_margin)
+            # | "caret" (am Textcursor, sonst an der Maus) | "mouse" (an der Maus) | "fixed" (an pill_fixed_position)
             # | "card" (dort, wo die Ergebnis-Karte erscheint, siehe result_position). Bei Prompts mit Ergebnis-Karte steht die Pille immer am Platz der Karte.
             pill_position = "{{AppSettings.DefaultPillPosition}}"
             # Der feste Platz: dieselben Werte wie bei result_fixed_position.
             pill_fixed_position = "{{AppSettings.DefaultPillFixedPosition}}"
+            # Abstand der Pille zum Bildschirmrand in Pixeln, 0 bis 200 (bei fixed, caret und mouse).
+            pill_screen_margin = {{AppSettings.DefaultPillScreenMargin}}
             # Breite der Pille in Pixeln: mindestens pill_min_width, höchstens pill_max_width (je 100 bis 1600); längerer Text bricht um.
             pill_min_width = {{AppSettings.DefaultPillMinWidth}}
             pill_max_width = {{AppSettings.DefaultPillMaxWidth}}
@@ -125,6 +127,8 @@ public static class DefaultSettings
             selection_style = "fill"
             # Deckkraft der Markierung in Prozent, 0 bis 100, für beide Stile; die Zeile unter der Maus hat die halbe Deckkraft.
             selection_opacity = {{AppearanceSettings.DefaultSelectionOpacity}}
+            # Breite des Rahmens bei selection_style = "border" in px, 1 bis 4.
+            selection_border_width = {{AppearanceSettings.DefaultLineWidth}}
             # Feiner Rand um das Fenster: true | false, und seine Breite in px (0 bis 4; border = false heißt 0).
             # Bei acrylic, blur und mica rundet Windows die Ecken selbst; ein breiter Rand kann dort an den Ecken unsauber aussehen (außer mit custom_corners).
             border = true

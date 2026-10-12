@@ -42,10 +42,11 @@ result_min_height = 0
 result_max_height = 360
 
 # Where the status pill (progress, notes, errors) appears: follow (where the prompt picker opens, default) | caret (at the text
-# cursor, otherwise at the mouse) | mouse | fixed (at pill_fixed_position, with overlay_screen_margin) | card (where the result
+# cursor, otherwise at the mouse) | mouse | fixed (at pill_fixed_position) | card (where the result
 # card appears, see result_position). For prompts with a result card the pill always sits where the card will appear.
 pill_position = "follow"
 pill_fixed_position = "top-third"   # same places as result_fixed_position
+pill_screen_margin = 8      # distance to the screen edge in px, 0-200 (fixed, caret and mouse)
 pill_min_width = 200        # 100-1600 px; longer text wraps at pill_max_width
 pill_max_width = 420        # 100-1600 px
 pill_min_height = 0         # 0-400 px (0 = as high as the text; otherwise the text is centred and the pill grows when it wraps)
@@ -94,6 +95,7 @@ radius = 10                 # corner radius in px, 0-100
 blur = "acrylic"            # acrylic | blur | mica | micaalt | none
 selection_style = "fill"    # selected row: fill (area) | border (frame only, the text does not move)
 selection_opacity = 25      # its opacity in percent, 0-100, for both styles; hover has half of it
+selection_border_width = 1  # frame width in px with selection_style = "border", 1-4
 border = true               # thin border around the window
 border_width = 1            # border width in px, 0-4 (border = false means 0)
 separator = true            # line under the search field

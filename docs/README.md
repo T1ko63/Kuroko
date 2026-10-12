@@ -102,8 +102,9 @@ Textcursor bzw. an der Maus. Es wächst vom Bildschirmrand weg, wenn die Liste b
 
 **Pille:** Fortschritt, kurze Hinweise und Fehler zeigt eine kleine Pille. Sie steht standardmäßig dort, wo sich das Prompt-Menü
 öffnet (`pill_position = "follow"`). Mit `caret` steht sie am Textcursor, mit `mouse` an der Maus, mit `fixed` an
-`pill_fixed_position` (dieselben elf Plätze, Abstand `overlay_screen_margin`) und mit `card` dort, wo die Ergebnis-Karte erscheint.
-Bei Prompts mit Ergebnis-Karte steht sie immer am Platz der Karte, weil aus ihr die Karte wird. Größe und Schrift stellen
+`pill_fixed_position` (dieselben elf Plätze) und mit `card` dort, wo die Ergebnis-Karte erscheint.
+Bei Prompts mit Ergebnis-Karte steht sie immer am Platz der Karte, weil aus ihr die Karte wird. `pill_screen_margin` (Standard 8 px)
+ist bei `fixed`, `caret` und `mouse` der Abstand zum Bildschirmrand. Größe und Schrift stellen
 `pill_min_width`, `pill_max_width`, `pill_min_height` und `pill_font_size` ein, `pill_duration` die Sekunden, die ein Hinweis steht.
 
 **Aussehen:** Das Overlay ist bewusst reduziert: oben die Suche, darunter nur Name und (falls vorhanden) Hotkey jedes Prompts,
@@ -219,6 +220,7 @@ result_min_height = 0         # Mindesthöhe der Karte in px, 0-2000 (0 = so kle
 result_max_height = 360     # maximale Höhe in px, 120-2000; darüber scrollt der Text
 pill_position = "follow"    # Pille: follow (wie das Prompt-Menü) | caret | mouse | fixed (pill_fixed_position) | card (wie die Ergebnis-Karte)
 pill_fixed_position = "top-third"   # dieselben Plätze wie result_fixed_position
+pill_screen_margin = 8      # Abstand der Pille zum Bildschirmrand in px, 0-200 (fixed, caret, mouse)
 pill_min_width = 200        # Breite der Pille in px, 100-1600; ab pill_max_width bricht der Text um
 pill_max_width = 420
 pill_min_height = 0         # Mindesthöhe in px, 0-400 (0 = so hoch wie der Text; sonst Text mittig)
@@ -282,6 +284,7 @@ radius       = 10           # Eckenradius in px, 0-100
 blur         = "acrylic"    # acrylic | blur | mica | micaalt | none
 selection_style = "fill"    # ausgewählte Zeile: fill (Fläche) | border (nur Rahmen, der Text verschiebt sich nicht)
 selection_opacity = 25      # Deckkraft der Auswahl in %, 0-100, für beide Stile; Hover = halbe Deckkraft
+selection_border_width = 1  # Rahmenbreite bei selection_style = "border" in px, 1-4
 border       = true         # feiner Rand um das Fenster: true | false
 border_width = 1            # Breite des Rands in px, 0-4 (border = false heißt 0)
 separator    = true         # Trennlinie unter der Eingabezeile: true | false
@@ -320,7 +323,7 @@ selection  = "#000000"
   `[appearance.dark]` bzw. `[appearance.light]`; ohne sie werden beide wie bisher aus `foreground` abgeleitet. Auf Acrylic, Blur und
   Mica rundet Windows die Ecken selbst (0, 4 oder 8 px), ein breiter Rand kann dort an den Ecken unsauber aussehen, außer mit
   `custom_corners` und dem Windhawk-Mod.
-* **Auswahlzeile:** `selection_style = "fill"` färbt die Fläche der ausgewählten Zeile, `"border"` nur einen 1-px-Rahmen; der Text
+* **Auswahlzeile:** `selection_style = "fill"` färbt die Fläche der ausgewählten Zeile, `"border"` nur einen Rahmen (`selection_border_width`, 1-4 px, Standard 1); der Text
   verschiebt sich dabei nicht. `selection_opacity` (0-100, Standard 25) ist die Deckkraft für beide Stile, die Zeile unter der Maus hat
   die halbe. `selection` ist eine normale Farbe wie `background`. Ältere Werte mit Alpha (`#40FFFFFF`, `rgba(...)`) funktionieren
   weiter: Das Alpha wird ignoriert, und eine Meldung weist auf `selection_opacity` hin. 25 entspricht dem alten `#40`, das Aussehen

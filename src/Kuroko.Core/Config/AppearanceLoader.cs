@@ -9,7 +9,7 @@ namespace Kuroko.Core.Config;
 internal static class AppearanceLoader
 {
     private static readonly HashSet<string> Keys = new(StringComparer.Ordinal) {
-        "placeholder", "selection_style", "selection_opacity", "transparency", "radius", "blur", "border", "border_width", "separator", "separator_width", "font", "custom_corners", "dark", "light",
+        "placeholder", "selection_style", "selection_opacity", "selection_border_width", "transparency", "radius", "blur", "border", "border_width", "separator", "separator_width", "font", "custom_corners", "dark", "light",
     };
 
     private static readonly HashSet<string> ColorKeys = new(StringComparer.Ordinal) { "background", "foreground", "selection", "border_color", "separator_color" };
@@ -46,6 +46,8 @@ internal static class AppearanceLoader
         var font = ReadFont(table, reader, Line, fontExists);
         var selectionStyle = ReadSelectionStyle(table, reader, Line);
         var selectionOpacity = ReadInt(table, "selection_opacity", AppearanceSettings.DefaultSelectionOpacity, 0, 100, reader, Line);
+        var selectionBorderWidth = ReadInt(table, "selection_border_width", AppearanceSettings.DefaultLineWidth,
+            AppearanceSettings.MinSelectionBorderWidth, AppearanceSettings.MaxLineWidth, reader, Line);
         return new AppearanceSettings(transparency, radius, blur, dark, light, border, customCorners)
         {
             Placeholder = placeholder,
@@ -55,6 +57,7 @@ internal static class AppearanceLoader
             Font = font,
             SelectionStyle = selectionStyle,
             SelectionOpacity = selectionOpacity,
+            SelectionBorderWidth = selectionBorderWidth,
         };
     }
 
