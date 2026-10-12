@@ -361,6 +361,10 @@ Gib ausschließlich den korrigierten Text aus.
 Alle Hotkeys (`overlay_hotkey`, `undo_hotkey`, `result_copy_hotkey` und die der Prompts) teilen sich einen Namensraum: Jeder darf nur einmal
 vorkommen, sonst meldet die App den Fehler mit Datei und Zeile. Ein Beispiel für einen Overlay-Prompt steht in `config/prompts.example.toml`.
 
+Tasten dürfen als das Zeichen auf der Taste im aktiven Tastaturlayout geschrieben werden (`Ctrl+Alt+ü`, `Ctrl+Alt+<`, `Ctrl+Alt++`),
+mit Namen (`Num1`, `PrintScreen`, `VolumeUp`) oder als Tastencode (`Ctrl+Alt+0xE2`). Alle Tasten, die Codetabelle für deutsche
+Tastaturen, die AltGr-Falle (`Ctrl+Alt+Q` nimmt das `@` weg) und alle Meldungen: [`keybindings.md`](keybindings.md) (englisch).
+
 ## Datenschutz
 
 Kuroko hat keine Telemetrie, keine Nutzungsstatistik, keine Update-Prüfung und kein Konto. Netzwerkverkehr gibt es nur

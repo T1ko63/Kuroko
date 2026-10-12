@@ -179,6 +179,23 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     public static extern uint GetWindowThreadProcessId(nint hWnd, out uint lpdwProcessId);
 
+    // ---- user32: keyboard layout ----
+    public const uint MAPVK_VK_TO_VSC = 0;
+    public const uint TOUNICODE_NO_STATE_CHANGE = 0x4; // Windows 10 1607+: leaves the dead-key state alone
+
+    [DllImport("user32.dll")]
+    public static extern nint GetKeyboardLayout(uint idThread);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern short VkKeyScanEx(char ch, nint dwhkl);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern uint MapVirtualKeyEx(uint uCode, uint uMapType, nint dwhkl);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState,
+        [Out] char[] pwszBuff, int cchBuff, uint wFlags, nint dwhkl);
+
     [DllImport("user32.dll")]
     public static extern bool GetGUIThreadInfo(uint idThread, ref GUITHREADINFO lpgui);
 

@@ -53,9 +53,9 @@
     },
     "hotkey": {
       "type": "string",
-      "description": "Runs the prompt directly, without the overlay. Modifiers Ctrl (Control, Strg), Alt, Shift (Umschalt), Win (Windows) joined with + and a key: A-Z, 0-9, F1-F24, Space, Enter, Tab, Esc, Backspace, Insert, Delete, Home, End, PageUp, PageDown, Left, Up, Right, Down or one of ; = , - . / ` [ \\ ] '. At least one modifier unless the key is F1-F24. Empty: no hotkey.",
-      "pattern": "^\\s*$|^\\s*([A-Za-z]+\\s*\\+\\s*)*([A-Za-z0-9]+|[;=,\\-./`\\[\\]\\\\'])\\s*$",
-      "examples": ["Ctrl+Alt+K", "Alt+Shift+Z", "F8"]
+      "description": "Runs the prompt directly, without the overlay. Modifiers Ctrl (Control, Strg), Alt, Shift (Umschalt), Win (Windows) joined with + and one key: A-Z, 0-9, F1-F24; a name (Space, Enter, Tab, Esc, Backspace, Insert, Delete, Home, End, PageUp, PageDown, Left, Up, Right, Down, Num0-Num9, NumAdd, NumSubtract, NumMultiply, NumDivide, NumDecimal, Oem1-Oem8, Oem102, OemPlus, OemComma, OemMinus, OemPeriod, Plus, PrintScreen, Pause, ScrollLock, CapsLock, NumLock, Menu, media, volume and browser keys); a key code 0x01-0xFE (Ctrl+Alt+0xE2); or the character printed on the key in the active keyboard layout (Ctrl+Alt+ü, Ctrl+Alt+<, Ctrl+Alt++). Only the key's own character counts: characters typed with Shift or AltGr (> | °) are an error. At least one modifier unless the key is F1-F24. Empty: no hotkey. See docs/keybindings.md.",
+      "pattern": "^\\s*$|^\\s*([A-Za-z]+\\s*\\+\\s*)*([A-Za-z][A-Za-z0-9]*|0[xX][0-9A-Fa-f]{1,2}|[^\\s+]|\\+)\\s*$",
+      "examples": ["Ctrl+Alt+K", "Alt+Shift+Z", "F8", "Ctrl+Alt+ü", "Ctrl+Alt+0xE2"]
     }
   }
 }

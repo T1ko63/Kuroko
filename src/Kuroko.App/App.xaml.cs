@@ -118,6 +118,7 @@ public partial class App : Application
         // Both files are read before any window exists; a broken file never prevents the start.
         _config = new ConfigManager(_configDir, Environment.GetEnvironmentVariable, _keyStore, FontCheck.IsInstalled);
         var firstRun = !File.Exists(_config.SettingsPath);
+        RefreshKeyLayout();
         var loaded = _config.Load();
         LogIssues(loaded);
         Lap("config");
@@ -242,6 +243,7 @@ public partial class App : Application
         _keysWindow = new ApiKeysWindow(_keyStore, () => _config!.Current.Settings.Providers, () =>
         {
             // A stored or removed key takes effect at once; only errors are reported.
+            RefreshKeyLayout();
             var result = _config!.Reload(force: true);
             LogIssues(result);
             ApplyConfig(result, initial: false);
@@ -252,8 +254,21 @@ public partial class App : Application
         _keysWindow.Activate();
     }
 
+    /// <summary>
+    /// Hotkeys written as a character (ü, &lt;) are resolved against the keyboard layout in use now; every config load
+    /// takes a fresh snapshot, so switching the layout and reloading picks it up.
+    /// </summary>
+    private static void RefreshKeyLayout()
+    {
+        var layout = Win32KeyLayout.Active();
+        if (KeyLayouts.Current is Win32KeyLayout old && old.Handle == layout.Handle) return;
+        KeyLayouts.Current = layout;
+        AppLog.Info($"Keyboard layout: {layout.Name} ({layout.Handle})");
+    }
+
     private void ReloadConfig(bool manual)
     {
+        RefreshKeyLayout();
         var result = _config!.Reload(force: manual);
         LogIssues(result);
         ApplyConfig(result, initial: false);
@@ -312,7 +327,7 @@ public partial class App : Application
 
         if (initial || result.SettingsChanged)
         {
-            _tray!.SetTooltip($"Kuroko - {settings.OverlayHotkey}");
+            _tray!.SetTooltip($"Kuroko - {(HotkeyGesture.TryParse(settings.OverlayHotkey, out var overlayGesture, out _) ? overlayGesture.ToString() : settings.OverlayHotkey)}");
 
             // Only a configuration read from a valid file may switch autostart: a broken settings.toml must never
             // silently turn it off.
@@ -442,10 +457,11 @@ public partial class App : Application
         {
             try
             {
-                var result = _hotkeys.Register(HotkeyGesture.Parse(gesture), callback);
+                var parsed = HotkeyGesture.Parse(gesture);
+                var result = _hotkeys.Register(parsed, callback);
                 if (result.Success)
                 {
-                    AppLog.Info($"Hotkey registered: {gesture} ({label})");
+                    AppLog.Info($"Hotkey registered: {parsed} ({label})");
                     return;
                 }
 

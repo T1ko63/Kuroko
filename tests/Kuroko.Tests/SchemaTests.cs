@@ -206,4 +206,39 @@ public class SchemaTests
         Assert.DoesNotContain(value, Enum(Schema("settings.schema.json"), Schema("settings.schema.json").GetProperty("properties").GetProperty(key)));
         Assert.False(SettingsLoader.Parse($"{key} = \"{value}\"\n{MinimalProvider}", _ => null).Ok);
     }
+
+    [Theory]
+    [InlineData("Ctrl+Alt+K")]
+    [InlineData("F8")]
+    [InlineData("Ctrl+Alt+ü")]
+    [InlineData("Ctrl+Alt+<")]
+    [InlineData("Ctrl+Alt+#")]
+    [InlineData("Ctrl+Alt++")]
+    [InlineData("Ctrl + Alt + +")]
+    [InlineData("Ctrl+Alt+Plus")]
+    [InlineData("Ctrl+Alt+0xE2")]
+    [InlineData("Ctrl+Num5")]
+    [InlineData("Ctrl+Oem102")]
+    [InlineData("Win+VolumeUp")]
+    public void Hotkey_pattern_allows_every_way_to_write_a_key(string hotkey)
+    {
+        foreach (var name in new[] { "settings.schema.json", "prompts.schema.json" })
+        {
+            var schema = Schema(name);
+            var pattern = schema.GetProperty("definitions").GetProperty("hotkey").GetProperty("pattern").GetString()!;
+            Assert.Matches(pattern, hotkey);
+            Assert.True(Kuroko.Core.Hotkeys.HotkeyGesture.TryParse(hotkey, FakeKeyLayout.German, out _, out var error), error);
+        }
+    }
+
+    [Theory]
+    [InlineData("Ctrl+")]
+    [InlineData("Ctrl++K")]
+    [InlineData("Ctrl+Alt+0x1FF")]
+    [InlineData("Ctrl+Alt+ab cd")]
+    public void Hotkey_pattern_rejects_malformed_text(string hotkey)
+    {
+        var pattern = Schema("settings.schema.json").GetProperty("definitions").GetProperty("hotkey").GetProperty("pattern").GetString()!;
+        Assert.DoesNotMatch(pattern, hotkey);
+    }
 }

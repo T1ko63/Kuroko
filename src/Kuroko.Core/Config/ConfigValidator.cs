@@ -6,9 +6,12 @@ namespace Kuroko.Core.Config;
 /// <summary>Checks that need both files at once: providers named by prompts, hotkeys used twice.</summary>
 public static class ConfigValidator
 {
+    /// <param name="keyLayout">Resolves hotkey keys written as a character; null uses <see cref="KeyLayouts.Current"/>.</param>
     public static List<ConfigIssue> Validate(
-        AppSettings settings, IReadOnlyList<PromptDefinition> prompts, IReadOnlyDictionary<string, int>? promptLines = null)
+        AppSettings settings, IReadOnlyList<PromptDefinition> prompts, IReadOnlyDictionary<string, int>? promptLines = null,
+        IKeyLayout? keyLayout = null)
     {
+        var layout = keyLayout ?? KeyLayouts.Current;
         var issues = new List<ConfigIssue>();
         int? LineOf(string promptName) => promptLines is not null && promptLines.TryGetValue(promptName, out var line) ? line : null;
 
@@ -33,10 +36,10 @@ public static class ConfigValidator
         var owners = new Dictionary<HotkeyGesture, string>();
         void Claim(string hotkey, string owner, string file, int? line)
         {
-            if (!HotkeyGesture.TryParse(hotkey, out var gesture, out _)) return; // syntax errors are reported by the loaders
+            if (!HotkeyGesture.TryParse(hotkey, layout, out var gesture, out _)) return; // syntax errors are reported by the loaders
             if (owners.TryGetValue(gesture, out var existing))
             {
-                issues.Add(new ConfigIssue(file, line, $"hotkey {gesture} is used twice: {existing} and {owner}", IsError: true));
+                issues.Add(new ConfigIssue(file, line, $"hotkey {gesture.ToString(layout)} is used twice: {existing} and {owner}", IsError: true));
                 return;
             }
 
