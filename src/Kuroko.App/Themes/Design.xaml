@@ -22,6 +22,7 @@
     <sys:Double x:Key="Row.Height">38</sys:Double>
     <Thickness x:Key="Row.Margin">8,1,8,1</Thickness>        <!-- 38 + 2 = 40 per row -->
     <Thickness x:Key="Row.Padding">12,0,12,0</Thickness>
+    <Thickness x:Key="Row.FrameThickness">1</Thickness>    <!-- default; [appearance] selection_border_width -->
     <CornerRadius x:Key="Row.Radius">6</CornerRadius>      <!-- default; derived from [appearance] radius -->
     <GridLength x:Key="Row.NumberWidth">22</GridLength>
     <sys:Double x:Key="Scroll.Width">10</sys:Double>
@@ -68,7 +69,7 @@
                         <Border x:Name="Row" Padding="{StaticResource Row.Padding}" CornerRadius="{DynamicResource Row.Radius}" Background="Transparent">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
-                        <Border x:Name="Frame" CornerRadius="{DynamicResource Row.Radius}" BorderThickness="1" BorderBrush="Transparent"
+                        <Border x:Name="Frame" CornerRadius="{DynamicResource Row.Radius}" BorderThickness="{DynamicResource Row.FrameThickness}" BorderBrush="Transparent"
                                 IsHitTestVisible="False"/>
                     </Grid>
                     <ControlTemplate.Triggers>

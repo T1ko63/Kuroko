@@ -292,6 +292,7 @@ public partial class App : Application
                 ? pill
                 : PillPlacement.Follow;
             _controller.PillSpot = ParseSpot(settings.PillFixedPosition, CardSpot.TopThird);
+            _controller.PillScreenMargin = settings.PillScreenMargin;
             _controller.SetPillLayout(new PillLayout(
                 settings.PillMinWidth, settings.PillMaxWidth, settings.PillMinHeight, settings.PillFontSize, TimeSpan.FromSeconds(settings.PillDuration)));
 

@@ -177,7 +177,7 @@ public class SettingsLoaderTests
     {
         var s = Parse("theme = \"dark\"\n").Settings!;
 
-        Assert.Equal(("follow", "top-third"), (s.PillPosition, s.PillFixedPosition));
+        Assert.Equal(("follow", "top-third", 8d), (s.PillPosition, s.PillFixedPosition, s.PillScreenMargin));
         Assert.Equal((200d, 420d, 0d, 13d, 2d), (s.PillMinWidth, s.PillMaxWidth, s.PillMinHeight, s.PillFontSize, s.PillDuration));
     }
 
@@ -187,6 +187,7 @@ public class SettingsLoaderTests
         var s = Parse("""
             pill_position = "card"
             pill_fixed_position = "bottom-right"
+            pill_screen_margin = 30
             pill_min_width = 150
             pill_max_width = 600.5
             pill_min_height = 48
@@ -194,13 +195,14 @@ public class SettingsLoaderTests
             pill_duration = 3.5
             """).Settings!;
 
-        Assert.Equal(("card", "bottom-right"), (s.PillPosition, s.PillFixedPosition));
+        Assert.Equal(("card", "bottom-right", 30d), (s.PillPosition, s.PillFixedPosition, s.PillScreenMargin));
         Assert.Equal((150d, 600.5, 48d, 15d, 3.5), (s.PillMinWidth, s.PillMaxWidth, s.PillMinHeight, s.PillFontSize, s.PillDuration));
     }
 
     [Theory]
     [InlineData("pill_position = \"center\"", "pill_position")]
     [InlineData("pill_fixed_position = \"middle\"", "pill_fixed_position")]
+    [InlineData("pill_screen_margin = 201", "pill_screen_margin must be a number")]
     [InlineData("pill_min_width = 50", "pill_min_width must be a number")]
     [InlineData("pill_max_width = 2000", "pill_max_width must be a number")]
     [InlineData("pill_min_height = -1", "pill_min_height must be a number")]

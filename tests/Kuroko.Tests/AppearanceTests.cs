@@ -552,16 +552,20 @@ public class AppearanceLoaderTests
     [InlineData("\"Border\"", SelectionStyle.Border)]
     public void The_selection_style_is_read(string value, SelectionStyle expected)
     {
-        var result = Parse($"[appearance]\nselection_style = {value}\nselection_opacity = 60\n");
+        var result = Parse($"[appearance]\nselection_style = {value}\nselection_opacity = 60\nselection_border_width = 3\n");
 
+        var a = result.Settings!.Appearance;
         Assert.Empty(Shown(result));
-        Assert.Equal((expected, 60), (result.Settings!.Appearance.SelectionStyle, result.Settings.Appearance.SelectionOpacity));
+        Assert.Equal((expected, 60, 3), (a.SelectionStyle, a.SelectionOpacity, a.SelectionBorderWidth));
+        Assert.Equal(1, AppearanceSettings.Default.SelectionBorderWidth);
     }
 
     [Theory]
     [InlineData("selection_style = \"bar\"")]
     [InlineData("selection_opacity = 101")]
     [InlineData("selection_opacity = \"25\"")]
+    [InlineData("selection_border_width = 0")]
+    [InlineData("selection_border_width = 5")]
     public void An_invalid_selection_setting_is_reported_and_replaced_by_the_default(string line)
     {
         var result = Parse($"[appearance]\nradius = 4\n{line}\n");

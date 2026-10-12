@@ -32,7 +32,7 @@ public static class SettingsLoader
         "appearance", "result_copy_hotkey", "result_position", "result_font_size",
         "result_width", "result_max_height", "result_min_height", "result_fixed_position", "result_screen_margin",
         "overlay_fixed_position", "overlay_screen_margin", "overlay_width", "overlay_min_height", "overlay_max_height", "overlay_font_size",
-        "pill_position", "pill_fixed_position", "pill_min_width", "pill_max_width", "pill_min_height", "pill_font_size", "pill_duration",
+        "pill_position", "pill_fixed_position", "pill_screen_margin", "pill_min_width", "pill_max_width", "pill_min_height", "pill_font_size", "pill_duration",
     };
 
     private static readonly HashSet<string> ProviderKeys = new(StringComparer.Ordinal)
@@ -106,6 +106,7 @@ public static class SettingsLoader
 
         var pillPosition = reader.Choice(root, "pill_position", AppSettings.DefaultPillPosition, PillPositions);
         var pillFixedPosition = reader.Choice(root, "pill_fixed_position", AppSettings.DefaultPillFixedPosition, ResultSpots);
+        var pillScreenMargin = ReadNumber(root, reader, "pill_screen_margin", AppSettings.DefaultPillScreenMargin, AppSettings.MinResultScreenMargin, AppSettings.MaxResultScreenMargin);
         var pillMinWidth = ReadNumber(root, reader, "pill_min_width", AppSettings.DefaultPillMinWidth, AppSettings.MinPillWidth, AppSettings.MaxPillWidth);
         var pillMaxWidth = ReadNumber(root, reader, "pill_max_width", AppSettings.DefaultPillMaxWidth, AppSettings.MinPillWidth, AppSettings.MaxPillWidth);
         if (pillMinWidth > pillMaxWidth)
@@ -200,6 +201,7 @@ public static class SettingsLoader
             Appearance = appearance,
             PillPosition = pillPosition,
             PillFixedPosition = pillFixedPosition,
+            PillScreenMargin = pillScreenMargin,
             PillMinWidth = pillMinWidth,
             PillMaxWidth = pillMaxWidth,
             PillMinHeight = pillMinHeight,

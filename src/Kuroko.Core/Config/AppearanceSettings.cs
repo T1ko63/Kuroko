@@ -35,6 +35,11 @@ public sealed record AppearanceSettings(
     /// <summary>Opacity of the selected row in percent (selection_opacity), for both styles; hover has half of it.</summary>
     public int SelectionOpacity { get; init; } = DefaultSelectionOpacity;
 
+    /// <summary>Width of the frame in px with selection_style = "border" (selection_border_width).</summary>
+    public int SelectionBorderWidth { get; init; } = DefaultLineWidth;
+
+    public const int MinSelectionBorderWidth = 1;
+
     public const SelectionStyle DefaultSelectionStyle = SelectionStyle.Fill;
 
     /// <summary>25 % is alpha 0x40, the alpha of the old default selection colours (#40FFFFFF, #40000000).</summary>
