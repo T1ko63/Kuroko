@@ -14,11 +14,21 @@ internal sealed class RunState
     private bool _busy;
     private bool _escReleasedForReload;
 
-    public RunState(IDesktop desktop, IHotkeyRegistry? hotkeys)
+    private readonly Action? _escTaken;
+    private readonly Action? _escFreed;
+
+    /// <param name="escTaken">Called right before the run takes Esc: whoever else holds it (the error pill) lets it go.</param>
+    /// <param name="escFreed">Called after the run released Esc: the error pill a failed run left behind takes it.</param>
+    public RunState(IDesktop desktop, IHotkeyRegistry? hotkeys, Action? escTaken = null, Action? escFreed = null)
     {
         _desktop = desktop;
         _esc = new TemporaryHotkey(hotkeys, "Esc could not be registered for the run");
+        _escTaken = escTaken;
+        _escFreed = escFreed;
     }
+
+    /// <summary>True while the run holds Esc.</summary>
+    public bool HoldsEsc => _esc.IsHeld;
 
     /// <summary>Set while the overlay is up or a run is active; the 1 ms timer resolution is only held for that time.</summary>
     public bool Busy
@@ -61,10 +71,17 @@ internal sealed class RunState
     /// <summary>Esc while a run reads the text or waits for the answer, before a card is up. Registered only for that time.</summary>
     public void HoldEsc()
     {
-        if (!_esc.IsHeld) _esc.Register(TemporaryHotkey.Escape, OnEsc);
+        if (_esc.IsHeld) return;
+        _escTaken?.Invoke();
+        _esc.Register(TemporaryHotkey.Escape, OnEsc);
     }
 
-    public void ReleaseEsc() => _esc.Release();
+    public void ReleaseEsc()
+    {
+        if (!_esc.IsHeld) return;
+        _esc.Release();
+        _escFreed?.Invoke();
+    }
 
     private void OnEsc(long hotkeyTimestamp)
     {
@@ -76,7 +93,7 @@ internal sealed class RunState
     public void ReleaseForReload()
     {
         _escReleasedForReload = _esc.IsHeld;
-        ReleaseEsc();
+        _esc.Release(); // not ReleaseEsc: nothing else may take Esc while the hotkeys are registered anew
     }
 
     /// <summary>Registers Esc again if the run held it and is still waiting without a card.</summary>

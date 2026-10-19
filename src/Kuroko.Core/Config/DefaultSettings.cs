@@ -57,8 +57,11 @@ public static class DefaultSettings
             pill_min_height = {{AppSettings.DefaultPillMinHeight}}
             # Schriftgröße der Pille, 8 bis 32.
             pill_font_size = {{AppSettings.DefaultPillFontSize}}
-            # So viele Sekunden steht ein Hinweis wie „Rückgängig gemacht“ (0.5 bis 60). Fehler bleiben 5 s, die Pille nach einem gescheiterten Einfügen 15 s.
+            # So viele Sekunden steht ein Hinweis wie „Rückgängig gemacht“ (0.5 bis 60).
             pill_duration = {{AppSettings.DefaultPillDuration}}
+            # So viele Sekunden steht eine Fehlermeldung (0.5 bis 300). 0 = sie bleibt, bis du sie anklickst oder Esc drückst;
+            # solange sie steht, gehört Esc Kuroko. Die Pille nach einem gescheiterten Einfügen bleibt mindestens 15 s.
+            pill_error_duration = {{AppSettings.DefaultPillErrorDuration}}
 
             # Marker für einmalige Anweisungen im Text, z. B.:  <<kürzer und freundlicher>> Hallo ...
             # Sie wirken in Prompts mit mode = "universal" (siehe prompts.toml): ohne Marker ist der ganze Text ein Auftrag,

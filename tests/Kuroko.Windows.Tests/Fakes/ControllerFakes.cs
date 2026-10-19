@@ -235,6 +235,12 @@ internal sealed class FakeStatus : IStatusView
 
     public bool IsActionShown { get; private set; }
 
+    public event Action? ErrorShown;
+
+    public event Action? ErrorEnded;
+
+    public bool IsErrorShown { get; private set; }
+
     public double ResultFontSize { get; set; } = 14;
 
     /// <summary>Every call, e.g. "progress: …", "error: …", "action: …", "info: …", "hide", "result: …", "append: …", "end".</summary>
@@ -264,6 +270,13 @@ internal sealed class FakeStatus : IStatusView
     {
         Leave();
         Shown.Add($"error: {text}");
+        RaiseErrorShown();
+    }
+
+    private void RaiseErrorShown()
+    {
+        IsErrorShown = true;
+        ErrorShown?.Invoke();
     }
 
     public void ShowInfo(string text, Anchor anchor, bool longer = false)
@@ -276,6 +289,7 @@ internal sealed class FakeStatus : IStatusView
     {
         Leave();
         Shown.Add($"action: {text}");
+        RaiseErrorShown();
         IsActionShown = true;
     }
 
@@ -325,6 +339,12 @@ internal sealed class FakeStatus : IStatusView
         {
             IsActionShown = false;
             ActionEnded?.Invoke();
+        }
+
+        if (IsErrorShown)
+        {
+            IsErrorShown = false;
+            ErrorEnded?.Invoke();
         }
 
         if (_resultMode)

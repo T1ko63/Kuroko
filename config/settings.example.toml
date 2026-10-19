@@ -42,7 +42,8 @@ pill_min_width = 200        # 100-1600 px; longer text wraps at pill_max_width
 pill_max_width = 420        # 100-1600 px
 pill_min_height = 0         # 0-400 px (0 = as high as the text; otherwise the text is centred and the pill grows when it wraps)
 pill_font_size = 13         # 8-32
-pill_duration = 2           # seconds a note such as "Undone" stays, 0.5-60 (errors keep 5 s, a failed paste 15 s)
+pill_duration = 2           # seconds a note such as "Undone" stays, 0.5-60
+pill_error_duration = 5     # seconds an error stays, 0.5-300; 0 = until clicked or Esc (a failed paste: at least 15 s)
 
 # Markers for one-off instructions inside the text, e.g.  <<shorter>> Hello ...
 # Used by prompts with mode = "universal". Must not be empty.

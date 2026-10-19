@@ -109,7 +109,13 @@
       "minimum": 0.5,
       "maximum": 60,
       "default": 2,
-      "description": "Seconds a note such as \"Undone\" stays. Errors keep 5 s, the pill after a failed paste 15 s."
+      "description": "Seconds a note such as \"Undone\" stays. Errors have pill_error_duration."
+    },
+    "pill_error_duration": {
+      "type": "number",
+      "anyOf": [{ "const": 0 }, { "minimum": 0.5, "maximum": 300 }],
+      "default": 5,
+      "description": "Seconds an error message stays, 0.5-300. 0 = until you click it or press Esc; while it is up, Esc belongs to Kuroko. The pill after a failed paste stays at least 15 s."
     },
     "marker_start": {
       "type": "string",

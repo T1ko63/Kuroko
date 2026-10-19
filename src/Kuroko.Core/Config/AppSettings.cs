@@ -52,8 +52,14 @@ public sealed record AppSettings(
 
     public double PillFontSize { get; init; } = DefaultPillFontSize;
 
-    /// <summary>How long an info pill stays, in seconds (pill_duration). Errors and pills with an action keep their own times.</summary>
+    /// <summary>How long an info pill stays, in seconds (pill_duration). Errors have <see cref="PillErrorDuration"/>.</summary>
     public double PillDuration { get; init; } = DefaultPillDuration;
+
+    /// <summary>
+    /// How long an error pill stays, in seconds (pill_error_duration); 0 = until it is clicked or Esc is pressed. The pill
+    /// after a failed paste stays at least <see cref="MinActionPillDuration"/> seconds.
+    /// </summary>
+    public double PillErrorDuration { get; init; } = DefaultPillErrorDuration;
 
     public const string DefaultPillPosition = "follow";
     public const string DefaultPillFixedPosition = "top-third";
@@ -67,6 +73,12 @@ public sealed record AppSettings(
     public const double DefaultPillDuration = 2;
     public const double MinPillDuration = 0.5;
     public const double MaxPillDuration = 60;
+    public const double DefaultPillErrorDuration = 5;
+    public const double MinPillErrorDuration = 0.5;
+    public const double MaxPillErrorDuration = 300;
+
+    /// <summary>Seconds the error pill after a failed paste stays at least, so there is time to copy the answer.</summary>
+    public const double MinActionPillDuration = 15;
 
     /// <summary>Look of the windows ([appearance] in settings.toml). Defaults when the block is missing.</summary>
     public AppearanceSettings Appearance { get; init; } = AppearanceSettings.Default;

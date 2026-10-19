@@ -46,6 +46,15 @@ public interface IStatusView
 
     bool IsActionShown { get; }
 
+    /// <summary>An error pill (<see cref="ShowError"/> or <see cref="ShowErrorWithAction"/>) appeared; the caller takes Esc for it.</summary>
+    event Action? ErrorShown;
+
+    /// <summary>The error pill went away: hidden (click, Esc, timeout) or replaced by anything else, also by another error.</summary>
+    event Action? ErrorEnded;
+
+    /// <summary>True while an error pill is on screen.</summary>
+    bool IsErrorShown { get; }
+
     double ResultFontSize { get; set; }
 
     void SetResultSize(double width, double minHeight, double maxHeight);

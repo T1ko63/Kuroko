@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using Kuroko.Core.Providers;
 using Kuroko.Core.Secrets;
@@ -32,6 +33,7 @@ public static class SettingsLoader
         "result_width", "result_max_height", "result_min_height", "result_fixed_position", "result_screen_margin",
         "overlay_fixed_position", "overlay_screen_margin", "overlay_width", "overlay_min_height", "overlay_max_height", "overlay_font_size",
         "pill_position", "pill_fixed_position", "pill_screen_margin", "pill_min_width", "pill_max_width", "pill_min_height", "pill_font_size", "pill_duration",
+        "pill_error_duration",
     };
 
     /// <summary>Keys that moved to keybinds.toml. Still recognized, so they get a clear warning instead of "unknown setting".</summary>
@@ -117,6 +119,12 @@ public static class SettingsLoader
         var pillMinHeight = ReadNumber(root, reader, "pill_min_height", AppSettings.DefaultPillMinHeight, 0, AppSettings.MaxPillMinHeight);
         var pillFontSize = ReadNumber(root, reader, "pill_font_size", AppSettings.DefaultPillFontSize, AppSettings.MinResultFontSize, AppSettings.MaxResultFontSize);
         var pillDuration = ReadNumber(root, reader, "pill_duration", AppSettings.DefaultPillDuration, AppSettings.MinPillDuration, AppSettings.MaxPillDuration);
+
+        // 0 is allowed on its own: the error then stays until it is clicked or Esc is pressed.
+        var pillErrorDuration = root.TryGetValue("pill_error_duration", out var errorDuration) && errorDuration is 0L or 0.0
+            ? 0
+            : ReadNumber(root, reader, "pill_error_duration", AppSettings.DefaultPillErrorDuration,
+                AppSettings.MinPillErrorDuration, AppSettings.MaxPillErrorDuration, " (or 0: the error stays until you click it or press Esc)");
 
         var theme = reader.Choice(root, "theme", "system", Themes);
         var accent = reader.Choice(root, "accent", "none", null).Trim();
@@ -207,6 +215,7 @@ public static class SettingsLoader
             PillMinHeight = pillMinHeight,
             PillFontSize = pillFontSize,
             PillDuration = pillDuration,
+            PillErrorDuration = pillErrorDuration,
         };
         return new SettingsLoadResult(issues.Any(i => i.IsError) ? null : settings, issues);
     }
@@ -218,14 +227,16 @@ public static class SettingsLoader
            || ColorParser.TryParseAccentHex(accent, out _);
 
     /// <summary>A whole number or a decimal (15 or 14.5) within [min, max]; anything else is an error and the default stays.</summary>
-    private static double ReadNumber(TomlTable root, TomlReader reader, string key, double fallback, double min, double max)
+    /// <param name="hint">Added to the error message, e.g. a special value outside the range.</param>
+    private static double ReadNumber(TomlTable root, TomlReader reader, string key, double fallback, double min, double max, string hint = "")
     {
         if (!root.TryGetValue(key, out var value)) return fallback;
 
         double? number = value switch { long whole => whole, double fraction => fraction, _ => null };
         if (number is { } n && n >= min && n <= max) return n;
 
-        reader.Issue(reader.LineOf(key), $"{key} must be a number between {min} and {max}", isError: true);
+        // Numbers as TOML writes them ("0.5"), not in the user's culture ("0,5").
+        reader.Issue(reader.LineOf(key), string.Create(CultureInfo.InvariantCulture, $"{key} must be a number between {min} and {max}{hint}"), isError: true);
         return fallback;
     }
 

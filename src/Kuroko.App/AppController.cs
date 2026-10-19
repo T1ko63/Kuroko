@@ -35,6 +35,7 @@ public sealed class AppController
     private readonly UndoRun _undo;
     private readonly AnchorPolicy _anchors = new();
     private readonly SubmapSession _submap;
+    private readonly TemporaryHotkey _errorEsc;
 
     /// <param name="prompts">Read on every use, so a reloaded prompts.toml is picked up without rebuilding anything.</param>
     /// <param name="hotkeys">Needed for the temporary hotkeys: Esc during a run, Esc and copy while the result card is up.</param>
@@ -54,7 +55,8 @@ public sealed class AppController
         _commands = commands ?? (() => []);
         _warmUp = warmUp;
         _desktop = desktop ?? new Win32Desktop();
-        _run = new RunState(_desktop, hotkeys);
+        _errorEsc = new TemporaryHotkey(hotkeys, "Esc could not be registered for the error pill");
+        _run = new RunState(_desktop, hotkeys, escTaken: _errorEsc.Release, escFreed: TakeErrorEsc);
         _latency = new LatencyLog(_desktop);
         _card = new ResultCard(status, _desktop, hotkeys, clipboard, _run, () => ResultCopyHotkey);
         _lastResult = new LastResult(status, hotkeys, clipboard, () => ResultCopyHotkey);
@@ -69,6 +71,30 @@ public sealed class AppController
         _overlay.Cancelled += () => _ = CloseOverlayAsync(restoreFocus: true);
         _overlay.Dismissed += () => _ = CloseOverlayAsync(restoreFocus: false);
         _status.CancelRequested += OnStatusCancelRequested;
+        _status.ErrorShown += TakeErrorEsc;
+        _status.ErrorEnded += _errorEsc.Release;
+    }
+
+    // ---- Esc of the error pill ----
+
+    /// <summary>
+    /// While an error pill is up, Esc closes it, as on an open card. Taken only when nothing else needs Esc: a run still
+    /// holding it hands it over when it releases it (<see cref="RunState.ReleaseEsc"/>), the overlay handles Esc itself.
+    /// </summary>
+    private void TakeErrorEsc()
+    {
+        if (!_status.IsErrorShown || _errorEsc.IsHeld || _run.HoldsEsc || _overlay.IsShown) return;
+        _errorEsc.Register(TemporaryHotkey.Escape, _ =>
+        {
+            AppLog.Info("hotkey: Esc (error pill)");
+            _status.HideStatus();
+        });
+    }
+
+    /// <summary>A new action takes the place of an error pill: it goes, and with it its Esc (the overlay needs Esc itself).</summary>
+    private void DismissError()
+    {
+        if (_status.IsErrorShown) _status.HideStatus();
     }
 
     public OverlayPosition Position
@@ -155,7 +181,7 @@ public sealed class AppController
         set => _anchors.PillScreenMargin = value;
     }
 
-    /// <summary>pill_min_width, pill_max_width, pill_min_height, pill_font_size and pill_duration; used for the next pill.</summary>
+    /// <summary>pill_min_width, pill_max_width, pill_min_height, pill_font_size, pill_duration and pill_error_duration; used for the next pill.</summary>
     public void SetPillLayout(PillLayout layout) => _status.SetPillLayout(layout);
 
     /// <summary>Environment.TickCount64 of the last hotkey or run; used to find out when the app has been idle for a while.</summary>
@@ -221,6 +247,8 @@ public sealed class AppController
             AppLog.Info("Overlay hotkey ignored: a run is active.");
             return;
         }
+
+        DismissError(); // the overlay handles Esc itself
 
         // Read-only targets are fine here: whether that matters is decided once a prompt is chosen (overlay output works, replace does not).
         var target = _desktop.CaptureTarget();
@@ -500,7 +528,7 @@ public sealed class AppController
     }
 
     /// <summary>
-    /// Releases the temporary hotkeys (Esc of a run, Esc and copy of the card, copy of the error pill). Called before the
+    /// Releases the temporary hotkeys (Esc of a run, Esc and copy of the card, Esc and copy of the error pill). Called before the
     /// configured hotkeys are registered anew, so a reload can never collide with them (a prompt may have been given the key that copies the card).
     /// </summary>
     public void ReleaseResultHotkeys()
@@ -509,14 +537,16 @@ public sealed class AppController
         _card.ReleaseForReload();
         _run.ReleaseForReload();
         _lastResult.ReleaseForReload();
+        _errorEsc.Release();
     }
 
-    /// <summary>Registers the temporary hotkeys again (with the current <see cref="ResultCopyHotkey"/>) if a card, a run or an error pill held them.</summary>
+    /// <summary>Registers the temporary hotkeys again (with the current <see cref="ResultCopyHotkey"/>) if a card, a run or an error pill held them (an error pill that is still up takes Esc).</summary>
     public void RestoreResultHotkeys()
     {
         _card.RestoreAfterReload();
         _run.RestoreAfterReload(_card.IsLive);
         _lastResult.RestoreAfterReload();
+        TakeErrorEsc(); // last: a run that still waits gets Esc first
     }
 
     // ---- undo ----
