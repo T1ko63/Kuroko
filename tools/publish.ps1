@@ -14,9 +14,10 @@ if (-not $version) { throw "no <Version> in Directory.Build.props" }
 $suffix = if ($SelfContained) { '-selfcontained' } else { '' }
 $zip = Join-Path $root "publish\Kuroko-$version-win-x64$suffix.zip"
 
-# Start clean so files from an older build do not end up in the zip.
+# Start clean so files from an older build do not end up in the zip. Only the contents go: the folder itself stays,
+# because an Explorer window or a terminal that was open in it keeps the empty folder locked.
 if (Test-Path $out) {
-    try { Remove-Item $out -Recurse -Force -ErrorAction Stop }
+    try { Get-ChildItem $out -Force | Remove-Item -Recurse -Force -ErrorAction Stop }
     catch { throw "Cannot clear $out. Is Kuroko still running from there? Quit it from the tray and try again." }
 }
 
