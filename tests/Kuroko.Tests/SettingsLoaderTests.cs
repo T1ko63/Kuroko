@@ -29,7 +29,6 @@ public class SettingsLoaderTests
         Assert.Equal(4, settings.Providers.Count);
         Assert.Equal(ProviderType.OpenAiCompatible, settings.Providers["local"].Type);
         Assert.Equal("gem-key", settings.Providers["gemini"].ApiKey);
-        Assert.Equal("Ctrl+Shift+Space", settings.OverlayHotkey);
         Assert.Equal("<<", settings.MarkerStart);
     }
 
@@ -149,20 +148,31 @@ public class SettingsLoaderTests
     }
 
     [Fact]
-    public void Undo_settings_have_defaults_and_can_be_changed()
+    public void Undo_history_has_a_default_and_can_be_changed()
     {
-        var defaults = Parse("theme = \"dark\"\n").Settings!;
-        Assert.Equal("Ctrl+Alt+Z", defaults.UndoHotkey);
-        Assert.Equal(10, defaults.UndoHistory);
-
-        var custom = Parse("undo_hotkey = \"Ctrl+Shift+Z\"\nundo_history = 3\n").Settings!;
-        Assert.Equal("Ctrl+Shift+Z", custom.UndoHotkey);
-        Assert.Equal(3, custom.UndoHistory);
+        Assert.Equal(10, Parse("theme = \"dark\"\n").Settings!.UndoHistory);
+        Assert.Equal(3, Parse("undo_history = 3\n").Settings!.UndoHistory);
         Assert.Equal(0, Parse("undo_history = 0\n").Settings!.UndoHistory);
     }
 
     [Theory]
-    [InlineData("undo_hotkey = \"Banana\"", "undo_hotkey")]
+    [InlineData("overlay_hotkey = \"Banana\"", "overlay_hotkey")]
+    [InlineData("undo_hotkey = \"Ctrl+Shift+Z\"", "undo_hotkey")]
+    [InlineData("result_copy_hotkey = \"Ctrl+C\"", "result_copy_hotkey")]
+    [InlineData("[mods]\nmain = \"Ctrl\"", "[mods]")]
+    [InlineData("[submaps.tone]\nopen = \"K\"", "[submaps]")]
+    public void Hotkeys_in_settings_toml_are_ignored_with_a_warning(string toml, string what)
+    {
+        var result = Parse(toml + "\n");
+
+        Assert.True(result.Ok, string.Join("; ", result.Issues));
+        var issue = Assert.Single(result.Issues, i => i.Show);
+        Assert.False(issue.IsError);
+        Assert.Equal(1, issue.Line);
+        Assert.Equal($"{what} in settings.toml is no longer read; keybinds live in keybinds.toml", issue.Message);
+    }
+
+    [Theory]
     [InlineData("undo_history = -1", "undo_history must be between")]
     [InlineData("undo_history = 101", "undo_history must be between")]
     public void Invalid_undo_settings_are_errors(string line, string expectedMessagePart)
@@ -237,8 +247,6 @@ public class SettingsLoaderTests
     }
 
     [Theory]
-    [InlineData("overlay_hotkey = \"Banana\"", "overlay_hotkey")]
-    [InlineData("overlay_hotkey = \"K\"", "overlay_hotkey")]
     [InlineData("theme = \"neon\"", "theme must be one of")]
     [InlineData("overlay_position = \"left\"", "overlay_position must be one of")]
     [InlineData("autostart = \"yes\"", "autostart must be true or false")]

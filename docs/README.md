@@ -14,12 +14,12 @@ Audit-Bericht vom Oktober 2026 in [`refactoring-report.md`](refactoring-report.m
 |---|---|
 | Overlay öffnen (Prompt suchen/wählen) | `Ctrl+Shift+Space` |
 | „Universal" direkt ausführen (schreiben **und** bearbeiten) | `Ctrl+Alt+U` |
-| Anderen Prompt direkt ausführen (z. B. „Correction") | pro Prompt in `prompts.toml`, Standard `Ctrl+Alt+K` |
-| Letzte Ersetzung rückgängig machen | `Ctrl+Alt+Z` (`undo_hotkey`) |
+| Anderen Prompt direkt ausführen (z. B. „Correction") | pro Prompt unter `[prompts]` in `keybinds.toml`, Standard `Ctrl+Alt+K` |
+| Letzte Ersetzung rückgängig machen | `Ctrl+Alt+Z` (`undo` in `keybinds.toml`) |
 | Laufende Anfrage abbrechen | `Esc`, nur solange eine Anfrage läuft |
 | Ergebnis-Karte schließen (und eine laufende Anfrage abbrechen) | `Esc`, nur solange eine Karte sichtbar ist |
-| Ergebnis-Karte kopieren und schließen | `Ctrl+Alt+C` (`result_copy_hotkey`), nur solange eine Karte sichtbar ist |
-| Ergebnis kopieren, das nicht eingefügt werden konnte | `Ctrl+Alt+C` (`result_copy_hotkey`), nur solange die Fehlerpille sichtbar ist; später Tray → „Letztes Ergebnis kopieren“ |
+| Ergebnis-Karte kopieren und schließen | `Ctrl+Alt+C` (`result_copy` in `keybinds.toml`), nur solange eine Karte sichtbar ist |
+| Ergebnis kopieren, das nicht eingefügt werden konnte | `Ctrl+Alt+C` (`result_copy` in `keybinds.toml`), nur solange die Fehlerpille sichtbar ist; später Tray → „Letztes Ergebnis kopieren“ |
 
 **Im Overlay:** sofort tippen filtert (Fuzzy-Suche), `↑`/`↓` und `Enter` wählen, `1`–`9` wählen direkt,
 Mausklick geht auch, `Esc` bricht ab. Danach liegt der Fokus wieder genau dort, wo du warst.
@@ -116,23 +116,23 @@ bestimmt `selection`. Maße, Schriftgrößen und Abstände stehen weiter an eine
 **Wenn das Einfügen scheitert:** Ist die Antwort schon da, kann aber nicht eingefügt werden (Fenster gewechselt, Zwischenablage
 belegt, Eingabe blockiert, Einfügen nicht bestätigt), geht sie nicht verloren. Die Fehlerpille nennt den Grund und bietet an:
 „Ctrl+Alt+C kopiert das Ergebnis“. Sie bleibt dafür 15 Sekunden stehen (Klick schließt sie), und nur so lange ist
-`result_copy_hotkey` registriert. Danach liegt die Antwort weiter im Tray-Menü unter **Letztes Ergebnis kopieren**; der Eintrag
+`result_copy` (`keybinds.toml`) registriert. Danach liegt die Antwort weiter im Tray-Menü unter **Letztes Ergebnis kopieren**; der Eintrag
 kopiert immer die letzte vollständige Antwort (auch die einer Ergebnis-Karte) und ist ausgegraut, solange es noch keine gibt.
 Auch nach einem Abbruch mit `Esc` kurz vor dem Einfügen ist sie dort zu finden. Gespeichert wird sie nur im Arbeitsspeicher
 (siehe [Datenschutz](#datenschutz)).
 
-**Tray-Menü:** Letztes Ergebnis kopieren · Prompts bearbeiten · Einstellungen bearbeiten · Config-Ordner öffnen · Config neu laden ·
+**Tray-Menü:** Letztes Ergebnis kopieren · Prompts bearbeiten · Einstellungen bearbeiten · Tastenbelegung bearbeiten · Config-Ordner öffnen · Config neu laden ·
 API-Schlüssel … · Verbindung testen · Mit Windows starten · Über Kuroko … · Beenden.
 
-* **Prompts bearbeiten / Einstellungen bearbeiten** öffnen `prompts.toml` bzw. `settings.toml` im Standardprogramm für
+* **Prompts bearbeiten / Einstellungen bearbeiten / Tastenbelegung bearbeiten** öffnen `prompts.toml`, `settings.toml` bzw. `keybinds.toml` im Standardprogramm für
   `.toml`-Dateien; ist keins eingerichtet, im Editor (Notepad). Nach dem Speichern gilt die Änderung sofort.
 * **Verbindung testen** schickt eine Mini-Anfrage an den Standard-Anbieter und meldet, ob Schlüssel, Modell und Netz
   funktionieren (mit Antwortzeit), sonst den Grund, z. B. „API-Schlüssel fehlt oder wurde abgelehnt“.
 
 ## Konfiguration
 
-Beim ersten Start entstehen in `%APPDATA%\Kuroko\` (oder dem Ordner aus `KUROKO_CONFIG_DIR`) zwei Dateien
-mit Kommentaren: `settings.toml` und `prompts.toml`. Änderungen werden nach dem Speichern **automatisch**
+Beim ersten Start entstehen in `%APPDATA%\Kuroko\` (oder dem Ordner aus `KUROKO_CONFIG_DIR`) drei Dateien
+mit Kommentaren: `settings.toml` (wie Kuroko sich verhält), `prompts.toml` (was die Prompts tun) und `keybinds.toml` (welche Taste was auslöst). Änderungen werden nach dem Speichern **automatisch**
 übernommen, auch die Hotkeys. Bei einem Fehler in einer Datei bleibt die letzte funktionierende Version aktiv, und
 eine Meldung nennt Datei und Zeile.
 
@@ -143,13 +143,13 @@ noch, bittet Kuroko darum, sie zu beenden, und startet nicht. Alte Autostart-Ein
 „InstaPrompt (Claude)“) entfernt Kuroko bei jedem Start. Umgebungsvariablen heißen jetzt `KUROKO_*` statt `GHOSTWRITER_*`.
 
 Vollständige Vorlagen mit allen Schlüsseln, Standardwerten und kurzen Kommentaren liegen im Repository unter
-[`config/settings.example.toml`](config/settings.example.toml) und [`config/prompts.example.toml`](config/prompts.example.toml).
+[`config/settings.example.toml`](config/settings.example.toml), [`config/prompts.example.toml`](config/prompts.example.toml) und [`config/keybinds.example.toml`](config/keybinds.example.toml).
 Zum Verwenden nach `%APPDATA%\Kuroko\` kopieren und `.example` aus dem Namen entfernen. Die Vorlagen enthalten keine
 API-Schlüssel; Schlüssel nie ins Repository einchecken.
 
 ### Editor-Unterstützung (JSON-Schema)
 
-Für beide Dateien liegt ein JSON-Schema unter [`schemas/`](schemas/): `settings.schema.json` und `prompts.schema.json`.
+Für alle drei Dateien liegt ein JSON-Schema unter [`schemas/`](schemas/): `settings.schema.json`, `prompts.schema.json` und `keybinds.schema.json`.
 Editoren mit [Taplo](https://taplo.tamasfe.dev/), etwa VSCodium/VS Code mit der Erweiterung **Even Better TOML**, zeigen
 damit Vervollständigung, Beschreibungen beim Überfahren und Fehler wie unbekannte Schlüssel, falsche Typen, Werte außerhalb
 der erlaubten Liste (`mode`, `output`, `theme`, Positionen …) oder Zahlen außerhalb des Bereichs. Die App prüft beim Laden
@@ -165,7 +165,8 @@ unabhängig davon selbst und meldet Fehler mit Datei und Zeile; das Schema ist n
   ```json
   "evenBetterToml.schema.associations": {
     ".*/Kuroko/settings\\.toml$": "file:///C:/Pfad/zum/Repository/schemas/settings.schema.json",
-    ".*/Kuroko/prompts\\.toml$": "file:///C:/Pfad/zum/Repository/schemas/prompts.schema.json"
+    ".*/Kuroko/prompts\\.toml$": "file:///C:/Pfad/zum/Repository/schemas/prompts.schema.json",
+    ".*/Kuroko/keybinds\\.toml$": "file:///C:/Pfad/zum/Repository/schemas/keybinds.schema.json"
   }
   ```
 
@@ -201,14 +202,11 @@ Windows-Benachrichtigungen stehen. Ob der Schlüssel dann funktioniert, zeigt Tr
 ### settings.toml (Auszug)
 
 ```toml
-overlay_hotkey = "Ctrl+Shift+Space"
 marker_start = "<<"
 marker_end   = ">>"
 theme = "system"            # system | light | dark
 accent = "none"             # none (neutral) | system (Windows-Akzent) | Hex wie "#3B82F6": Cursor, Textmarkierung, Fortschrittslinie
-undo_hotkey = "Ctrl+Alt+Z"  # letzte Ersetzung rückgängig
 undo_history = 10           # so viele Ersetzungen werden gemerkt (0 = aus)
-result_copy_hotkey = "Ctrl+Alt+C"   # kopiert die Ergebnis-Karte bzw. das nicht eingefügte Ergebnis (nur solange Karte oder Fehlerpille sichtbar sind); nicht erlaubt: einfaches Ctrl+C/A/V
 overlay_position = "caret"  # Auswahl-Menü: caret | mouse | fixed (fester Platz: overlay_fixed_position, Standard top-third)
 overlay_screen_margin = 8   # weitere Schlüssel: overlay_fixed_position, overlay_font_size, overlay_width, overlay_min_height, overlay_max_height
 result_position = "fixed"   # Ergebnis-Karte: fixed (fester Platz, siehe result_fixed_position) | follow (wie das Prompt-Menü) | caret | mouse
@@ -349,7 +347,6 @@ Was dabei an den Anbieter geht, steht unter [Datenschutz](#datenschutz).
 name = "Correction"
 mode = "transform"          # transform (Standard) | instruction | universal: beschreibt die Eingabe
 output = "replace"          # replace (Standard) | overlay: wohin das Ergebnis geht (overlay = Ergebnis-Karte, nichts wird ersetzt)
-hotkey = "Ctrl+Alt+K"       # optional: führt den Prompt direkt aus, ohne Overlay
 provider = "gemini"         # optional: sonst der Standard-Anbieter
 model = "gemini-2.5-pro"    # optional: sonst das Modell des Anbieters
 prompt = """
@@ -358,8 +355,38 @@ Gib ausschließlich den korrigierten Text aus.
 """
 ```
 
-Alle Hotkeys (`overlay_hotkey`, `undo_hotkey`, `result_copy_hotkey` und die der Prompts) teilen sich einen Namensraum: Jeder darf nur einmal
-vorkommen, sonst meldet die App den Fehler mit Datei und Zeile. Ein Beispiel für einen Overlay-Prompt steht in `config/prompts.example.toml`.
+Ein Beispiel für einen Overlay-Prompt steht in `config/prompts.example.toml`. Seinen Hotkey bekommt ein Prompt in `keybinds.toml`.
+
+### keybinds.toml
+
+Jeder Hotkey steht hier und nur hier:
+
+```toml
+[mods]
+replace = "Shift+Alt"       # Name für eine Modifier-Kombination, in jedem Hotkey als $replace nutzbar
+
+[app]
+overlay = "Ctrl+Shift+Space"
+undo = "Ctrl+Alt+Z"         # nur aktiv, wenn undo_history in settings.toml größer als 0 ist
+result_copy = "Ctrl+Alt+C"  # nur belegt, solange Ergebnis-Karte oder Fehlerpille sichtbar sind
+
+[prompts]
+Correction = "Ctrl+Alt+K"   # Name aus prompts.toml = Hotkey
+"Übersetzen DE↔EN" = "$replace+T"
+
+[submaps.ton]               # ein Hotkey öffnet kurz einfache Tasten
+open = "$replace+^"
+keys = { P = "Professioneller", L = "Lockerer" }
+```
+
+Alle Hotkeys teilen sich einen Namensraum: Jeder darf nur einmal vorkommen, sonst meldet die App den Fehler mit Datei und Zeile.
+Einfaches `Ctrl+C`, `Ctrl+A` und `Ctrl+V` geht für keinen Hotkey, weil Kuroko diese Tasten selbst sendet. Ein Name unter
+`[prompts]`, den `prompts.toml` nicht kennt (auch nach dem Umbenennen eines Prompts), ist ein Fehler mit Zeile.
+
+Ältere Versionen hatten die Hotkeys in `settings.toml` (`overlay_hotkey`, `undo_hotkey`, `result_copy_hotkey`, `[mods]`,
+`[submaps]`) und in `prompts.toml` (`hotkey` je Prompt). Fehlt `keybinds.toml` beim Start, baut Kuroko sie einmal aus diesen
+Werten. Die alten Dateien bleiben dabei unverändert; die alten Schlüssel werden danach nicht mehr gelesen, eine Warnung mit Datei
+und Zeile weist darauf hin, bis du sie löschst.
 
 Tasten dürfen als das Zeichen auf der Taste im aktiven Tastaturlayout geschrieben werden (`Ctrl+Alt+ü`, `Ctrl+Alt+<`, `Ctrl+Alt++`),
 mit Namen (`Num1`, `PrintScreen`, `VolumeUp`) oder als Tastencode (`Ctrl+Alt+0xE2`). Modifier-Kombinationen bekommen in `[mods]` einen Namen

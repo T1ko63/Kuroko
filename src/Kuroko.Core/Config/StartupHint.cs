@@ -10,10 +10,10 @@ namespace Kuroko.Core.Config;
 public static class StartupHint
 {
     /// <returns>The text to show, or null when there is nothing to say.</returns>
-    public static string? Build(AppSettings settings, bool firstRun)
+    public static string? Build(AppSettings settings, KeybindSettings keybinds, bool firstRun)
     {
         var parts = new List<string>();
-        if (firstRun) parts.Add(Loc.Get("first_run", settings.OverlayHotkey));
+        if (firstRun) parts.Add(Loc.Get("first_run", keybinds.OverlayHotkey));
 
         if (settings.Providers.Count == 0) parts.Add(Loc.Get("hint_no_provider"));
         else if (MissingKey(settings) is { } provider) parts.Add(MissingKeyText(provider));

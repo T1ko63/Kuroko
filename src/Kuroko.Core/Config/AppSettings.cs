@@ -2,9 +2,8 @@ using Kuroko.Core.Providers;
 
 namespace Kuroko.Core.Config;
 
-/// <summary>Everything from settings.toml, validated and with defaults filled in.</summary>
+/// <summary>Everything from settings.toml, validated and with defaults filled in. Hotkeys are in <see cref="KeybindSettings"/>.</summary>
 public sealed record AppSettings(
-    string OverlayHotkey,
     string MarkerStart,
     string MarkerEnd,
     string Theme,
@@ -15,9 +14,7 @@ public sealed record AppSettings(
     string? DefaultProvider,
     IReadOnlyDictionary<string, ProviderSettings> Providers,
     string Accent = "none",
-    string UndoHotkey = "Ctrl+Alt+Z",
     int UndoHistory = 10,
-    string ResultCopyHotkey = AppSettings.DefaultResultCopyHotkey,
     string ResultPosition = AppSettings.DefaultResultPosition,
     double ResultFontSize = AppSettings.DefaultResultFontSize,
     double ResultWidth = AppSettings.DefaultResultWidth,
@@ -74,21 +71,6 @@ public sealed record AppSettings(
     /// <summary>Look of the windows ([appearance] in settings.toml). Defaults when the block is missing.</summary>
     public AppearanceSettings Appearance { get; init; } = AppearanceSettings.Default;
 
-    /// <summary>
-    /// Modifier variables ([mods]): name (without '$', case-insensitive) to modifiers. The hotkeys of this file are stored
-    /// with the variables already filled in; prompt hotkeys keep "$name" and are filled in where they are used.
-    /// </summary>
-    public IReadOnlyDictionary<string, Hotkeys.HotkeyModifiers> Mods { get; init; } = Hotkeys.HotkeyMods.None;
-
-    /// <summary>Submaps ([submaps.name]): a hotkey that makes a few plain keys hotkeys for a moment. Open hotkeys are stored filled in.</summary>
-    public IReadOnlyList<SubmapDefinition> Submaps { get; init; } = [];
-
-    public const string DefaultOverlayHotkey = "Ctrl+Shift+Space";
-    public const string DefaultUndoHotkey = "Ctrl+Alt+Z";
-
-    /// <summary>Copies the text of the result card (overlay output) while the card is visible.</summary>
-    public const string DefaultResultCopyHotkey = "Ctrl+Alt+C";
-
     /// <summary>Where the result card appears: "fixed" (at result_fixed_position on the target window's monitor), "follow" (where the prompt picker opens, see overlay_position), "caret" (at the text cursor, otherwise at the mouse) or "mouse".</summary>
     public const string DefaultResultPosition = "fixed";
 
@@ -134,7 +116,7 @@ public sealed record AppSettings(
 
     /// <summary>Used when settings.toml cannot be read at all: the app still starts, AI calls report "no provider".</summary>
     public static AppSettings Fallback { get; } = new(
-        DefaultOverlayHotkey, "<<", ">>", "system", false, "caret", "auto", DefaultIdleTrimSeconds, null,
+        "<<", ">>", "system", false, "caret", "auto", DefaultIdleTrimSeconds, null,
         new Dictionary<string, ProviderSettings>());
 }
 

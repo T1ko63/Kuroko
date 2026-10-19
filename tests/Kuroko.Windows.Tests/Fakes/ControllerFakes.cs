@@ -192,13 +192,6 @@ internal sealed class FakeOverlay : IOverlayView
     {
     }
 
-    public void SetHotkeyMods(IReadOnlyDictionary<string, Kuroko.Core.Hotkeys.HotkeyModifiers> mods)
-    {
-        HotkeyMods = mods;
-    }
-
-    public IReadOnlyDictionary<string, Kuroko.Core.Hotkeys.HotkeyModifiers>? HotkeyMods { get; private set; }
-
     /// <summary>The commands handed over by the last <see cref="Present"/>.</summary>
     public IReadOnlyList<AppCommand> Commands { get; private set; } = [];
 
@@ -352,7 +345,7 @@ internal sealed class FakeHotkeys : IHotkeyRegistry
 
     public static HotkeyGesture Esc { get; } = new(HotkeyModifiers.None, 0x1B);
 
-    public static HotkeyGesture Copy { get; } = HotkeyGesture.Parse(Kuroko.Core.Config.AppSettings.DefaultResultCopyHotkey);
+    public static HotkeyGesture Copy { get; } = HotkeyGesture.Parse(Kuroko.Core.Config.KeybindSettings.DefaultResultCopyHotkey);
 
     /// <summary>A gesture whose registration throws, to test that a failure halfway releases what was taken.</summary>
     public HotkeyGesture? ThrowOn { get; set; }

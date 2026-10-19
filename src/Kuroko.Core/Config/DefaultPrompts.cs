@@ -23,10 +23,10 @@ public static class DefaultPrompts
         text.AppendLine("#            \"overlay\": das Ergebnis erscheint in einer kleinen Karte, der Text in der App bleibt unverändert.");
         text.AppendLine("#                       Braucht eine Markierung (gelesen wird nur der markierte Text, nie das ganze Feld),");
         text.AppendLine("#                       funktioniert auch auf schreibgeschütztem Text wie Webseiten. Esc schließt die Karte,");
-        text.AppendLine("#                       result_copy_hotkey (settings.toml) kopiert sie.");
-        text.AppendLine("#   hotkey   optional, z. B. \"Ctrl+Alt+K\": führt den Prompt direkt aus, ohne Overlay");
+        text.AppendLine("#                       result_copy in keybinds.toml kopiert sie.");
         text.AppendLine("#   provider optional: Name eines [providers.*] aus settings.toml (sonst der Standard-Anbieter)");
         text.AppendLine("#   model    optional: Modell, das statt dem des Anbieters verwendet wird");
+        text.AppendLine("# Hotkeys für Prompts stehen in keybinds.toml unter [prompts], z. B. Correction = \"Ctrl+Alt+K\".");
 
         foreach (var prompt in BuiltInPrompts.All)
         {
@@ -35,7 +35,6 @@ public static class DefaultPrompts
             text.AppendLine($"name = {Quote(prompt.Name)}");
             text.AppendLine($"mode = \"{ModeText(prompt.Mode)}\"");
             if (prompt.Output != PromptOutput.Replace) text.AppendLine($"output = \"{OutputText(prompt.Output)}\"");
-            if (prompt.Hotkey is not null) text.AppendLine($"hotkey = {Quote(prompt.Hotkey)}");
             text.AppendLine("prompt = \"\"\"");
             text.AppendLine(EscapeMultiline(prompt.Prompt));
             text.AppendLine("\"\"\"");

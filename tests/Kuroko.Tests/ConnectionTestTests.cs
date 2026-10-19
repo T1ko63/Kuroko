@@ -93,7 +93,7 @@ public class StartupHintTests
     public void Missing_key_names_the_expected_environment_variable_and_the_credential_manager()
     {
         var settings = Load(GeminiWithEnv);
-        var hint = StartupHint.Build(settings, firstRun: false);
+        var hint = StartupHint.Build(settings, KeybindSettings.Default, firstRun: false);
 
         Assert.NotNull(hint);
         Assert.Contains("GEMINI_API_KEY", hint);
@@ -106,10 +106,10 @@ public class StartupHintTests
     [Fact]
     public void A_key_from_the_environment_or_the_key_store_means_no_hint_after_the_first_run()
     {
-        Assert.Null(StartupHint.Build(Load(GeminiWithEnv, env: name => name == "GEMINI_API_KEY" ? "k" : null), firstRun: false));
+        Assert.Null(StartupHint.Build(Load(GeminiWithEnv, env: name => name == "GEMINI_API_KEY" ? "k" : null), KeybindSettings.Default, firstRun: false));
 
         var store = new OneKeyStore("gemini", "stored");
-        Assert.Null(StartupHint.Build(Load(GeminiWithEnv, store: store), firstRun: false));
+        Assert.Null(StartupHint.Build(Load(GeminiWithEnv, store: store), KeybindSettings.Default, firstRun: false));
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class StartupHintTests
             type = "anthropic"
             model = "m"
             """);
-        var hint = StartupHint.Build(settings, firstRun: false)!;
+        var hint = StartupHint.Build(settings, KeybindSettings.Default, firstRun: false)!;
 
         Assert.DoesNotContain("_API_KEY", hint);
         Assert.Contains("api_key_env", hint);
@@ -139,8 +139,8 @@ public class StartupHintTests
             """);
 
         Assert.Null(StartupHint.MissingKey(settings));
-        Assert.Null(StartupHint.Build(settings, firstRun: false));
-        Assert.Contains(settings.OverlayHotkey, StartupHint.Build(settings, firstRun: true));
+        Assert.Null(StartupHint.Build(settings, KeybindSettings.Default, firstRun: false));
+        Assert.Contains(KeybindSettings.DefaultOverlayHotkey, StartupHint.Build(settings, KeybindSettings.Default, firstRun: true));
     }
 }
 

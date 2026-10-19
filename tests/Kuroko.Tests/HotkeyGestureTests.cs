@@ -306,50 +306,50 @@ public class HotkeyGestureTests
     }
 
     [Fact]
-    public void Settings_loader_warns_about_an_AltGr_hotkey_but_loads()
+    public void Keybinds_loader_warns_about_an_AltGr_app_hotkey_but_loads()
     {
-        var result = SettingsLoader.Parse("overlay_hotkey = \"Ctrl+Alt+Q\"\n", _ => null, keyLayout: De);
+        var result = KeybindsLoader.Parse("[app]\noverlay = \"Ctrl+Alt+Q\"\n", De);
         Assert.True(result.Ok);
         var issue = Assert.Single(result.Issues, i => i.Message.Contains("'@'"));
         Assert.False(issue.IsError);
         Assert.True(issue.Show);
-        Assert.Equal(1, issue.Line);
-        Assert.StartsWith("overlay_hotkey:", issue.Message);
+        Assert.Equal(2, issue.Line);
+        Assert.StartsWith("[app] overlay:", issue.Message);
     }
 
     [Fact]
-    public void Prompts_loader_warns_about_an_AltGr_hotkey_but_loads()
+    public void Keybinds_loader_warns_about_an_AltGr_prompt_hotkey_but_loads()
     {
-        var result = PromptsLoader.Parse("[[prompt]]\nname = \"A\"\nhotkey = \"Ctrl+Alt+E\"\nprompt = \"x\"\n", De);
+        var result = KeybindsLoader.Parse("[prompts]\n\"Übersetzen\" = \"Ctrl+Alt+E\"\n", De);
         Assert.True(result.Ok);
         var issue = Assert.Single(result.Issues, i => i.Message.Contains("'€'"));
         Assert.False(issue.IsError);
-        Assert.Equal(3, issue.Line);
+        Assert.Equal(2, issue.Line);
     }
 
     [Fact]
-    public void Prompts_loader_reports_a_shift_character()
+    public void Keybinds_loader_reports_a_shift_character()
     {
-        var result = PromptsLoader.Parse("[[prompt]]\nname = \"A\"\nhotkey = \"Ctrl+Alt+>\"\nprompt = \"x\"\n", De);
+        var result = KeybindsLoader.Parse("[prompts]\nA = \"Ctrl+Alt+>\"\n", De);
         Assert.False(result.Ok);
-        Assert.Contains(result.Issues, i => i.IsError && i.Message.Contains("Shift+<") && i.Line == 3);
+        Assert.Contains(result.Issues, i => i.IsError && i.Message.Contains("Shift+<") && i.Line == 2);
     }
 
     [Fact]
     public void Character_and_code_of_the_same_key_are_a_duplicate()
     {
-        var settings = SettingsLoader.Parse("overlay_hotkey = \"Ctrl+Alt+<\"\n", _ => null, keyLayout: De).Settings!;
-        var prompts = PromptsLoader.Parse("[[prompt]]\nname = \"A\"\nhotkey = \"Ctrl+Alt+0xE2\"\nprompt = \"x\"\n", De).Prompts!;
-        var issues = ConfigValidator.Validate(settings, prompts, keyLayout: De);
-        Assert.Contains(issues, i => i.IsError && i.Message.Contains("hotkey Ctrl+Alt+< is used twice"));
+        var settings = SettingsLoader.Parse(string.Empty, _ => null).Settings!;
+        var keybinds = KeybindsLoader.Parse("[app]\noverlay = \"Ctrl+Alt+<\"\n\n[prompts]\nA = \"Ctrl+Alt+0xE2\"\n", De).Keybinds!;
+        var issues = ConfigValidator.Validate(settings, [new Kuroko.Core.Prompts.PromptDefinition("A", "x")], keybinds, keyLayout: De);
+        Assert.Contains(issues, i => i.IsError && i.Message.Contains("hotkey Ctrl+Alt+< is used twice") && i.Line == 5);
     }
 
     [Fact]
     public void Default_hotkeys_take_no_AltGr_character_on_german()
     {
-        var defaults = new[] { AppSettings.DefaultOverlayHotkey, AppSettings.DefaultUndoHotkey, AppSettings.DefaultResultCopyHotkey }
-            .Concat(Kuroko.Core.Prompts.BuiltInPrompts.All.Select(p => p.Hotkey).OfType<string>())
-            .Concat(PromptsLoader.Parse(DefaultPrompts.Create(), De).Prompts!.Select(p => p.Hotkey).OfType<string>());
+        var defaults = new[] { KeybindSettings.DefaultOverlayHotkey, KeybindSettings.DefaultUndoHotkey, KeybindSettings.DefaultResultCopyHotkey }
+            .Concat(DefaultKeybinds.PromptHotkeys.Select(p => p.Hotkey))
+            .Concat(KeybindsLoader.Parse(DefaultKeybinds.Create(), De).Keybinds!.Prompts.Select(p => p.Hotkey));
         foreach (var hotkey in defaults)
         {
             Assert.Null(HotkeyGesture.Parse(hotkey, De).SwallowedAltGrCharacter(De));

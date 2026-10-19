@@ -3,64 +3,68 @@
 Everything about Kuroko's hotkeys: how to write a key, how to find the code of an unusual key, which hotkeys are a
 good idea, what is not possible, and what every message means.
 
-Hotkeys are set in two files in `%APPDATA%\Kuroko` (tray → **Edit settings** / **Edit prompts**):
+**Contents:** [Where keybinds live](#where-keybinds-live) · [Quick start](#quick-start) · [Keys](#keys) ·
+[Finding a key's code](#finding-a-keys-code) · [Modifiers and variables](#modifiers-and-variables) · [Submaps](#submaps) ·
+[Choosing good hotkeys](#choosing-good-hotkeys) · [Recipes](#recipes) · [Limits](#limits) · [Messages](#messages) ·
+[Migrating](#migrating)
 
-| Setting | File | Default |
+## Where keybinds live
+
+Every hotkey is in one file, `%APPDATA%\Kuroko\keybinds.toml` (tray → **Edit keybinds**, or `/keybinds` in the overlay),
+and nowhere else. One rule without exceptions:
+
+* `settings.toml` says how Kuroko behaves (theme, providers, overlay, markers …). No keys.
+* `prompts.toml` says what the prompts do. No `hotkey`.
+* `keybinds.toml` says which key does what.
+
+| What | Where in `keybinds.toml` | Default |
 |---|---|---|
-| `overlay_hotkey`: open the overlay | `settings.toml` | `Ctrl+Shift+Space` |
-| `undo_hotkey`: undo the last replacement | `settings.toml` | `Ctrl+Alt+Z` |
-| `result_copy_hotkey`: copy the result card | `settings.toml` | `Ctrl+Alt+C` |
-| `hotkey` of a `[[prompt]]`: run that prompt directly | `prompts.toml` | `Ctrl+Alt+U` (Universal), `Ctrl+Alt+K` (Correction) |
-| `open` of a `[submaps.<name>]`: open a [submap](#submaps) of plain keys | `settings.toml` | none |
+| Open the overlay | `overlay` in `[app]` | `Ctrl+Shift+Space` |
+| Undo the last replacement (while `undo_history` in `settings.toml` is above 0) | `undo` in `[app]` | `Ctrl+Alt+Z` |
+| Copy the result card | `result_copy` in `[app]` | `Ctrl+Alt+C` |
+| Run a prompt directly | `[prompts]`: prompt name = hotkey | `Universal = "Ctrl+Alt+U"`, `Correction = "Ctrl+Alt+K"` |
+| Open a [submap](#submaps) of plain keys | `open` of a `[submaps.<name>]` | none |
+| Name a modifier combination | `[mods]` | none |
 
 Changes apply as soon as the file is saved. A hotkey with an error is reported with file and line, and the last
-working configuration stays active.
+working keybinds stay active. If `keybinds.toml` is missing at start, Kuroko creates it: from the hotkeys of an older
+`settings.toml` and `prompts.toml` if there are any (see [Migrating](#from-settingstoml-and-promptstoml)), otherwise with the
+defaults above. A commented template with every key is [`config/keybinds.example.toml`](../config/keybinds.example.toml).
 
-**Contents:** [Quick start](#quick-start) · [Keys](#keys) · [Finding a key's code](#finding-a-keys-code) ·
-[Modifiers and variables](#modifiers-and-variables) · [Submaps](#submaps) · [Choosing good hotkeys](#choosing-good-hotkeys) ·
-[Recipes](#recipes) · [Limits](#limits) · [Messages](#messages) · [Migrating](#migrating)
+Whether a prompt replaces the text or shows a card is its `output` in `prompts.toml`, not its hotkey: `[mods]` only gives
+modifier combinations a name and decides nothing. Calling one of them `card` is just a convention.
 
 ## Quick start
 
-A hotkey is modifiers and one key, joined with `+`. Write it in `settings.toml` (the app's own hotkeys) or as `hotkey`
-of a prompt in `prompts.toml`:
+A hotkey is modifiers and one key, joined with `+`. The app's own hotkeys go in `[app]`, a prompt's hotkey in `[prompts]`
+under the prompt's name from `prompts.toml`:
 
 ```toml
-# settings.toml
-overlay_hotkey = "Ctrl+Shift+Space"   # modifiers + one key
-undo_hotkey = "Ctrl+Alt+ü"            # a key written as the character printed on it
+# keybinds.toml
+[app]
+overlay = "Ctrl+Shift+Space"   # modifiers + one key
+undo = "Ctrl+Alt+ü"            # a key written as the character printed on it
+
+[prompts]
+Correction = "Ctrl+Alt+K"
+"Übersetzen DE↔EN" = "Ctrl+Alt+T"   # a name with spaces or other characters than A-Z, 0-9, _ and - is quoted
 ```
 
-```toml
-# prompts.toml
-[[prompt]]
-name = "Correction"
-hotkey = "Ctrl+Alt+K"
-prompt = "..."
-```
+Prompt names are not case-sensitive. A name that `prompts.toml` does not have is an error that names the line, so renaming
+a prompt is noticed at once. `""` means no hotkey.
 
 Once you have more than a few prompt hotkeys, give your modifier combinations a name in `[mods]` and use it as
 `$name`. Changing one line then moves a whole group of hotkeys:
 
 ```toml
-# settings.toml
+# keybinds.toml
 [mods]
 replace = "Shift+Alt"   # prompts that replace the text
 card = "Ctrl+Alt"       # prompts that show a card
-```
 
-```toml
-# prompts.toml
-[[prompt]]
-name = "Correction"
-hotkey = "$replace+C"   # Shift+Alt+C
-prompt = "..."
-
-[[prompt]]
-name = "Summary"
-hotkey = "$card+S"      # Ctrl+Alt+S
-output = "overlay"
-prompt = "..."
+[prompts]
+Correction = "$replace+C"   # Shift+Alt+C
+Summary = "$card+S"         # Ctrl+Alt+S
 ```
 
 For many prompts, a [submap](#submaps) needs only one hotkey: press it, then a plain key (`P`, `L`, …) picks the
@@ -184,41 +188,35 @@ On a US keyboard with the extra key next to left Shift (102-key), that key is `0
 ## Modifiers and variables
 
 A **modifier variable** is a name for a modifier combination. Define it once in the `[mods]` table of
-`settings.toml` and write `$name` in any hotkey instead of the modifiers:
+`keybinds.toml` and write `$name` in any hotkey instead of the modifiers:
 
 ```toml
-# settings.toml
+# keybinds.toml
 [mods]
 main = "Ctrl"
 card = "Ctrl+Alt"
-```
 
-```toml
-# settings.toml, above the first [table]
-overlay_hotkey = "$main+Shift+Space"   # Ctrl+Shift+Space
-```
+[app]
+overlay = "$main+Shift+Space"   # Ctrl+Shift+Space
 
-```toml
-# prompts.toml
-hotkey = "$card+S"                     # Ctrl+Alt+S
+[prompts]
+Summary = "$card+S"             # Ctrl+Alt+S
 ```
 
 ### How it works
 
 * Before a hotkey is read, every `$name` is replaced by its modifiers. `$card+S` then is exactly `Ctrl+Alt+S`, with
   all the rules of [Keys](#keys).
-* Variables work in **every** hotkey: `overlay_hotkey`, `undo_hotkey`, `result_copy_hotkey` and the `hotkey` of each
-  prompt.
+* Variables work in **every** hotkey of `keybinds.toml`: `[app]`, `[prompts]` and the `open` hotkey of each submap.
 * **Names:** letters, digits and `_` (`main`, `card_2`), not case-sensitive (`$Main` is `$main`), like the modifier
   names.
 * **Values:** modifiers only (`Ctrl`, `Alt`, `Shift`, `Win` and their other spellings), at least one, joined with `+`.
   A value cannot contain a key (`"Ctrl+K"`) or another variable (`"$main+Alt"`): variables are not nested.
-* **Saving `[mods]`** applies at once and registers all hotkeys again, also the prompt hotkeys whose `prompts.toml`
-  did not change. If a prompt still uses a variable you removed or renamed, the new `settings.toml` is rejected with an
-  error that names the prompt, and the last working version stays active.
+* **Saving `[mods]`** applies at once and registers all hotkeys again. If a hotkey still uses a variable you removed or
+  renamed, the new `keybinds.toml` is rejected with an error on that hotkey's line, and the last working version stays
+  active.
 * The log, the tray tooltip and the prompt list in the overlay show hotkeys with the variables filled in and in one
-  fixed spelling: `$card+s` in `prompts.toml` appears as `Ctrl+Alt+S`. A hotkey that cannot be read (for example
-  because of an unknown variable) is shown in the overlay as written.
+  fixed spelling: `$card+s` appears as `Ctrl+Alt+S`.
 
 ### Main modifier and sub-modifiers
 
@@ -228,11 +226,10 @@ modifier to it. Change `main` and everything moves along.
 ```toml
 [mods]
 main = "Ctrl"
-```
 
-```toml
-hotkey = "$main+Alt+K"     # Ctrl+Alt+K
-hotkey = "$main+Shift+K"   # Ctrl+Shift+K
+[prompts]
+Correction = "$main+Alt+K"   # Ctrl+Alt+K
+Rewrite = "$main+Shift+K"    # Ctrl+Shift+K
 ```
 
 **Combining** is free: a variable plus fixed modifiers (`$main+Alt+K`), or two variables (`$main+$extra+K`), as
@@ -242,7 +239,7 @@ long as no modifier appears twice after filling in. `$card+Ctrl+K` with `card = 
 ### Things to keep in mind
 
 * **Ctrl alone takes app shortcuts.** With `main = "Ctrl"`, `$main+S` is `Ctrl+S`, and no app can save any more while
-  Kuroko runs. Use `main` only together with a second modifier (`$main+Alt+…`, `$main+Shift+…`), or make `main` a
+  Kuroko runs (`$main+C`, `$main+V` and `$main+A` are refused, see [App shortcuts](#app-shortcuts)). Use `main` only together with a second modifier (`$main+Alt+…`, `$main+Shift+…`), or make `main` a
   pair from the start (`main = "Ctrl+Shift"`).
 * **Ctrl+Alt is AltGr.** A variable such as `card = "Ctrl+Alt"` runs into [the AltGr trap](#the-altgr-trap) for the
   keys that type something with AltGr (`$card+Q` takes `@` on German). Kuroko warns about each such hotkey.
@@ -259,7 +256,7 @@ Hyprland. Press the `open` hotkey, the pill shows the submap's label, then press
 what it stands for. Ten prompts then need one hotkey instead of ten.
 
 ```toml
-# settings.toml: general settings stay above the first [table]
+# keybinds.toml
 [mods]
 replace = "Shift+Alt"
 
@@ -282,7 +279,7 @@ keys = { P = "Professioneller", L = "Lockerer", K = "Kürzen", A = "Ausführlich
 | `keys` | Each key and what it runs: `key = "target"`. At least one. | required |
 
 The name after `submaps.` is free: letters, digits, `_` and `-` (`tone`, `my-tools`), not case-sensitive. Each
-submap has its own `[submaps.<name>]` block; like `[mods]`, it goes below the general settings.
+submap has its own `[submaps.<name>]` block in `keybinds.toml`.
 
 `keys` can also be written as a table of its own, one key per line, which is easier to read for long lists:
 
@@ -311,16 +308,16 @@ stand alone here, not only F1–F24, because it is a hotkey only while the subma
 
 | Target | Example | Runs |
 |---|---|---|
-| A prompt name from `prompts.toml` | `P = "Professioneller"` | the prompt, exactly as its own `hotkey` would: it reads the selection (or the whole field), and replaces it or shows the card. Names are not case-sensitive. The prompt needs no hotkey of its own. |
+| A prompt name from `prompts.toml` | `P = "Professioneller"` | the prompt, exactly as its own hotkey would: it reads the selection (or the whole field), and replaces it or shows the card. Names are not case-sensitive. The prompt needs no hotkey of its own. |
 | A command with `/` | `U = "/undo"` | the command, as the tray menu does. |
 
 The commands are the ones of the overlay's `/` list, plus `/undo`:
 
 | Command | Does |
 |---|---|
-| `/undo` | undo the last replacement, as `undo_hotkey` does (with `undo_history = 0` there is nothing to undo) |
+| `/undo` | undo the last replacement, as the `undo` hotkey does (with `undo_history = 0` there is nothing to undo) |
 | `/copy` | copy the last result |
-| `/prompts`, `/settings` | open `prompts.toml` or `settings.toml` in the editor |
+| `/prompts`, `/settings`, `/keybinds` | open `prompts.toml`, `settings.toml` or `keybinds.toml` in the editor |
 | `/folder` | open the config folder |
 | `/reload` | reload the configuration |
 | `/keys` | open the API key window |
@@ -330,7 +327,8 @@ The commands are the ones of the overlay's `/` list, plus `/undo`:
 | `/quit` | quit Kuroko |
 
 A prompt a submap names must exist: if you rename or remove it in `prompts.toml`, that `prompts.toml` is rejected
-with a message naming the submap, and the last working version stays active until you change the submap too.
+with a message on the submap's line in `keybinds.toml`, and the last working version stays active until you change the
+submap too.
 
 ### While a submap is open
 
@@ -360,8 +358,6 @@ mode that sees every key:
 
 ## Choosing good hotkeys
 
-## Choosing good hotkeys
-
 A global hotkey is taken away from **every** other app while Kuroko runs: the app in front never sees it. So pick
 combinations that nothing else needs.
 
@@ -385,8 +381,8 @@ On German, these `Ctrl+Alt` hotkeys take away a character:
 | `Ctrl+Alt+<` | `\|` |
 
 The default hotkeys avoid them. Older versions gave the Universal prompt `Ctrl+Alt+M` (`µ`); it is now `Ctrl+Alt+U`.
-A `prompts.toml` created by an older version keeps `Ctrl+Alt+M` and shows the warning; change it there if you type
-`µ` with AltGr+M.
+A `prompts.toml` created by an older version had `Ctrl+Alt+M`; it moves to `keybinds.toml` with the other hotkeys and
+shows the warning there. Change it in `keybinds.toml` if you type `µ` with AltGr+M.
 
 Ways around it: another letter (`Ctrl+Alt+K`, `Ctrl+Alt+Z` are free on German), `Ctrl+Shift+…`, `Alt+Shift+…`,
 `Ctrl+Alt+Shift+…` or `Win+Alt+…`.
@@ -396,8 +392,10 @@ Ways around it: another letter (`Ctrl+Alt+K`, `Ctrl+Alt+Z` are free on German), 
 * Avoid shortcuts you use in your apps: `Ctrl+Shift+T` (reopen tab), `Ctrl+Shift+N` (new window), `Ctrl+Shift+V`
   (paste as text), `Ctrl+Alt+Delete`, and the `Win+letter` shortcuts of Windows (many cannot be taken at all, e.g.
   `Win+L`).
-* Plain `Ctrl+A`, `Ctrl+C` and `Ctrl+V` cannot be `result_copy_hotkey`: Kuroko sends those keys itself to read and
-  replace text.
+* Plain `Ctrl+A`, `Ctrl+C` and `Ctrl+V` cannot be any hotkey (`[app]`, `[prompts]` or a submap's `open`, also not
+  through a variable such as `$main+C` with `main = "Ctrl"`): Kuroko sends those keys itself to read and replace text,
+  so it could no longer read or paste, and Ctrl+C/V would stop working in every app while Kuroko runs. Such a hotkey is
+  an error with its line.
 * `F12` is reserved by Windows for debuggers and may fail to register.
 * If another app already owns a combination, Kuroko says so at start: "Hotkey … is already used by another app".
 
@@ -406,38 +404,20 @@ Ways around it: another letter (`Ctrl+Alt+K`, `Ctrl+Alt+Z` are free on German), 
 ### By output: replace or card
 
 One modifier pair for prompts that replace the text, another for prompts that show a card. The letter says what the
-prompt does; the modifiers say where the result goes. This is the scheme Kuroko's author uses.
+prompt does; the modifiers say where the result goes. This is the scheme Kuroko's author uses. The names are only a
+convention: where the result goes is still the prompt's `output` in `prompts.toml`.
 
 ```toml
-# settings.toml
+# keybinds.toml
 [mods]
 replace = "Shift+Alt"   # the result replaces the text
 card = "Ctrl+Alt"       # the result appears in a card
-```
 
-```toml
-# prompts.toml
-[[prompt]]
-name = "Correct"
-hotkey = "$replace+C"   # Alt+Shift+C
-prompt = "..."
-
-[[prompt]]
-name = "Shorten"
-hotkey = "$replace+S"   # Alt+Shift+S
-prompt = "..."
-
-[[prompt]]
-name = "Summarize"
-hotkey = "$card+S"      # Ctrl+Alt+S
-output = "overlay"
-prompt = "..."
-
-[[prompt]]
-name = "Fact check"
-hotkey = "$card+F"      # Ctrl+Alt+F
-output = "overlay"
-prompt = "..."
+[prompts]
+Correct = "$replace+C"      # Alt+Shift+C
+Shorten = "$replace+S"      # Alt+Shift+S
+Summarize = "$card+S"       # Ctrl+Alt+S, output = "overlay" in prompts.toml
+"Fact check" = "$card+F"    # Ctrl+Alt+F, output = "overlay" in prompts.toml
 ```
 
 `S` appears in both groups (shorten, summarize) without a clash, because the modifiers differ. On German, avoid
@@ -446,19 +426,18 @@ prompt = "..."
 ### Ctrl as main
 
 ```toml
-# settings.toml: general settings stay above the first [table]
-overlay_hotkey = "$main+Shift+Space"   # Ctrl+Shift+Space
-undo_hotkey = "$main+Alt+Z"            # Ctrl+Alt+Z
-result_copy_hotkey = "$main+Alt+C"     # Ctrl+Alt+C
-
+# keybinds.toml
 [mods]
 main = "Ctrl"
-```
 
-```toml
-# prompts.toml
-hotkey = "$main+Alt+K"     # Correction: Ctrl+Alt+K
-hotkey = "$main+Shift+1"   # a second group: Ctrl+Shift+1, 2, 3 …
+[app]
+overlay = "$main+Shift+Space"   # Ctrl+Shift+Space
+undo = "$main+Alt+Z"            # Ctrl+Alt+Z
+result_copy = "$main+Alt+C"     # Ctrl+Alt+C
+
+[prompts]
+Correction = "$main+Alt+K"      # Ctrl+Alt+K
+Rewrite = "$main+Shift+1"       # a second group: Ctrl+Shift+1, 2, 3 …
 ```
 
 Always add a second modifier to `$main`; `$main+K` alone would be `Ctrl+K` and steal an app shortcut.
@@ -467,18 +446,17 @@ Always add a second modifier to `$main`; `$main+K` alone would be `Ctrl+K` and s
 ### Win as main
 
 ```toml
-# settings.toml: general settings stay above the first [table]
-overlay_hotkey = "$main+Space"   # Win+Alt+Space
-undo_hotkey = "$main+Z"          # Win+Alt+Z
-result_copy_hotkey = "$main+C"   # Win+Alt+C
-
+# keybinds.toml
 [mods]
 main = "Win+Alt"
-```
 
-```toml
-# prompts.toml
-hotkey = "$main+J"   # Win+Alt+J
+[app]
+overlay = "$main+Space"   # Win+Alt+Space
+undo = "$main+Z"          # Win+Alt+Z
+result_copy = "$main+C"   # Win+Alt+C
+
+[prompts]
+Correction = "$main+J"    # Win+Alt+J
 ```
 
 `Win+Alt` keeps all Ctrl and Alt shortcuts of your apps free, and there is no AltGr trap. Windows itself uses a few
@@ -493,7 +471,7 @@ One hotkey for four rewrites of the selected text. `^` is the key left of `1` on
 another key.
 
 ```toml
-# settings.toml
+# keybinds.toml
 [mods]
 replace = "Shift+Alt"
 
@@ -523,14 +501,14 @@ examples you write yourself (or point `K` and `A` at the built-in "Condense" and
 Undo, copy and reload on one hotkey, next to a prompt:
 
 ```toml
-# settings.toml
+# keybinds.toml
 [submaps.tools]
 open = "Ctrl+Alt+Shift+K"
 label = "U undo · C copy last result · R reload · K correct"
 keys = { U = "/undo", C = "/copy", R = "/reload", K = "Correction" }
 ```
 
-`Ctrl+Alt+Shift+K`, then `U`, undoes the last replacement. With such a submap, `undo_hotkey` can move to a
+`Ctrl+Alt+Shift+K`, then `U`, undoes the last replacement. With such a submap, the `undo` hotkey can move to a
 combination you never press by accident.
 
 ## Limits
@@ -552,13 +530,13 @@ needs no special rights, but some things are not possible:
 
 ## Messages
 
-Messages appear in a pill and the tray, with file and line, e.g. `settings.toml, line 12: undo_hotkey: …` or
-`prompts.toml, line 30: prompt 'Correction': …`. Errors keep the last working configuration active; warnings do not
+Messages appear in a pill and the tray, with file and line, e.g. `keybinds.toml, line 12: [app] undo: …` or
+`keybinds.toml, line 30: [prompts] 'Correction': …`. Errors keep the last working configuration active; warnings do not
 block anything.
 
 | Message | Meaning | Fix |
 |---|---|---|
-| Hotkey is empty. | A hotkey setting in `settings.toml` is `""`. | Write a hotkey, or remove the line to get the default. (In `prompts.toml`, an empty `hotkey` just means "no hotkey".) |
+| Hotkey is empty. | A hotkey in `[app]` (or a submap's `open`) is `""`. | Write a hotkey, or remove the line to get the default. (Under `[prompts]`, `""` just means "no hotkey".) |
 | Hotkey '…' is malformed. | A `+` without anything next to it (`Ctrl+`, `+K`, `Ctrl++K`). | Write modifiers, `+`, one key. For the `+` key: `Ctrl+Alt++` or `Ctrl+Alt+Plus`. |
 | Unknown modifier '…' in hotkey '…'. | Something before the last `+` is not Ctrl, Alt, Shift or Win. | Only those four (and their other spellings) can be modifiers, see [Limits](#limits). |
 | Modifier '…' appears twice in hotkey '…'. | `Ctrl+Strg+K` and the like. | Write each modifier once. |
@@ -574,8 +552,8 @@ block anything.
 | '…' in hotkey '…' is Shift+… / AltGr+… on the active keyboard layout (…). A hotkey names the key, not the character: … | You wrote a Shift or AltGr character (`>`, `\|`, `°`, `@`). | Write the key's own character as the message shows, and add `Shift` yourself if you want it: `Ctrl+Shift+<`. |
 | *(warning)* … is also AltGr+…, which types '…' on the active keyboard layout (…); while Kuroko runs, '…' cannot be typed with AltGr. | A `Ctrl+Alt` hotkey takes away an AltGr character, see [the AltGr trap](#the-altgr-trap). | Choose another key or other modifiers. If you never type that character, ignore it. |
 | hotkey … is used twice: … and … | Two settings, prompts or submap `open` hotkeys are the same (also when written differently, e.g. `<` and `0xE2`, or `$card+S` and `Ctrl+Alt+S`). | Give one of them another hotkey. |
-| Unknown variable '$…' in hotkey '…'. Defined in [mods] of settings.toml: … | The hotkey uses a `$name` that `[mods]` does not define (typo, or removed from `[mods]`). | Fix the name, or add it to `[mods]`. If you just removed it from `[mods]`, the old `settings.toml` stays active until no prompt uses it any more. |
-| Unknown variable '$…' in hotkey '…'. No variables are defined: add them to a [mods] table in settings.toml. | The hotkey uses `$name`, but `settings.toml` has no `[mods]` (or it is empty). | Add `[mods]` with that name, see [Modifiers and variables](#modifiers-and-variables). |
+| Unknown variable '$…' in hotkey '…'. Defined in [mods] of keybinds.toml: … | The hotkey uses a `$name` that `[mods]` does not define (typo, or removed from `[mods]`). | Fix the name, or add it to `[mods]`. Until then the last working `keybinds.toml` stays active. |
+| Unknown variable '$…' in hotkey '…'. No variables are defined: add them to a [mods] table in keybinds.toml. | The hotkey uses `$name`, but `keybinds.toml` has no `[mods]` (or it is empty). | Add `[mods]` with that name, see [Modifiers and variables](#modifiers-and-variables). |
 | '$' in hotkey '…' must be followed by a variable name (letters, digits, _). | A `$` with no name after it (`$+K`). | Write the variable's name right after `$`: `$card+K`. |
 | *any message above* … (written as '…', which is '…' with [mods] filled in). | The hotkey used variables; the message talks about the filled-in text and also shows what you wrote. | Fix what the message says, in the hotkey or in `[mods]`. Most often a modifier is twice: `$card+Ctrl+K` with `card = "Ctrl+Alt"`. |
 | mods must be a table: [mods] with lines like main = "Ctrl" | `mods = …` was written as a single value. | Write a `[mods]` table, one variable per line. |
@@ -602,13 +580,79 @@ block anything.
 | [submaps.…] key '…' is listed twice (also as '…') | Two entries mean the same key (`p` and `P`, `"<"` and `0xE2`). | Keep one. |
 | [submaps.…] key '…' must name a prompt from prompts.toml or a command such as "/undo" | The target is empty (or just `/`) or not text. | Write a prompt name or a command. |
 | [submaps.…] key '…': unknown command '/…' (commands: …) | A target with `/` that is not a command. | Use one of the commands the message lists, see [Targets](#targets). |
-| [submaps.…] key '…' runs '…', but prompts.toml has no prompt of that name (prompts: …) | No prompt has that name: a typo, or the prompt was renamed or removed. The message lists the prompts. | Fix the name in `settings.toml`, or add the prompt. If you just renamed it in `prompts.toml`, that file stays rejected until the submap uses the new name. |
+| [submaps.…] key '…' runs '…', but prompts.toml has no prompt of that name (prompts: …) | No prompt has that name: a typo, or the prompt was renamed or removed. The message lists the prompts. | Fix the name in `keybinds.toml`, or add the prompt. If you just renamed it in `prompts.toml`, that file stays rejected until the submap uses the new name. |
 | [submaps.…] key '…' is also the hotkey of …; give one of them another key | A submap key that is already a hotkey without modifiers (e.g. an `F8` prompt hotkey and `F8` in a submap). | Change one of them. |
 | *(warning)* [submaps.…] unknown setting '…' | A field other than `open`, `label`, `timeout`, `keys` (often a typo such as `lable`). | Fix the name. |
-| result_copy_hotkey: … is used by the app to read the selection (Ctrl+C, Ctrl+A, Ctrl+V); choose another hotkey | See [App shortcuts](#app-shortcuts). | Choose another hotkey, e.g. the default `Ctrl+Alt+C`. |
+| *…*: Ctrl+… is used by the app to read and replace text (Ctrl+C, Ctrl+A, Ctrl+V); choose another hotkey | A hotkey (`[app]`, `[prompts]` or a submap's `open`) is plain `Ctrl+C`, `Ctrl+A` or `Ctrl+V`, also when it comes from a variable (`$main+C` with `main = "Ctrl"`). See [App shortcuts](#app-shortcuts). | Choose another hotkey, e.g. the default `Ctrl+Alt+C` for `result_copy`. |
+| [prompts] no prompt '…' in prompts.toml (prompts: …) | A name under `[prompts]` is not a prompt in `prompts.toml`: a typo, or the prompt was renamed or removed. Names are not case-sensitive. | Fix the name in `keybinds.toml`, or add the prompt. If you just renamed it in `prompts.toml`, that file stays rejected until `[prompts]` uses the new name; saving both files together works. |
+| [prompts] '…' is listed twice (prompt names are not case-sensitive) | Two lines under `[prompts]` name the same prompt (`Fix` and `fix`). | Keep one. |
+| [prompts] '…' must be a hotkey in quotes, e.g. "Ctrl+Alt+K" | The value is a number or a list. | Put the hotkey in quotes. `""` means no hotkey. |
+| app must be a table: [app] with lines like overlay = "…" / prompts must be a table: … | `app = …` or `prompts = …` was written as a single value. | Write an `[app]` or `[prompts]` table, one hotkey per line. |
+| *(warning)* [app] unknown hotkey '…' (known: overlay, undo, result_copy) | A line in `[app]` other than the three app hotkeys (often a typo). | Fix the name. Prompt hotkeys go under `[prompts]`. |
+| *(warning)* unknown entry '…' | Something at the top of `keybinds.toml` that is not `[mods]`, `[app]`, `[prompts]` or `[submaps.…]`, e.g. `overlay = …` above `[app]`. | Move it into the right table. |
 | Hotkey … (…) is already used by another app. | Shown at start or reload: Windows refused the hotkey because another program registered it first. | Choose another hotkey, or quit the other program. |
+| Hotkey … (…) is invalid: … | Shown at start or reload: the hotkey could not be read when it was registered, most often a character such as `ü` while a keyboard layout without that key is active. The reason follows the colon. | Switch to the layout the hotkey was written for and reload, or write the key's name or code (see [Which keyboard layout counts](#which-keyboard-layout-counts)). |
+| *(warning)* overlay_hotkey / undo_hotkey / result_copy_hotkey / [mods] / [submaps] in settings.toml is no longer read; keybinds live in keybinds.toml | An old key in `settings.toml`. It was taken over into `keybinds.toml` once and is ignored since then. | Delete it from `settings.toml`; change the hotkey in `keybinds.toml`. |
+| *(warning)* prompt '…': hotkey in prompts.toml is no longer read; keybinds live in keybinds.toml | An old `hotkey` line in `prompts.toml`, ignored like the above. | Delete it; the prompt's hotkey is under `[prompts]` in `keybinds.toml`. |
+| *(note)* keybinds.toml: created from the hotkeys in settings.toml and prompts.toml (…) | Shown once, at the first start of a version with `keybinds.toml`. Lists what was taken over. | Nothing to do. See [Migrating](#from-settingstoml-and-promptstoml). |
+| keybinds.toml: not created yet: settings.toml cannot be read (…) | `keybinds.toml` is missing and `settings.toml` (or `prompts.toml`) has a syntax error, so its hotkeys cannot be taken over yet. Until then the default hotkeys apply. | Fix the file the message names; on the next save `keybinds.toml` is created from it. |
 
 ## Migrating
+
+### From settings.toml and prompts.toml
+
+Up to version 1.1, the hotkeys were spread over two files: `overlay_hotkey`, `undo_hotkey`, `result_copy_hotkey`, `[mods]`
+and `[submaps]` in `settings.toml`, and a `hotkey` line in each `[[prompt]]` of `prompts.toml`. Now they all live in
+`keybinds.toml`.
+
+* **Nothing to do by hand.** At the first start of the new version, `keybinds.toml` is missing, and Kuroko builds it from
+  those values: the three app hotkeys go to `[app]` (as `overlay`, `undo`, `result_copy`), every prompt `hotkey` to
+  `[prompts]` under the prompt's name, `[mods]` and every `[submaps.<name>]` move as they are. Hotkeys are taken over as
+  written, `$variables` included. A note in the pill and the log says what was taken over.
+* **Your old files are not changed.** As with the move from the old product names, Kuroko never rewrites them. The old
+  keys stay where they are, are no longer read, and each one gives a warning with file and line until you delete it.
+  Changing an old key has no effect any more.
+* **An existing `keybinds.toml` is never overwritten.** The move happens only while the file is missing. Deleting
+  `keybinds.toml` creates it again (from the old keys if they are still there, otherwise with the defaults).
+* **A new install** gets a `keybinds.toml` with the defaults and the hotkeys of the built-in prompts
+  (`Universal = "Ctrl+Alt+U"`, `Correction = "Ctrl+Alt+K"`).
+* **If an old file has a syntax error**, its hotkeys cannot be read: `keybinds.toml` is not created yet, a message says
+  so, and the default hotkeys apply until the file is fixed.
+
+Before:
+
+```toml
+# settings.toml
+overlay_hotkey = "Ctrl+Shift+Space"
+[mods]
+replace = "Shift+Alt"
+```
+
+```toml
+# prompts.toml
+[[prompt]]
+name = "Correction"
+hotkey = "$replace+C"
+prompt = "..."
+```
+
+After (the new file; delete the old lines whenever you like):
+
+```toml
+# keybinds.toml
+[mods]
+replace = "Shift+Alt"
+
+[app]
+overlay = "Ctrl+Shift+Space"
+undo = "Ctrl+Alt+Z"
+result_copy = "Ctrl+Alt+C"
+
+[prompts]
+Correction = "$replace+C"
+```
+
+### US characters of punctuation keys
 
 Older versions knew a few punctuation keys by their **US** character: `;` `=` `,` `-` `.` `/` `` ` `` `[` `\` `]` `'`.
 These characters now go through the active keyboard layout like every other character, so they mean the key that

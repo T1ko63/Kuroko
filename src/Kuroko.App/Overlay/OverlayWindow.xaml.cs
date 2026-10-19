@@ -141,16 +141,6 @@ public partial class OverlayWindow : Window, IOverlayView
     /// <summary>Grey text in the empty search field ([appearance] placeholder); "" shows none. Takes effect the next time the picker opens.</summary>
     public void SetPlaceholder(string text) => Placeholder.Text = text;
 
-    private IReadOnlyDictionary<string, HotkeyModifiers> _mods = HotkeyMods.None;
-
-    /// <summary>[mods] for the hotkeys shown in the list; a change redraws the rows the next time the picker opens.</summary>
-    public void SetHotkeyMods(IReadOnlyDictionary<string, HotkeyModifiers> mods)
-    {
-        if (ReferenceEquals(mods, _mods)) return;
-        _mods = mods;
-        _renderedAll = null; // same prompts, but their hotkeys may read differently now
-    }
-
     /// <summary>
     /// Width, height limits and font size of the picker (overlay_width, overlay_min_height, overlay_max_height, overlay_font_size).
     /// The font size scales the whole picker (rows, search line, numbers, hotkeys) in proportion. Applies at once to the resources;
@@ -288,7 +278,7 @@ public partial class OverlayWindow : Window, IOverlayView
         var matches = FuzzyMatcher.Filter(_all, query, p => p.Name);
         _renderedAll = _all;
         _renderedQuery = query;
-        ShowRows(matches.Select((p, i) => OverlayRow.For(p, query.Length == 0 && i < 9 ? (i + 1).ToString() : string.Empty, _mods)).ToList());
+        ShowRows(matches.Select((p, i) => OverlayRow.For(p, query.Length == 0 && i < 9 ? (i + 1).ToString() : string.Empty)).ToList());
     }
 
     private void ShowRows(List<OverlayRow> rows)

@@ -24,7 +24,7 @@ internal sealed class LastResult
     private Anchor _rescueAnchor;
     private bool _rescueReleasedForReload;
 
-    /// <param name="copyHotkey">result_copy_hotkey, read whenever the error pill opens or the hotkeys are restored after a reload.</param>
+    /// <param name="copyHotkey">result_copy in keybinds.toml, read whenever the error pill opens or the hotkeys are restored after a reload.</param>
     public LastResult(IStatusView status, IHotkeyRegistry? hotkeys, IClipboard? clipboard, Func<string> copyHotkey)
     {
         _status = status;
@@ -42,7 +42,7 @@ internal sealed class LastResult
 
     /// <summary>
     /// The answer is complete but could not be pasted: the error pill says so and offers to copy it with
-    /// result_copy_hotkey, registered only while this pill is up. The tray entry works as well, also later.
+    /// result_copy in keybinds.toml, registered only while this pill is up. The tray entry works as well, also later.
     /// </summary>
     public void ShowRescue(string message, Anchor anchor)
     {
@@ -90,7 +90,7 @@ internal sealed class LastResult
         _rescueCopy.Release();
     }
 
-    /// <summary>Registers the copy hotkey again (with the current result_copy_hotkey) if the error pill held it and is still up.</summary>
+    /// <summary>Registers the copy hotkey again (with the current result_copy hotkey) if the error pill held it and is still up.</summary>
     public void RestoreAfterReload()
     {
         if (_rescueReleasedForReload && _status.IsActionShown && HotkeyGesture.TryParse(_copyHotkey(), out var gesture, out _))

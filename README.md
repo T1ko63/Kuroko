@@ -28,7 +28,7 @@ A Raycast-inspired overlay offers fuzzy search and number-key shortcuts for acce
 A dedicated Windhawk C++ mod adds DWM blur effects without affecting the C# core’s performance.
 
 ### TOML configuration
-Manage providers, models, hotkeys, and custom prompts in two readable TOML files. Changes apply as soon as you save. JSON schemas in `schemas/` give completion and checks in editors with Taplo (e.g. Even Better TOML).
+Manage providers and settings, custom prompts, and hotkeys in three readable TOML files (`settings.toml`, `prompts.toml`, `keybinds.toml`). Changes apply as soon as you save. JSON schemas in `schemas/` give completion and checks in editors with Taplo (e.g. Even Better TOML).
 
 ### Secure API keys
 Store API keys in the Windows Credential Manager from the tray menu instead of keeping them in plain text.
@@ -38,7 +38,7 @@ Store API keys in the Windows Credential Manager from the tray menu instead of k
 1. Download the zip (`Kuroko-<version>-win-x64.zip`) from the latest release on the [GitHub Releases page](https://github.com/T1ko63/Kuroko/releases/latest), unzip it into any folder and start `Kuroko.exe`; it lives in the tray.
 
    The zip contains the small build, which needs the **.NET Desktop Runtime 10** (x64). If it is missing, Windows says so when `Kuroko.exe` starts and offers to open the download page. Install it from [dotnet.microsoft.com](https://dotnet.microsoft.com/download/dotnet/10.0); a per-user install works without administrator rights. Where nothing can be installed, build the self-contained variant instead (see [Build from source](#build-from-source)).
-2. On first start, Kuroko creates `settings.toml` and `prompts.toml` in `%APPDATA%\Kuroko` (or in the folder set by `KUROKO_CONFIG_DIR`). Commented templates with every key are in [`config/`](config).
+2. On first start, Kuroko creates `settings.toml`, `prompts.toml` and `keybinds.toml` in `%APPDATA%\Kuroko` (or in the folder set by `KUROKO_CONFIG_DIR`). Commented templates with every key are in [`config/`](config).
 3. Add an API key via the tray icon → **API keys …** (**API-Schlüssel …** in the German UI). It is stored as `Kuroko:<provider>` (for example `Kuroko:gemini`) in the Windows Credential Manager. Alternatively, set `api_key_env` or `api_key` in the provider block of `settings.toml` (tray → **Edit settings** opens it). If no key is found at start, a hint names the environment variable Kuroko expects. Tray → **Test connection** checks key, model and network with one tiny request.
 4. Select text in any app, or just type, and press `Ctrl+Shift+Space` to pick a prompt.
 
@@ -57,7 +57,7 @@ The result lands in `publish\Kuroko` or `publish\Kuroko-selfcontained`, next to 
 |---|---|
 | Open the overlay (search and pick a prompt) | `Ctrl+Shift+Space` |
 | Run the Universal prompt directly (write **and** edit) | `Ctrl+Alt+U` |
-| Run another prompt directly | per prompt in `prompts.toml`, e.g. `Ctrl+Alt+K` for Correction |
+| Run another prompt directly | per prompt under `[prompts]` in `keybinds.toml`, e.g. `Ctrl+Alt+K` for Correction |
 | Undo the last replacement | `Ctrl+Alt+Z` |
 | Cancel a running request | `Esc`, only while a request is running |
 | Close the result card (cancels a running request) | `Esc`, only while a card is visible |
@@ -65,11 +65,12 @@ The result lands in `publish\Kuroko` or `publish\Kuroko-selfcontained`, next to 
 | Close an open submap without running anything | `Esc`, only while a submap is open |
 | Copy an answer that could not be pasted | `Ctrl+Alt+C` while the error pill is shown, later tray → **Copy last result** |
 
-All hotkeys can be changed in `settings.toml` and `prompts.toml`. Keys can be written as the character printed on them in your
+Every hotkey is in `keybinds.toml` (tray → **Edit keybinds**, or `/keybinds` in the overlay). Keys can be written as the character printed on them in your
 keyboard layout (`Ctrl+Alt+ü`, `Ctrl+Alt+<`), by name (`Num1`, `PrintScreen`, `VolumeUp`) or by key code (`Ctrl+Alt+0xE2`).
 Modifier combinations can get a name in `[mods]` (`card = "Ctrl+Alt"`) and be used as `$card+S` in every hotkey.
-Submaps (`[submaps.<name>]` in `settings.toml`) give one hotkey a small set of plain keys for a moment, like a leader key:
+Submaps (`[submaps.<name>]`) give one hotkey a small set of plain keys for a moment, like a leader key:
 `$replace+^`, then `P` runs "Professioneller", `L` runs "Lockerer", `U` runs `/undo`.
+Hotkeys of older versions (in `settings.toml` and `prompts.toml`) move to `keybinds.toml` at the first start by themselves.
 [`docs/keybindings.md`](docs/keybindings.md) lists every key, how to find a key's code, which hotkeys to avoid and what each message means.
 
 Kuroko works on the selected text, or on the whole field if nothing is selected. The Universal prompt decides from the text:
@@ -96,7 +97,7 @@ texts over 50,000 characters are not supported.
   change and when the overlay opens, so the connection is ready. It carries no text and no key.
 * **API keys** travel only in the request header, never in the URL, and never over plain `http://` to a remote host.
   They are masked in error messages and never logged.
-* **Stored on disk:** `settings.toml`, `prompts.toml` and `kuroko.log` in `%APPDATA%\Kuroko`. The log holds timings,
+* **Stored on disk:** `settings.toml`, `prompts.toml`, `keybinds.toml` and `kuroko.log` in `%APPDATA%\Kuroko`. The log holds timings,
   text lengths, the target program’s name and prompt names, never your text, results or keys. Undo history, the last
   answer (for **Copy last result**) and the saved clipboard stay in memory only; what Kuroko puts on the clipboard,
   including your previous content when it is put back, is kept out of clipboard history and cloud sync, so a run adds
@@ -108,7 +109,7 @@ Details are in the German guide under [Datenschutz](docs/README.md#datenschutz).
 
 * [`docs/README.md`](docs/README.md): the full guide in German (all settings, result card, undo, appearance, troubleshooting, measurements).
 * [`docs/keybindings.md`](docs/keybindings.md): hotkeys in detail: every key, key codes, variables, submaps, the AltGr trap, limits, all messages, migrating old hotkeys.
-* [`config/`](config): commented templates of `settings.toml` and `prompts.toml` with every key.
+* [`config/`](config): commented templates of `settings.toml`, `prompts.toml` and `keybinds.toml` with every key.
 * [`docs/refactoring-report.md`](docs/refactoring-report.md): code audit from October 2026 (German, written when Kuroko was still called Ghostwriter).
 
 ## Development

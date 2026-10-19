@@ -17,7 +17,6 @@ public class PromptsLoaderTests
             [[prompt]]
             name = "Correction"
             mode = "transform"
-            hotkey = "Ctrl+Alt+K"
             provider = "gemini"
             model = "gemini-x"
             prompt = '''
@@ -30,7 +29,7 @@ public class PromptsLoaderTests
         var prompt = Assert.Single(result.Prompts!);
         Assert.Equal("Correction", prompt.Name);
         Assert.Equal(PromptMode.Transform, prompt.Mode);
-        Assert.Equal("Ctrl+Alt+K", prompt.Hotkey);
+        Assert.Null(prompt.Hotkey); // hotkeys are in keybinds.toml
         Assert.Equal("gemini", prompt.Provider);
         Assert.Equal("gemini-x", prompt.Model);
         Assert.Equal("Du bist mein Experte.\nGib nur den Text aus.", prompt.Prompt.Replace("\r\n", "\n"));
@@ -62,7 +61,7 @@ public class PromptsLoaderTests
         var defaults = Parse(DefaultPrompts.Create()).Prompts!;
         Assert.Equal("Universal", defaults[0].Name);                      // first, so it is quick-select 1 in the overlay
         Assert.Equal(PromptMode.Universal, defaults[0].Mode);
-        Assert.Equal("Ctrl+Alt+U", defaults[0].Hotkey);
+        Assert.Contains(("Universal", "Ctrl+Alt+U"), DefaultKeybinds.PromptHotkeys);
     }
 
     [Fact]
@@ -87,8 +86,6 @@ public class PromptsLoaderTests
     [InlineData("name = \"A\"", "prompt text is missing")]
     [InlineData("name = \"A\"\nprompt = \"   \"", "prompt text is missing")]
     [InlineData("name = \"A\"\nprompt = \"x\"\nmode = \"chat\"", "mode must be one of")]
-    [InlineData("name = \"A\"\nprompt = \"x\"\nhotkey = \"Banana\"", "Unknown")]
-    [InlineData("name = \"A\"\nprompt = \"x\"\nhotkey = \"K\"", "needs at least one modifier")]
     [InlineData("name = 5\nprompt = \"x\"", "name must be text")]
     public void Invalid_prompts_are_errors(string body, string expectedMessagePart)
     {
@@ -145,6 +142,20 @@ public class PromptsLoaderTests
     }
 
     [Fact]
+    public void A_hotkey_in_prompts_toml_is_ignored_with_a_warning_on_its_line()
+    {
+        var result = Parse("[[prompt]]\nname = \"A\"\nprompt = \"x\"\nhotkey = \"Banana\"\n");
+
+        Assert.True(result.Ok);
+        Assert.Null(Assert.Single(result.Prompts!).Hotkey);
+        var issue = Assert.Single(result.Issues);
+        Assert.False(issue.IsError);
+        Assert.True(issue.Show);
+        Assert.Equal(4, issue.Line);
+        Assert.Equal("prompt 'A': hotkey in prompts.toml is no longer read; keybinds live in keybinds.toml", issue.Message);
+    }
+
+    [Fact]
     public void Unknown_keys_are_only_warnings()
     {
         var result = Parse("[[prompt]]\nname = \"A\"\nprompt = \"x\"\nhotkeys = \"Ctrl+Alt+K\"\n");
@@ -165,7 +176,7 @@ public class PromptsLoaderTests
     public void The_generated_default_file_documents_every_prompt_key()
     {
         var text = DefaultPrompts.Create();
-        foreach (var key in new[] { "name", "prompt", "mode", "output", "hotkey", "provider", "model" })
+        foreach (var key in new[] { "name", "prompt", "mode", "output", "provider", "model" })
             Assert.Contains($"#   {key} ", text);
         Assert.Contains("\"overlay\"", text);
     }
@@ -183,7 +194,6 @@ public class PromptsLoaderTests
             var actual = result.Prompts[i];
             Assert.Equal(expected.Name, actual.Name);
             Assert.Equal(expected.Mode, actual.Mode);
-            Assert.Equal(expected.Hotkey, actual.Hotkey);
             Assert.Equal(expected.Output, actual.Output);
             Assert.Equal(expected.Prompt.Trim().Replace("\r\n", "\n"), actual.Prompt.Replace("\r\n", "\n"));
         }
@@ -214,7 +224,7 @@ public class ConfigValidatorTests
     public void Unknown_provider_is_an_error_listing_the_known_ones()
     {
         var prompts = new[] { new PromptDefinition("Fix", "x", Provider: "nope") };
-        var issue = Assert.Single(ConfigValidator.Validate(Settings("a", "b"), prompts), i => i.IsError);
+        var issue = Assert.Single(ConfigValidator.Validate(Settings("a", "b"), prompts, KeybindSettings.Default), i => i.IsError);
         Assert.Contains("unknown provider 'nope'", issue.Message);
         Assert.Contains("a, b", issue.Message);
         Assert.Equal("prompts.toml", issue.File);
@@ -224,30 +234,87 @@ public class ConfigValidatorTests
     public void Provider_names_match_case_insensitively()
     {
         var prompts = new[] { new PromptDefinition("Fix", "x", Provider: "GEMINI") };
-        Assert.DoesNotContain(ConfigValidator.Validate(Settings("gemini"), prompts), i => i.IsError);
+        Assert.DoesNotContain(ConfigValidator.Validate(Settings("gemini"), prompts, KeybindSettings.Default), i => i.IsError);
+    }
+
+    private static readonly PromptDefinition[] TwoPrompts = [new("A", "x"), new("B", "y")];
+
+    private static KeybindSettings Keybinds(string toml)
+    {
+        var result = KeybindsLoader.Parse(toml, FakeKeyLayout.German);
+        Assert.True(result.Ok, string.Join("; ", result.Issues));
+        return result.Keybinds!;
     }
 
     [Fact]
     public void Two_prompts_with_the_same_hotkey_conflict_even_when_spelled_differently()
     {
-        var prompts = new[]
-        {
-            new PromptDefinition("A", "x", Hotkey: "Ctrl+Alt+K"),
-            new PromptDefinition("B", "x", Hotkey: "alt+strg+k"),
-        };
-        var issue = Assert.Single(ConfigValidator.Validate(Settings("a"), prompts), i => i.IsError);
+        var keybinds = Keybinds("[prompts]\nA = \"Ctrl+Alt+K\"\nB = \"alt+strg+k\"\n");
+        var issue = Assert.Single(ConfigValidator.Validate(Settings("a"), TwoPrompts, keybinds), i => i.IsError);
         Assert.Contains("prompt 'A'", issue.Message);
         Assert.Contains("prompt 'B'", issue.Message);
+        Assert.Equal(KeybindsLoader.FileName, issue.File);
+        Assert.Equal(3, issue.Line);
     }
 
     [Fact]
     public void Prompt_hotkey_must_not_collide_with_the_overlay_hotkey()
     {
-        var settings = Settings("a");
-        var prompts = new[] { new PromptDefinition("A", "x", Hotkey: settings.OverlayHotkey) };
-        var error = Assert.Single(ConfigValidator.Validate(settings, prompts), i => i.IsError);
-        Assert.Contains("overlay_hotkey", error.Message);
+        var keybinds = Keybinds($"[prompts]\nA = \"{KeybindSettings.DefaultOverlayHotkey}\"\n");
+        var error = Assert.Single(ConfigValidator.Validate(Settings("a"), TwoPrompts, keybinds), i => i.IsError);
+        Assert.Contains("[app] overlay", error.Message);
         Assert.Contains("prompt 'A'", error.Message);
+    }
+
+    [Fact]
+    public void A_prompt_name_that_prompts_toml_does_not_have_is_an_error_with_its_line()
+    {
+        var keybinds = Keybinds("[prompts]\nA = \"Ctrl+Alt+K\"\n\"Kürzen\" = \"Ctrl+Alt+J\"\n");
+        var error = Assert.Single(ConfigValidator.Validate(Settings("a"), TwoPrompts, keybinds), i => i.IsError);
+        Assert.Equal(KeybindsLoader.FileName, error.File);
+        Assert.Equal(3, error.Line);
+        Assert.Equal("[prompts] no prompt 'Kürzen' in prompts.toml (prompts: A, B)", error.Message);
+    }
+
+    [Fact]
+    public void Prompt_names_in_keybinds_are_not_case_sensitive()
+    {
+        var keybinds = Keybinds("[prompts]\na = \"Ctrl+Alt+K\"\n");
+        Assert.DoesNotContain(ConfigValidator.Validate(Settings("a"), TwoPrompts, keybinds), i => i.IsError);
+        Assert.Equal("Ctrl+Alt+K", keybinds.HotkeyOf("A"));
+    }
+
+    [Theory]
+    [InlineData("[app]\noverlay = \"Ctrl+C\"\n", "[app] overlay", 2)]
+    [InlineData("[app]\nundo = \"Strg+V\"\n", "[app] undo", 2)]
+    [InlineData("[app]\nresult_copy = \"ctrl+a\"\n", "[app] result_copy", 2)]
+    [InlineData("[prompts]\nA = \"Ctrl+C\"\n", "prompt 'A'", 2)]
+    [InlineData("[mods]\nmain = \"Ctrl\"\n\n[prompts]\nB = \"$main+V\"\n", "prompt 'B'", 5)]
+    [InlineData("[submaps.tools]\nopen = \"Ctrl+A\"\nkeys = { U = \"/undo\" }\n", "submap 'tools'", 1)]
+    public void Plain_ctrl_c_v_and_a_are_rejected_for_every_hotkey(string toml, string owner, int line)
+    {
+        var error = Assert.Single(ConfigValidator.Validate(Settings("a"), TwoPrompts, Keybinds(toml)), i => i.IsError);
+        Assert.StartsWith(owner + ": Ctrl+", error.Message);
+        Assert.Contains("is used by the app to read and replace text (Ctrl+C, Ctrl+A, Ctrl+V)", error.Message);
+        Assert.Equal(KeybindsLoader.FileName, error.File);
+        Assert.Equal(line, error.Line);
+    }
+
+    [Theory]
+    [InlineData("Ctrl+Shift+C")]
+    [InlineData("Ctrl+Alt+V")]
+    [InlineData("Alt+A")]
+    public void Other_combinations_with_c_v_and_a_are_fine(string hotkey)
+    {
+        Assert.DoesNotContain(ConfigValidator.Validate(Settings("a"), TwoPrompts, Keybinds($"[prompts]\nA = \"{hotkey}\"\n")), i => i.IsError);
+    }
+
+    [Fact]
+    public void The_undo_hotkey_is_not_checked_while_undo_is_off()
+    {
+        var keybinds = Keybinds("[prompts]\nA = \"Ctrl+Alt+Z\"\n"); // the default undo hotkey
+        Assert.Contains(ConfigValidator.Validate(Settings("a"), TwoPrompts, keybinds), i => i.IsError);
+        Assert.DoesNotContain(ConfigValidator.Validate(Settings("a") with { UndoHistory = 0 }, TwoPrompts, keybinds), i => i.IsError);
     }
 
     [Fact]
@@ -260,7 +327,7 @@ public class ConfigValidatorTests
                 ["a"] = new("a", ProviderType.Gemini, "https://g.test", "m", null, TimeSpan.FromSeconds(30)),
             },
         };
-        var issues = ConfigValidator.Validate(settings, [new PromptDefinition("Fix", "x", Provider: "a")]);
+        var issues = ConfigValidator.Validate(settings, [new PromptDefinition("Fix", "x", Provider: "a")], KeybindSettings.Default);
         Assert.Contains(issues, i => !i.IsError && i.Message.Contains("no API key"));
         Assert.DoesNotContain(issues, i => i.IsError);
     }
@@ -277,6 +344,8 @@ public sealed class ConfigManagerTests : IDisposable
     private string SettingsPath => Path.Combine(_dir, "settings.toml");
 
     private string PromptsPath => Path.Combine(_dir, "prompts.toml");
+
+    private string KeybindsPath => Path.Combine(_dir, "keybinds.toml");
 
     private const string TwoProviders = """
         default_provider = "gemini"
@@ -309,17 +378,27 @@ public sealed class ConfigManagerTests : IDisposable
     }
 
     [Fact]
-    public void First_start_creates_both_files_and_loads_the_defaults()
+    public void First_start_creates_all_three_files_and_loads_the_defaults()
     {
         var manager = Manager();
         var result = manager.Load();
 
         Assert.False(result.HasErrors, string.Join("; ", result.Issues));
+        Assert.DoesNotContain(result.Issues, i => i.Show);
         Assert.True(File.Exists(SettingsPath));
         Assert.True(File.Exists(PromptsPath));
+        Assert.True(File.Exists(KeybindsPath));
         Assert.Equal(BuiltInPrompts.All.Count, manager.Current.Prompts.Count);
         Assert.Equal("gemini", manager.Current.Settings.DefaultProvider);
-        Assert.True(result.SettingsChanged && result.PromptsChanged);
+        Assert.True(result.SettingsChanged && result.PromptsChanged && result.KeybindsChanged);
+
+        // The built-in prompts get their hotkeys from the new keybinds.toml.
+        Assert.Equal("Ctrl+Alt+U", manager.Current.Prompts.Single(p => p.Name == "Universal").Hotkey);
+        Assert.Equal("Ctrl+Alt+K", manager.Current.Prompts.Single(p => p.Name == "Correction").Hotkey);
+        Assert.Null(manager.Current.Prompts.Single(p => p.Name == "Rewrite").Hotkey);
+        Assert.Equal(KeybindSettings.DefaultOverlayHotkey, manager.Current.Keybinds.OverlayHotkey);
+        Assert.DoesNotContain("_hotkey =", File.ReadAllText(SettingsPath));
+        Assert.DoesNotContain("hotkey =", File.ReadAllText(PromptsPath));
     }
 
     [Fact]
@@ -440,17 +519,61 @@ public sealed class ConfigManagerTests : IDisposable
     }
 
     [Fact]
-    public void Duplicate_hotkey_in_prompts_is_rejected()
+    public void Duplicate_hotkey_in_keybinds_is_rejected()
     {
-        var manager = Started();
-        File.WriteAllText(PromptsPath,
-            "[[prompt]]\nname = \"A\"\nhotkey = \"Ctrl+Alt+K\"\nprompt = \"x\"\n\n[[prompt]]\nname = \"B\"\nhotkey = \"Ctrl+Alt+K\"\nprompt = \"y\"\n");
+        var manager = Started(prompts: "[[prompt]]\nname = \"A\"\nprompt = \"x\"\n\n[[prompt]]\nname = \"B\"\nprompt = \"y\"\n");
+        File.WriteAllText(KeybindsPath, "[prompts]\nA = \"Ctrl+Alt+J\"\nB = \"Ctrl+Alt+J\"\n");
 
         var result = manager.Reload();
 
         Assert.True(result.HasErrors);
+        Assert.False(result.KeybindsChanged);
+        Assert.Contains(result.Issues, i => i.IsError && i.File == "keybinds.toml" && i.Message.Contains("used twice") && i.Line == 3);
+    }
+
+    [Fact]
+    public void Renaming_a_prompt_that_keybinds_names_rejects_the_prompts_change()
+    {
+        var manager = Started();
+        File.WriteAllText(KeybindsPath, "[prompts]\nFix = \"Ctrl+Alt+J\"\n");
+        Assert.True(manager.Reload().KeybindsChanged);
+        var before = manager.Current;
+
+        File.WriteAllText(PromptsPath, "[[prompt]]\nname = \"Repair\"\nprompt = \"fix it\"\n");
+        var result = manager.Reload();
+
+        Assert.True(result.HasErrors);
         Assert.False(result.PromptsChanged);
-        Assert.Contains(result.Issues, i => i.IsError && i.Message.Contains("used twice") && i.Line == 6);
+        Assert.Same(before.Prompts, manager.Current.Prompts);
+        Assert.Contains(result.Issues, i => i.IsError && i.File == "keybinds.toml" && i.Line == 2 && i.Message.Contains("no prompt 'Fix' in prompts.toml"));
+    }
+
+    [Fact]
+    public void Renaming_a_prompt_in_both_files_applies_both()
+    {
+        var manager = Started();
+        File.WriteAllText(KeybindsPath, "[prompts]\nFix = \"Ctrl+Alt+J\"\n");
+        manager.Reload();
+
+        File.WriteAllText(PromptsPath, "[[prompt]]\nname = \"Repair\"\nprompt = \"fix it\"\n");
+        File.WriteAllText(KeybindsPath, "[prompts]\nRepair = \"Ctrl+Alt+J\"\n");
+        var result = manager.Reload();
+
+        Assert.False(result.HasErrors, string.Join("; ", result.Issues));
+        Assert.True(result.PromptsChanged && result.KeybindsChanged);
+        Assert.Equal("Ctrl+Alt+J", Assert.Single(manager.Current.Prompts).Hotkey);
+    }
+
+    [Fact]
+    public void A_deleted_keybinds_file_is_written_again_on_the_next_reload()
+    {
+        var manager = Started();
+        File.Delete(KeybindsPath);
+
+        var result = manager.Reload();
+
+        Assert.True(File.Exists(KeybindsPath));
+        Assert.False(result.HasErrors, string.Join("; ", result.Issues));
     }
 
     [Fact]

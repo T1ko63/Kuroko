@@ -23,7 +23,7 @@ public class LocTests
         try
         {
             Loc.Language = language;
-            Assert.True(HotkeyGesture.TryParse(AppSettings.DefaultResultCopyHotkey, out var gesture, out _));
+            Assert.True(HotkeyGesture.TryParse(KeybindSettings.DefaultResultCopyHotkey, out var gesture, out _));
             Assert.StartsWith(expected, Loc.Get("rescue_hotkey", gesture));
         }
         finally

@@ -1,6 +1,5 @@
 using Kuroko.App;
 using Kuroko.App.Overlay;
-using Kuroko.Core.Hotkeys;
 using Kuroko.Core.Localization;
 using Kuroko.Core.Prompts;
 
@@ -8,26 +7,20 @@ namespace Kuroko.Windows.Tests;
 
 public class OverlayRowTests
 {
-    private static readonly Dictionary<string, HotkeyModifiers> Mods = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["card"] = HotkeyModifiers.Ctrl | HotkeyModifiers.Alt,
-    };
-
     [Theory]
-    [InlineData("$card+S", "Ctrl+Alt+S")]          // variables filled in
+    [InlineData("Shift + Alt + s", "Alt+Shift+S")]  // keybinds.toml fills in [mods] as written ("$replace+s"); shown canonical
     [InlineData("alt+ctrl+k", "Ctrl+Alt+K")]        // canonical, like the log and the tray tooltip
-    [InlineData("$cards+S", "$cards+S")]          // unknown variable: as written
     [InlineData("Ctrl+Banana", "Ctrl+Banana")]      // does not parse: as written
-    public void A_prompt_row_shows_the_hotkey_filled_in(string hotkey, string shown)
+    public void A_prompt_row_shows_the_hotkey_canonical(string hotkey, string shown)
     {
-        var row = OverlayRow.For(new PromptDefinition("Fix", "Fix it.", Hotkey: hotkey), "1", Mods);
+        var row = OverlayRow.For(new PromptDefinition("Fix", "Fix it.", Hotkey: hotkey), "1");
         Assert.Equal(shown, row.Trailing);
     }
 
     [Fact]
     public void A_prompt_row_without_a_hotkey_shows_nothing()
     {
-        Assert.Equal(string.Empty, OverlayRow.For(new PromptDefinition("Fix", "Fix it."), "1", Mods).Trailing);
+        Assert.Equal(string.Empty, OverlayRow.For(new PromptDefinition("Fix", "Fix it."), "1").Trailing);
     }
 
     [Fact]
