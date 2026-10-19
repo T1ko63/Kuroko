@@ -381,8 +381,15 @@
         },
         "reasoning": {
           "type": "string",
-          "enum": ["off", "default", "low", "medium", "high"],
-          "default": "off"
+          "enum": ["off", "default", "low", "medium", "high", "xhigh", "max"],
+          "default": "off",
+          "description": "How long the model thinks. off keeps answers fast; xhigh and max are OpenAI levels (Gemini treats them as high). Models differ in what they accept: a rejected level steps down by itself."
+        },
+        "service_tier": {
+          "type": "string",
+          "enum": ["standard", "fast", "ultrafast", "flex"],
+          "default": "standard",
+          "description": "type = \"openai\" only. standard sends nothing; fast (about 2x the price) and ultrafast (more, only gpt-6-astra and gpt-6.1-sol) answer faster; flex is cheaper, slower and may be refused (timeout_seconds defaults to 120 then). A tier the model rejects is dropped, with a warning in the log."
         },
         "max_output_tokens": {
           "type": "integer",

@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Kuroko.Core.Diagnostics;
 
 namespace Kuroko.Core.Providers;
 
@@ -16,15 +17,22 @@ public sealed class OpenAiProvider : LlmProvider
 
     protected override Uri BuildUri(LlmRequest request) => new(BaseUrl + "/responses");
 
-    protected override JsonObject BuildBody(LlmRequest request) => new()
+    protected override JsonObject BuildBody(LlmRequest request)
     {
-        ["model"] = request.Model,
-        ["instructions"] = request.System,
-        ["input"] = request.User,
-        ["stream"] = true,
-        ["store"] = false, // the text is not kept in the account's response history
-        ["max_output_tokens"] = request.MaxOutputTokens,
-    };
+        var body = new JsonObject
+        {
+            ["model"] = request.Model,
+            ["instructions"] = request.System,
+            ["input"] = request.User,
+            ["stream"] = true,
+            ["store"] = false, // the text is not kept in the account's response history
+            ["max_output_tokens"] = request.MaxOutputTokens,
+        };
+
+        // fast, ultrafast and flex go out as written; standard is OpenAI's default and sends nothing.
+        if (Settings.ServiceTier != ProviderSettings.StandardTier) body[ServiceTierField] = Settings.ServiceTier;
+        return body;
+    }
 
     protected override void AddHeaders(HttpRequestMessage message)
         => message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AuthKey);
@@ -37,7 +45,8 @@ public sealed class OpenAiProvider : LlmProvider
         var none = new ReasoningVariant("none", null);
         return Settings.Reasoning switch
         {
-            "off" => [Effort("none"), Effort("minimal"), none], // models differ in which "off" they know
+            // Models differ in which "off" they know; some know neither (gpt-6.1-sol), and without a field they would think at medium.
+            "off" => [Effort("none"), Effort("minimal"), Effort("low"), none],
             "default" => [none],
             var level => [Effort(level), none],
         };
@@ -60,6 +69,7 @@ public sealed class OpenAiProvider : LlmProvider
 
             case "response.completed":
                 state.Completed = true;
+                LogDowngrade(root);
                 break;
 
             case "response.incomplete":
@@ -85,6 +95,19 @@ public sealed class OpenAiProvider : LlmProvider
 
             case "error":
                 throw FromErrorEvent(Str(root, "code") ?? Str(root, "type"), Str(root, "message"));
+        }
+    }
+
+    /// <summary>
+    /// OpenAI answers a fast request at normal speed when the fast capacity is used up, and then reports "default" as the
+    /// tier it used. Only the log says so; the answer itself is fine.
+    /// </summary>
+    private void LogDowngrade(JsonElement root)
+    {
+        if (Settings.ServiceTier is not ("fast" or "ultrafast")) return;
+        if (TryObj(root, "response", out var response) && Str(response, ServiceTierField) == "default")
+        {
+            AppLog.Info($"{Settings.Name}: answered at normal speed (service_tier '{Settings.ServiceTier}' was requested; OpenAI reported 'default').");
         }
     }
 

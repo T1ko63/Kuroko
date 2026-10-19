@@ -80,14 +80,18 @@ public sealed record ProviderSettings(
     int MaxOutputTokens = 0,
     ApiKeySource KeySource = ApiKeySource.None,
     string? ApiKeyEnv = null,
-    string? FallbackProvider = null)
+    string? FallbackProvider = null,
+    string ServiceTier = ProviderSettings.StandardTier)
 {
+    /// <summary>service_tier = "standard": no service_tier is sent.</summary>
+    public const string StandardTier = "standard";
+
     // The generated ToString would print the key; it must never end up in a log or an exception text.
     private bool PrintMembers(System.Text.StringBuilder builder)
     {
         builder.Append($"Name = {Name}, Type = {Type}, BaseUrl = {BaseUrl}, Model = {Model}, ApiKey = {(ApiKey is null ? "null" : "***")}, ");
         builder.Append($"Timeout = {Timeout}, Reasoning = {Reasoning}, MaxOutputTokens = {MaxOutputTokens}, KeySource = {KeySource}, ApiKeyEnv = {ApiKeyEnv}, ");
-        builder.Append($"FallbackProvider = {FallbackProvider}");
+        builder.Append($"FallbackProvider = {FallbackProvider}, ServiceTier = {ServiceTier}");
         return true;
     }
 }

@@ -23,7 +23,8 @@ public static class SettingsLoader
         "top-third", "center", "bottom-third", "top-left", "bottom-left", "top-right", "bottom-right", "left", "right", "top", "bottom",
     ];
     private static readonly string[] Languages = ["auto", "de", "en"];
-    private static readonly string[] Reasonings = ["off", "default", "low", "medium", "high"];
+    private static readonly string[] Reasonings = ["off", "default", "low", "medium", "high", "xhigh", "max"];
+    private static readonly string[] ServiceTiers = ["standard", "fast", "ultrafast", "flex"];
 
     private static readonly HashSet<string> TopLevelKeys = new(StringComparer.Ordinal)
     {
@@ -42,6 +43,7 @@ public static class SettingsLoader
     private static readonly HashSet<string> ProviderKeys = new(StringComparer.Ordinal)
     {
         "type", "base_url", "model", "api_key", "api_key_env", "timeout_seconds", "reasoning", "max_output_tokens", "fallback_provider",
+        "service_tier",
     };
 
     /// <param name="getEnv">Reads an environment variable (api_key_env).</param>
@@ -332,7 +334,16 @@ public static class SettingsLoader
             failed = true;
         }
 
-        var timeout = reader.Int(table, "timeout_seconds", 30, Line);
+        // service_tier: how fast OpenAI answers (and what it costs). "standard" sends nothing.
+        var serviceTier = reader.Choice(table, "service_tier", "standard", ServiceTiers, Line);
+        if (table.ContainsKey("service_tier") && type != ProviderType.OpenAi)
+        {
+            reader.Issue(Line("service_tier"), $"[providers.{name}] service_tier is only read for type = \"openai\"; it is ignored here", isError: false);
+            serviceTier = "standard";
+        }
+
+        // flex answers more slowly: without its own timeout_seconds it gets a longer default.
+        var timeout = reader.Int(table, "timeout_seconds", serviceTier == "flex" ? FlexTimeoutSeconds : DefaultTimeoutSeconds, Line);
         if (timeout is < 1 or > 600)
         {
             Error("timeout_seconds", "timeout_seconds must be between 1 and 600");
@@ -352,8 +363,14 @@ public static class SettingsLoader
         string? fallback = table.ContainsKey("fallback_provider") ? reader.Choice(table, "fallback_provider", string.Empty, null, Line).Trim() : null;
 
         return failed ? null : new ProviderSettings(name, type.Value, baseUrl, model, apiKey, TimeSpan.FromSeconds(timeout), reasoning, maxTokens,
-            keySource, keyEnvName.Length > 0 ? keyEnvName : null, fallback);
+            keySource, keyEnvName.Length > 0 ? keyEnvName : null, fallback, serviceTier);
     }
+
+    /// <summary>timeout_seconds when a provider does not set it.</summary>
+    public const int DefaultTimeoutSeconds = 30;
+
+    /// <summary>timeout_seconds for service_tier = "flex" when a provider does not set it: flex answers more slowly.</summary>
+    public const int FlexTimeoutSeconds = 120;
 
     /// <summary>
     /// Sets the fallback provider each provider really uses: its own fallback_provider, otherwise the global one. The global

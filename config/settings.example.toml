@@ -119,8 +119,9 @@ selection  = "#000000"
 # The key is looked up in this order: api_key, then the variable from api_key_env, then the Windows
 # Credential Manager entry "Kuroko:<name>" (store it via tray icon -> "API keys ..."; no setting needed here).
 #   base_url           optional, defaults per type
-#   timeout_seconds    optional, 1-600 (default 30)
-#   reasoning          optional: off | default | low | medium | high (default off)
+#   timeout_seconds    optional, 1-600 (default 30; 120 with service_tier = "flex")
+#   reasoning          optional: off | default | low | medium | high | xhigh | max (default off)
+#   service_tier       optional, openai only: standard | fast | ultrafast | flex (default standard)
 #   max_output_tokens  optional, 0 = automatic (default)
 #   fallback_provider  optional: provider to try once when this one cannot be reached; wins over the global
 #                      fallback_provider, "" = none for this provider (default: the global one)
@@ -142,6 +143,7 @@ type = "openai"
 model = "gpt-5.5"
 api_key_env = "OPENAI_API_KEY"
 reasoning = "off"
+service_tier = "standard"
 
 # Local models through an OpenAI-compatible server (Ollama, LM Studio). No key needed.
 [providers.local]

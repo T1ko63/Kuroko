@@ -293,6 +293,53 @@ public class SettingsLoaderTests
         Assert.Contains(expectedMessagePart, Error(result).Message);
     }
 
+    private static ProviderSettings OpenAi(string lines)
+    {
+        var result = Parse($"[providers.x]\ntype = \"openai\"\nmodel = \"m\"\napi_key = \"k\"\n{lines}\n");
+        Assert.True(result.Ok, string.Join("; ", result.Issues));
+        return result.Settings!.Providers["x"];
+    }
+
+    [Theory]
+    [InlineData("xhigh")]
+    [InlineData("max")]
+    public void The_openai_reasoning_levels_are_accepted(string level)
+    {
+        Assert.Equal(level, OpenAi($"reasoning = \"{level}\"").Reasoning);
+    }
+
+    [Theory]
+    [InlineData("", "standard", 30)]
+    [InlineData("service_tier = \"fast\"", "fast", 30)]
+    [InlineData("service_tier = \"ultrafast\"", "ultrafast", 30)]
+    [InlineData("service_tier = \"flex\"", "flex", 120)]                         // flex is slower: a longer default
+    [InlineData("service_tier = \"flex\"\ntimeout_seconds = 45", "flex", 45)]  // its own timeout wins
+    public void The_service_tier_is_read_with_its_timeout(string lines, string tier, int seconds)
+    {
+        var provider = OpenAi(lines);
+        Assert.Equal((tier, TimeSpan.FromSeconds(seconds)), (provider.ServiceTier, provider.Timeout));
+    }
+
+    [Fact]
+    public void An_unknown_service_tier_is_an_error_with_its_line()
+    {
+        var result = Parse("[providers.x]\ntype = \"openai\"\nmodel = \"m\"\napi_key = \"k\"\nservice_tier = \"batch\"\n");
+        Assert.False(result.Ok);
+        Assert.Contains("service_tier must be one of", Error(result).Message);
+        Assert.Equal(5, Error(result).Line);
+    }
+
+    [Fact]
+    public void A_service_tier_for_another_type_is_a_warning_and_ignored()
+    {
+        var result = Parse("[providers.x]\ntype = \"gemini\"\nmodel = \"m\"\napi_key = \"k\"\nservice_tier = \"fast\"\n");
+        Assert.True(result.Ok);
+        var warning = Assert.Single(result.Issues, i => !i.IsError);
+        Assert.Contains("service_tier is only read for type = \"openai\"", warning.Message);
+        Assert.Equal(5, warning.Line);
+        Assert.Equal("standard", result.Settings!.Providers["x"].ServiceTier);
+    }
+
     [Fact]
     public void Provider_names_are_case_insensitive_and_must_be_unique()
     {
