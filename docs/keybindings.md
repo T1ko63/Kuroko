@@ -326,6 +326,10 @@ The commands are the ones of the overlay's `/` list, plus `/undo`:
 | `/about` | show the version |
 | `/quit` | quit Kuroko |
 
+**In the picker:** a prompt without a hotkey of its own shows, in its hotkey column, the submap that runs it: the `open`
+hotkey, then the key, as in `Alt+Shift+^ › P`. A prompt in several submaps shows the first one in the file. A prompt with
+its own hotkey in `[prompts]` shows that hotkey.
+
 A prompt a submap names must exist: if you rename or remove it in `prompts.toml`, that `prompts.toml` is rejected
 with a message on the submap's line in `keybinds.toml`, and the last working version stays active until you change the
 submap too.

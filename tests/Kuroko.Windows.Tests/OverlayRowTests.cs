@@ -1,5 +1,6 @@
 using Kuroko.App;
 using Kuroko.App.Overlay;
+using Kuroko.Core.Config;
 using Kuroko.Core.Localization;
 using Kuroko.Core.Prompts;
 
@@ -89,4 +90,20 @@ public class OverlayRowTests
     [InlineData(3, -5, 1)]  // page up: clamped, row 0 disabled, so the nearest enabled row back towards the start position
     public void Moving_skips_disabled_rows(int current, int delta, int expected)
         => Assert.Equal(expected, RowNavigation.Move([false, true, false, true, true], current, delta));
+
+    [Fact]
+    public void A_prompt_row_without_a_hotkey_shows_the_submap_and_key_that_run_it()
+    {
+        var prompt = new PromptDefinition("Shorter", "Shorten it.") { Submap = new SubmapCall("shift+alt+t", 0x4B) };
+
+        Assert.Equal("Alt+Shift+T › K", OverlayRow.For(prompt, "1").Trailing);
+    }
+
+    [Fact]
+    public void A_prompt_row_with_its_own_hotkey_shows_the_hotkey_not_the_submap()
+    {
+        var prompt = new PromptDefinition("Fix", "Fix it.", Hotkey: "Ctrl+Alt+K") { Submap = new SubmapCall("Alt+Shift+T", 0x4B) };
+
+        Assert.Equal("Ctrl+Alt+K", OverlayRow.For(prompt, "1").Trailing);
+    }
 }

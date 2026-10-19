@@ -200,4 +200,47 @@ public class SubmapConfigTests
             Directory.Delete(dir, recursive: true);
         }
     }
+
+    [Fact]
+    public void A_prompt_is_found_in_the_first_submap_that_runs_it_ignoring_case_and_commands()
+    {
+        var keybinds = Load("""
+            [submaps.tone]
+            open = "Alt+Shift+T"
+            keys = { u = "/undo", K = "kürzen" }
+
+            [submaps.more]
+            open = "Alt+Shift+M"
+            keys = { X = "Kürzen", F = "Fix" }
+            """);
+
+        var (submap, key) = keybinds.SubmapOf("Kürzen")!.Value;
+        Assert.Equal(("tone", 0x4B), (submap.Name, key.VirtualKey));
+        Assert.Equal("more", keybinds.SubmapOf("fix")!.Value.Submap.Name);
+        Assert.Null(keybinds.SubmapOf("undo"));
+        Assert.Null(keybinds.SubmapOf("/undo"));
+        Assert.Null(keybinds.SubmapOf("Lockerer"));
+    }
+
+    [Fact]
+    public void A_prompt_gets_its_submap_only_without_a_hotkey_of_its_own()
+    {
+        var keybinds = Load("""
+            [prompts]
+            Fix = "Ctrl+Alt+F"
+
+            [submaps.tone]
+            open = "Alt+Shift+T"
+            keys = { K = "Kürzen", F = "Fix" }
+            """);
+
+        var fix = keybinds.ApplyTo(new PromptDefinition("Fix", "f"));
+        var shorter = keybinds.ApplyTo(new PromptDefinition("Kürzen", "k"));
+        var other = keybinds.ApplyTo(new PromptDefinition("Lockerer", "l"));
+
+        Assert.Equal(("Ctrl+Alt+F", null), (fix.Hotkey, fix.Submap));
+        Assert.Null(shorter.Hotkey);
+        Assert.Equal(new SubmapCall("Alt+Shift+T", 0x4B), shorter.Submap);
+        Assert.Equal((null, null), (other.Hotkey, other.Submap));
+    }
 }

@@ -1,4 +1,5 @@
 using Kuroko.Core.Hotkeys;
+using Kuroko.Core.Prompts;
 
 namespace Kuroko.Core.Config;
 
@@ -45,6 +46,29 @@ public sealed record KeybindSettings
     /// <summary>The hotkey [prompts] gives the prompt <paramref name="name"/>, or null.</summary>
     public string? HotkeyOf(string name)
         => Prompts.FirstOrDefault(p => p.Prompt.Equals(name, StringComparison.OrdinalIgnoreCase))?.Hotkey;
+
+    /// <summary>The first submap (in file order) with a key that runs the prompt <paramref name="name"/>, and that key; null when none does.</summary>
+    public (SubmapDefinition Submap, SubmapKey Key)? SubmapOf(string name)
+    {
+        foreach (var submap in Submaps)
+        {
+            var key = submap.Keys.FirstOrDefault(k => !k.IsCommand && k.Target.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (key is not null) return (submap, key);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The prompt with its hotkey from [prompts] and, only when it has none, the first submap key that runs it (see
+    /// <see cref="PromptDefinition.Submap"/>).
+    /// </summary>
+    public PromptDefinition ApplyTo(PromptDefinition prompt)
+    {
+        var hotkey = HotkeyOf(prompt.Name);
+        var submap = hotkey is null && SubmapOf(prompt.Name) is var (map, key) ? new SubmapCall(map.Open, key.VirtualKey) : null;
+        return prompt with { Hotkey = hotkey, Submap = submap };
+    }
 
     /// <summary>Used until keybinds.toml has been read: the app hotkeys at their defaults, no prompt hotkeys, no submaps.</summary>
     public static KeybindSettings Default { get; } = new();

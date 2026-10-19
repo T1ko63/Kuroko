@@ -25,6 +25,10 @@ public sealed record SubmapKey(string Key, int VirtualKey, string Target, int? L
     public string CommandName => IsCommand ? Target[1..] : string.Empty;
 }
 
+/// <summary>How a prompt is reached through a submap, for the picker's hotkey column: the submap's hotkey, then the key.</summary>
+/// <param name="Open">The submap's hotkey, with its [mods] variables already filled in.</param>
+public sealed record SubmapCall(string Open, int VirtualKey);
+
 /// <summary>
 /// The names of the app commands, as the overlay's "/" list and a submap's "/name" targets write them. The App builds its
 /// command list (tray menu and "/" list) from these names, so a submap can be checked when keybinds.toml is read.

@@ -355,4 +355,13 @@ public class HotkeyGestureTests
             Assert.Null(HotkeyGesture.Parse(hotkey, De).SwallowedAltGrCharacter(De));
         }
     }
+
+    [Theory]
+    [InlineData(0x4B, "K")]
+    [InlineData(0x74, "F5")]
+    [InlineData(0xE2, "<")] // the layout's character, as written in keybinds.toml
+    public void A_single_key_is_shown_like_in_a_hotkey(int vk, string shown)
+    {
+        Assert.Equal(shown, HotkeyGesture.DisplayKey(vk, De));
+    }
 }

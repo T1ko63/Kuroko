@@ -376,6 +376,9 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
         return string.Join('+', parts);
     }
 
+    /// <summary>How a single key is shown, as in <see cref="ToString(IKeyLayout?)"/>: "K", "F5", "Enter", or the layout's character ("&lt;" for 0xE2).</summary>
+    public static string DisplayKey(int vk, IKeyLayout? layout) => KeyName(vk, layout);
+
     private static string KeyName(int vk, IKeyLayout? layout)
     {
         if (vk is >= 0x41 and <= 0x5A or >= 0x30 and <= 0x39) return ((char)vk).ToString();
