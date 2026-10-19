@@ -62,7 +62,7 @@ public sealed class GeminiProvider : LlmProvider
             "default" => [none],
             "low" => [Level("low"), Budget(1024), none],
             "medium" => [Level("medium"), Budget(8192), none],
-            "high" => [Level("high"), Budget(24576), none],
+            "high" or "xhigh" or "max" => [Level("high"), Budget(24576), none], // Gemini's highest level
             _ => [none],
         };
     }

@@ -34,6 +34,12 @@ public abstract class LlmProvider : ILlmProvider
     // Remembers which reasoning variant worked per provider/model so later calls do not repeat a failing attempt.
     private static readonly ConcurrentDictionary<string, int> WorkingVariant = new();
 
+    // Provider/model/tier combinations whose service_tier was rejected: later calls go without it at once.
+    private static readonly ConcurrentDictionary<string, bool> RejectedTier = new();
+
+    /// <summary>The body field of service_tier (OpenAI); a request the model rejects for it is sent again without it.</summary>
+    protected const string ServiceTierField = "service_tier";
+
     protected LlmProvider(ProviderSettings settings, HttpClient http)
     {
         Settings = settings;
@@ -74,12 +80,14 @@ public abstract class LlmProvider : ILlmProvider
     {
         var variants = ReasoningVariants();
         // Type and address are part of the key: a reloaded provider of the same name may be a different API.
-        var memoryKey = $"{Settings.Name}|{Settings.Type}|{Settings.BaseUrl}|{request.Model}|{Settings.Reasoning}";
+        var memoryKey = $"{Settings.Name}|{Settings.Type}|{Settings.BaseUrl}|{request.Model}|{Settings.Reasoning}|{Settings.ServiceTier}";
         var index = WorkingVariant.TryGetValue(memoryKey, out var remembered) && remembered < variants.Count ? remembered : 0;
+        var withTier = Settings.ServiceTier != ProviderSettings.StandardTier && !RejectedTier.ContainsKey(memoryKey);
 
         while (true)
         {
-            var enumerator = StreamOnceAsync(request, variants[index], ct).GetAsyncEnumerator(ct);
+            var variant = withTier ? variants[index] : WithoutServiceTier(variants[index]);
+            var enumerator = StreamOnceAsync(request, variant, ct).GetAsyncEnumerator(ct);
             var retryWithNext = false;
             var yielded = false;
             try
@@ -90,6 +98,15 @@ public abstract class LlmProvider : ILlmProvider
                     try
                     {
                         hasNext = await enumerator.MoveNextAsync();
+                    }
+                    catch (LlmException ex) when (!yielded && ex.Kind == LlmErrorKind.BadRequest && withTier && MentionsServiceTier(ex.Detail))
+                    {
+                        // The model does not offer this tier (ultrafast on a model without it): the answer still comes, only not faster.
+                        AppLog.Warn($"{Settings.Name}: service_tier '{Settings.ServiceTier}' rejected for {request.Model}, sending the request without it.");
+                        RejectedTier[memoryKey] = true;
+                        withTier = false;
+                        retryWithNext = true;
+                        break;
                     }
                     catch (LlmException ex) when (!yielded && ex.Kind == LlmErrorKind.BadRequest
                         && index + 1 < variants.Count && MentionsReasoning(ex.Detail))
@@ -363,6 +380,23 @@ public abstract class LlmProvider : ILlmProvider
 
     private static bool MentionsReasoning(string? detail)
         => detail is not null && ReasoningWords.Any(w => detail.Contains(w, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The field by name, or the tier's value in quotes ("Invalid value: 'ultrafast'"), which OpenAI may name without the field.</summary>
+    private bool MentionsServiceTier(string? detail)
+        => detail is not null && (detail.Contains(ServiceTierField, StringComparison.OrdinalIgnoreCase)
+            || detail.Contains("service tier", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains($"'{Settings.ServiceTier}'", StringComparison.OrdinalIgnoreCase)
+            || detail.Contains($"\"{Settings.ServiceTier}\"", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The same reasoning variant, with the service_tier taken out of the body again.</summary>
+    private static ReasoningVariant WithoutServiceTier(ReasoningVariant variant) => variant with
+    {
+        Apply = body =>
+        {
+            variant.Apply?.Invoke(body);
+            body.Remove(ServiceTierField);
+        },
+    };
 
     /// <summary>Makes provider text safe for display: no key material, single line, bounded length.</summary>
     protected string? Sanitize(string? text)

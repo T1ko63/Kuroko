@@ -63,6 +63,83 @@ public class OpenAiProviderTests
     }
 
     [Fact]
+    public async Task Off_tries_none_then_minimal_then_low_before_sending_nothing()
+    {
+        static string Rejected(string effort)
+            => $"{{\"error\":{{\"message\":\"Unsupported value: '{effort}' is not supported for reasoning.effort with this model.\"}}}}";
+        var http = new FakeHandler()
+            .Respond(Json(HttpStatusCode.BadRequest, Rejected("none")))
+            .Respond(Json(HttpStatusCode.BadRequest, Rejected("minimal")))
+            .Respond(Sse(Ok("A")));
+        var provider = new OpenAiProvider(Settings(ProviderType.OpenAi, Base), new HttpClient(http));
+
+        Assert.Equal("A", await CollectAsync(provider));
+        Assert.Equal(["none", "minimal", "low"], http.Calls.Select(c => (string?)c.Json["reasoning"]!["effort"]));
+    }
+
+    [Theory]
+    [InlineData("xhigh")]
+    [InlineData("max")]
+    public async Task The_highest_levels_go_out_as_effort(string level)
+    {
+        var http = new FakeHandler().Respond(Sse(Ok("x")));
+        await CollectAsync(new OpenAiProvider(Settings(ProviderType.OpenAi, Base, reasoning: level), new HttpClient(http)));
+        Assert.Equal(level, (string?)http.Calls[0].Json["reasoning"]!["effort"]);
+    }
+
+    [Theory]
+    [InlineData("fast")]
+    [InlineData("ultrafast")]
+    [InlineData("flex")]
+    public async Task A_service_tier_goes_out_as_written(string tier)
+    {
+        var http = new FakeHandler().Respond(Sse(Ok("x")));
+        await CollectAsync(new OpenAiProvider(Settings(ProviderType.OpenAi, Base) with { ServiceTier = tier }, new HttpClient(http)));
+        Assert.Equal(tier, (string?)http.Calls[0].Json["service_tier"]);
+    }
+
+    [Fact]
+    public async Task The_standard_tier_sends_no_service_tier()
+    {
+        var http = new FakeHandler().Respond(Sse(Ok("x")));
+        await CollectAsync(new OpenAiProvider(Settings(ProviderType.OpenAi, Base), new HttpClient(http)));
+        Assert.False(http.Calls[0].Json.AsObject().ContainsKey("service_tier"));
+    }
+
+    [Fact]
+    public async Task A_rejected_tier_is_dropped_once_and_remembered_while_reasoning_stays()
+    {
+        var http = new FakeHandler()
+            .Respond(Json(HttpStatusCode.BadRequest,
+                "{\"error\":{\"message\":\"Invalid value: 'ultrafast'. Supported values are: 'auto', 'default', 'flex' and 'priority'.\",\"param\":\"service_tier\"}}"))
+            .Respond(Sse(Ok("A")))
+            .Respond(Sse(Ok("B")));
+        var provider = new OpenAiProvider(Settings(ProviderType.OpenAi, Base) with { ServiceTier = "ultrafast" }, new HttpClient(http));
+
+        Assert.Equal("A", await CollectAsync(provider));
+        Assert.Equal("ultrafast", (string?)http.Calls[0].Json["service_tier"]);
+        Assert.False(http.Calls[1].Json.AsObject().ContainsKey("service_tier"));
+        Assert.Equal("none", (string?)http.Calls[1].Json["reasoning"]!["effort"]); // the reasoning ladder did not move
+
+        // The next call goes without the tier at once.
+        Assert.Equal("B", await CollectAsync(provider));
+        Assert.Equal(3, http.Calls.Count);
+        Assert.False(http.Calls[2].Json.AsObject().ContainsKey("service_tier"));
+    }
+
+    [Fact]
+    public async Task A_bad_request_about_something_else_keeps_the_tier_and_fails()
+    {
+        var http = new FakeHandler().Respond(Json(HttpStatusCode.BadRequest, "{\"error\":{\"message\":\"Input too long.\"}}"));
+        var provider = new OpenAiProvider(Settings(ProviderType.OpenAi, Base) with { ServiceTier = "fast" }, new HttpClient(http));
+
+        var error = await FailureAsync(provider);
+
+        Assert.Equal(LlmErrorKind.BadRequest, error.Kind);
+        Assert.Single(http.Calls);
+    }
+
+    [Fact]
     public async Task Incomplete_response_is_truncated_not_a_result()
     {
         var http = new FakeHandler().Respond(Sse(Events(
@@ -224,6 +301,16 @@ public class GeminiProviderTests
 
         Assert.Equal("ok", await CollectAsync(provider));
         Assert.Equal("low", (string?)http.Calls[1].Json["generationConfig"]!["thinkingConfig"]!["thinkingLevel"]);
+    }
+
+    [Theory]
+    [InlineData("xhigh")]
+    [InlineData("max")]
+    public async Task The_openai_levels_above_high_think_as_high(string level)
+    {
+        var http = new FakeHandler().Respond(Sse(Events((null, Chunk("ok", "STOP")))));
+        await CollectAsync(new GeminiProvider(Settings(ProviderType.Gemini, Base, reasoning: level), new HttpClient(http)));
+        Assert.Equal("high", (string?)http.Calls[0].Json["generationConfig"]!["thinkingConfig"]!["thinkingLevel"]);
     }
 
     [Fact]

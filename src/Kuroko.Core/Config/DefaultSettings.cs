@@ -149,8 +149,10 @@ public static class DefaultSettings
             # Pro Anbieter: type, model und ein API-Schlüssel (api_key direkt ODER api_key_env = Name einer Umgebungsvariable).
             # Ohne beides gilt der Schlüssel aus der Windows-Anmeldeinformationsverwaltung (Tray-Symbol → API-Schlüssel …).
             # Modellnamen gehören nur hierher; sie sind nirgends im Programm festgelegt - bitte auf aktuelle Namen prüfen.
-            # reasoning = "off" hält die Antwort schnell (kein langes Nachdenken). Weitere Werte: default | low | medium | high.
-            # Weitere optionale Felder: base_url, timeout_seconds (Standard 30), max_output_tokens (0 = automatisch).
+            # reasoning = "off" hält die Antwort schnell (kein langes Nachdenken). Weitere Werte: default | low | medium | high | xhigh | max.
+            # Nur OpenAI: service_tier = standard | fast | ultrafast | flex (fast ca. 2x Preis, ultrafast teurer und nur gpt-6-astra/gpt-6.1-sol,
+            # flex günstiger, langsamer und kann abgelehnt werden). Ein abgelehnter Tier wird weggelassen (Warnung im Log).
+            # Weitere optionale Felder: base_url, timeout_seconds (Standard 30, bei flex 120), max_output_tokens (0 = automatisch).
 
             # Für kurze Umformulierungen zählt Tempo: gemini-2.5-flash antwortet gemessen in ca. 0,8 s, gemini-3.8-flash in 2-3 s.
             [providers.gemini]
@@ -170,6 +172,7 @@ public static class DefaultSettings
             model = "gpt-5.5"
             api_key_env = "OPENAI_API_KEY"
             reasoning = "off"
+            service_tier = "standard"
 
             # Lokale Modelle über OpenAI-kompatible Server: Ollama (Port 11434) oder LM Studio (http://localhost:1234/v1).
             [providers.local]

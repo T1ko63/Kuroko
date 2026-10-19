@@ -238,8 +238,34 @@ blur = "acrylic"
 type = "gemini"             # openai | gemini | anthropic | openai-compatible
 model = "gemini-2.5-flash"
 api_key_env = "GEMINI_API_KEY"   # oder api_key = "..."
-reasoning = "off"           # off | default | low | medium | high
+reasoning = "off"           # off | default | low | medium | high | xhigh | max
 ```
+
+**Denkstufe (`reasoning`):** `off` hält die Antwort schnell. `xhigh` und `max` sind OpenAI-Stufen (z. B. `gpt-6.1-sol`);
+Gemini behandelt sie wie `high`, Anthropic schickt sie als `effort`. Lehnt ein Modell eine Stufe ab, stuft Kuroko von selbst ab
+(Warnung im Log). Bei OpenAI probiert `off` der Reihe nach `none`, `minimal` und `low`: Modelle ohne „aus“ denken dann
+wenig statt mit ihrem Standard `medium`.
+
+**Geschwindigkeit bei OpenAI (`service_tier`):** nur bei `type = "openai"`, bei anderen Typen wird es mit einer Warnung ignoriert.
+
+```toml
+[providers.openai]
+type = "openai"
+model = "gpt-6.1-sol"
+reasoning = "off"
+service_tier = "fast"       # standard | fast | ultrafast | flex
+```
+
+| Wert | Wirkung | Preis (ungefähr, siehe OpenAI-Preisseite) |
+|---|---|---|
+| `standard` | normal, es wird kein Feld geschickt (Standard) | 1× |
+| `fast` | schneller; ist das Kontingent erschöpft, antwortet OpenAI normal schnell und zum normalen Preis (Info im Log) | ca. 2× |
+| `ultrafast` | am schnellsten, nur `gpt-6-astra` und `gpt-6.1-sol` | deutlich teurer als `fast` |
+| `flex` | langsamer und günstiger, kann abgelehnt werden; ohne eigenes `timeout_seconds` gelten 120 s | günstiger als `standard` |
+
+Lehnt das Modell den Tier ab (z. B. `ultrafast` bei einem Modell ohne ihn), schickt Kuroko die Anfrage einmal ohne ihn
+und merkt sich das bis zum Neustart; die Antwort kommt also, nur nicht schneller (Warnung im Log). `batch` gibt es nicht:
+die Batch-API antwortet erst Stunden später.
 
 ### Ausweich-Anbieter (`fallback_provider`)
 
