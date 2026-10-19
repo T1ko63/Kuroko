@@ -5,8 +5,9 @@ namespace Kuroko.Core.Config;
 /// for <see cref="TimeoutMs"/>, makes each of <see cref="Keys"/> a hotkey of its own, without modifiers.
 /// </summary>
 /// <param name="Open">The hotkey that opens the submap, with its [mods] variables already filled in.</param>
+/// <param name="Label">The text the pill shows; null when keybinds.toml gives none, then the pill lists the keys.</param>
 /// <param name="Line">Line of the [submaps.name] header, for messages.</param>
-public sealed record SubmapDefinition(string Name, string Open, string Label, int TimeoutMs, IReadOnlyList<SubmapKey> Keys, int? Line = null)
+public sealed record SubmapDefinition(string Name, string Open, string? Label, int TimeoutMs, IReadOnlyList<SubmapKey> Keys, int? Line = null)
 {
     public const int DefaultTimeoutMs = 2000;
     public const int MinTimeoutMs = 100;

@@ -263,10 +263,11 @@ public static class KeybindsLoader
                 open = ReadHotkey(table, reader, "open", string.Empty, layout, mods, Line, $"[submaps.{name}] open");
             }
 
-            var label = reader.Choice(table, "label", name, null, Line).Trim();
-            if (label.Length == 0)
+            // Without a label the pill lists the keys.
+            var label = table.ContainsKey("label") ? reader.Choice(table, "label", string.Empty, null, Line).Trim() : null;
+            if (label is { Length: 0 })
             {
-                Error(Line("label"), "label must not be empty: it is the text the pill shows while the submap is open (leave it out to show the name)");
+                Error(Line("label"), "label must not be empty: it is the text the pill shows while the submap is open (leave it out to list the keys)");
             }
 
             var timeout = reader.Int(table, "timeout", SubmapDefinition.DefaultTimeoutMs, Line);

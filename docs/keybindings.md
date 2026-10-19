@@ -252,7 +252,7 @@ long as no modifier appears twice after filling in. `$card+Ctrl+K` with `card = 
 ## Submaps
 
 A submap is one hotkey that opens a small set of plain keys for a moment, like a leader key in Vim or a submap in
-Hyprland. Press the `open` hotkey, the pill shows the submap's label, then press one of its keys (`P`, `L`, …) to run
+Hyprland. Press the `open` hotkey, the pill lists its keys (or shows its label), then press one of its keys (`P`, `L`, …) to run
 what it stands for. Ten prompts then need one hotkey instead of ten.
 
 ```toml
@@ -262,19 +262,28 @@ replace = "Shift+Alt"
 
 [submaps.tone]
 open = "$replace+^"                     # Alt+Shift+^ opens the submap
-label = "Ton: P professionell · L locker · K kürzer · A ausführlicher"
 timeout = 3000                          # milliseconds, default 2000
 keys = { P = "Professioneller", L = "Lockerer", K = "Kürzen", A = "Ausführlicher" }
 ```
 
 `Alt+Shift+^`, then `P`, runs the prompt "Professioneller" on the selected text, exactly as its own hotkey would.
+While the submap is open, the pill lists its keys in file order, with the keys in a column of their own:
+
+```
+P   Professioneller
+L   Lockerer
+K   Kürzen
+A   Ausführlicher
+```
+
+With a `label`, the pill shows that text instead.
 
 ### Fields
 
 | Field | Meaning | Default |
 |---|---|---|
 | `open` | The hotkey that opens the submap. Written like any hotkey: modifiers, `$variables` from `[mods]`, every key name. Pressed again while the submap is open, it closes it. | required |
-| `label` | The text the pill shows while the submap is open. Best used to say which key does what. | the submap's name |
+| `label` | Text the pill shows instead of the key list while the submap is open. Line breaks are kept: `"P pro\nL locker"` or a `"""…"""` string over several lines. | a list of the keys, one per line: the key, then its target |
 | `timeout` | How long the submap stays open without a key, in milliseconds, from 100 to 60000. | `2000` |
 | `keys` | Each key and what it runs: `key = "target"`. At least one. | required |
 
@@ -336,7 +345,7 @@ submap too.
 
 ### While a submap is open
 
-* **The pill** shows the label, where pills appear (`pill_position`), until the submap closes. A click on it closes
+* **The pill** shows the key list (or the label), where pills appear (`pill_position`), until the submap closes. A click on it closes
   the submap.
 * **Taken from other apps:** only the listed keys and `Esc`, without modifiers, and only until the submap closes, at
   most for `timeout` milliseconds (default 2 seconds). Pressing them goes to Kuroko, not to the app in front.
@@ -480,8 +489,7 @@ another key.
 replace = "Shift+Alt"
 
 [submaps.tone]
-open = "$replace+^"   # Alt+Shift+^
-label = "Ton: P professionell · L locker · K kürzer · A ausführlicher"
+open = "$replace+^"   # Alt+Shift+^; the pill lists P, L, K and A with their prompts
 timeout = 3000
 keys = { P = "Professioneller", L = "Lockerer", K = "Kürzen", A = "Ausführlicher" }
 ```
@@ -508,9 +516,15 @@ Undo, copy and reload on one hotkey, next to a prompt:
 # keybinds.toml
 [submaps.tools]
 open = "Ctrl+Alt+Shift+K"
-label = "U undo · C copy last result · R reload · K correct"
+label = """
+U  undo
+C  copy last result
+R  reload
+K  correct"""
 keys = { U = "/undo", C = "/copy", R = "/reload", K = "Correction" }
 ```
+
+The `label` here replaces the key list (which would show `/undo`, `/copy`, …) with words of your own, one line each.
 
 `Ctrl+Alt+Shift+K`, then `U`, undoes the last replacement. With such a submap, the `undo` hotkey can move to a
 combination you never press by accident.
@@ -574,7 +588,7 @@ block anything.
 | [submaps.…] name '…' is used twice (names are not case-sensitive) | Two submaps whose names differ only in case. | Rename one. |
 | [submaps.…] open is missing: the hotkey that opens the submap | The block has no `open`. | Add `open = "…"` with a hotkey. |
 | [submaps.…] open: *any hotkey message above* | The `open` hotkey has an error, e.g. no modifier or an unknown variable. | Fix it as the message says; `open` follows all rules of a hotkey. |
-| [submaps.…] label must not be empty | `label = ""`. | Write a label, or remove the line to show the name. |
+| [submaps.…] label must not be empty | `label = ""`. | Write a label, or remove the line to list the keys. |
 | [submaps.…] timeout must be between 100 and 60000 (milliseconds) | `timeout` is too small, too large or not a whole number. | Write milliseconds: `timeout = 3000` for three seconds. |
 | [submaps.…] keys must list at least one key and what it runs | `keys` is missing, empty or not a table. | `keys = { P = "Professioneller" }`. |
 | [submaps.…] Submap key '…' has modifiers: inside a submap a key is written alone (P, not Ctrl+P). | A key with `+` (`"Ctrl+P"`). | Write the plain key; the modifiers belong in `open`. |

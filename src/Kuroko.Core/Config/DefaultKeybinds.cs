@@ -67,13 +67,13 @@ public static class DefaultKeybinds
         foreach (var (prompt, hotkey) in content.Prompts) text.AppendLine($"{Key(prompt)} = {String(hotkey)}");
 
         text.AppendLine();
-        text.AppendLine("# Submaps: ein Hotkey (open) öffnet für timeout Millisekunden einfache Tasten ohne Modifier; die Pille zeigt label.");
+        text.AppendLine("# Submaps: ein Hotkey (open) öffnet für timeout Millisekunden einfache Tasten ohne Modifier; die Pille zeigt label,");
+        text.AppendLine("# ohne label eine Liste der Tasten (Taste und Ziel, eine pro Zeile).");
         text.AppendLine("# Ziel einer Taste ist ein Prompt-Name oder ein Befehl wie \"/undo\", \"/copy\", \"/reload\".");
         if (content.Submaps.Count == 0)
         {
             text.AppendLine("# [submaps.ton]");
             text.AppendLine("# open = \"Shift+Alt+T\"");
-            text.AppendLine("# label = \"Ton: P professionell · L locker\"");
             text.AppendLine("# timeout = 3000");
             text.AppendLine("# keys = { P = \"Professioneller\", L = \"Lockerer\" }");
         }

@@ -13,6 +13,13 @@
         <Grid x:Name="Root">
             <!-- Centred when pill_min_height makes the pill taller than its text. -->
             <TextBlock x:Name="Message" Margin="{StaticResource Status.Padding}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <!-- An open submap without a label: one row per key, the key in a column of its own (see StatusWindow.ShowSubmap). -->
+            <Grid x:Name="SubmapList" Margin="{StaticResource Status.Padding}" VerticalAlignment="Center" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+            </Grid>
             <!-- Result card: replaces the message with the first piece of the answer (see StatusWindow.BeginResult). -->
             <ScrollViewer x:Name="ResultScroll" Style="{StaticResource ResultScroller}" Visibility="Collapsed"
                           VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" CanContentScroll="False"

@@ -62,8 +62,8 @@ public interface IStatusView
 
     void ShowErrorWithAction(string text, Anchor anchor);
 
-    /// <summary>The label of an open submap; stays until <see cref="HideStatus"/>, a click raises <see cref="CancelRequested"/>.</summary>
-    void ShowSubmap(string text, Anchor anchor);
+    /// <summary>An open submap: its label or its key list; stays until <see cref="HideStatus"/>, a click raises <see cref="CancelRequested"/>.</summary>
+    void ShowSubmap(SubmapView view, Anchor anchor);
 
     void HideStatus();
 

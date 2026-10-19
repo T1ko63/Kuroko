@@ -210,16 +210,42 @@ public partial class StatusWindow : Window, IStatusView
     }
 
     /// <summary>
-    /// The label of an open submap: plain text without a bar that stays until <see cref="HideStatus"/>. A click raises
-    /// <see cref="CancelRequested"/>, like on a progress pill, so the submap closes with it.
+    /// An open submap: its label, or without one a list of its keys, without a bar; it stays until <see cref="HideStatus"/>.
+    /// A click raises <see cref="CancelRequested"/>, like on a progress pill, so the submap closes with it.
     /// </summary>
-    public void ShowSubmap(string text, Anchor anchor)
+    public void ShowSubmap(SubmapView view, Anchor anchor)
     {
         EndAction();
         LeaveResultMode();
         _isProgress = true;
         _autoHide.Stop();
-        Present(text, anchor, showBar: false);
+        Present(view.Label ?? string.Empty, anchor, showBar: false, list: view.Label is null ? view.Rows : null);
+    }
+
+    /// <summary>Fills the key list: one row per key, the key muted in its own column, the target beside it.</summary>
+    private void FillSubmapList(IReadOnlyList<SubmapViewRow> rows)
+    {
+        var gap = (double)FindResource("Status.ListGap");
+        var keyGap = (double)FindResource("Status.ListKeyGap");
+        SubmapList.Children.Clear();
+        SubmapList.RowDefinitions.Clear();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            SubmapList.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var top = i == 0 ? 0 : gap;
+
+            var key = new TextBlock { Text = rows[i].Key, Margin = new Thickness(0, top, keyGap, 0) };
+            key.SetResourceReference(TextBlock.ForegroundProperty, "MutedBrush");
+            Grid.SetRow(key, i);
+
+            var target = new TextBlock { Text = rows[i].Target, Margin = new Thickness(0, top, 0, 0), TextWrapping = TextWrapping.Wrap };
+            target.SetResourceReference(TextBlock.ForegroundProperty, "TextBrush");
+            Grid.SetRow(target, i);
+            Grid.SetColumn(target, 1);
+
+            SubmapList.Children.Add(key);
+            SubmapList.Children.Add(target);
+        }
     }
 
     /// <summary>
@@ -484,8 +510,13 @@ public partial class StatusWindow : Window, IStatusView
 
     // ---- pill ----
 
-    private void Present(string text, Anchor anchor, bool showBar, bool isError = false)
+    /// <param name="list">A submap's key list, shown instead of <paramref name="text"/>; null for every other pill.</param>
+    private void Present(string text, Anchor anchor, bool showBar, bool isError = false, IReadOnlyList<SubmapViewRow>? list = null)
     {
+        var showList = list is { Count: > 0 };
+        if (showList) FillSubmapList(list!);
+        SubmapList.Visibility = showList ? Visibility.Visible : Visibility.Collapsed;
+        Message.Visibility = showList ? Visibility.Collapsed : Visibility.Visible;
         Message.Text = text;
         Message.SetResourceReference(TextBlock.ForegroundProperty, isError ? "ErrorBrush" : "MutedBrush");
         Line.Visibility = showBar ? Visibility.Visible : Visibility.Collapsed;
@@ -495,6 +526,7 @@ public partial class StatusWindow : Window, IStatusView
         var shadow = WindowSkin.ShadowMargin;
         var padding = Message.Margin.Left + Message.Margin.Right;
         Message.MaxWidth = _pillMaxWidth - 2 * shadow - padding;
+        SubmapList.MaxWidth = Message.MaxWidth;
         Root.MinHeight = Math.Max(0, _pillMinHeight - Panel.BorderThickness.Top - Panel.BorderThickness.Bottom);
         Root.Measure(new Size(_pillMaxWidth - 2 * shadow, double.PositiveInfinity));
         Width = Math.Max(_pillMinWidth, Math.Min(_pillMaxWidth, Root.DesiredSize.Width + 2 * shadow));

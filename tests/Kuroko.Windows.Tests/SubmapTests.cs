@@ -246,4 +246,26 @@ public class SubmapTests
         AssertClosed(controller);
         Assert.Equal("hide", _status.Last);
     }
+
+    [Fact]
+    public void A_submap_without_a_label_shows_its_keys_in_file_order()
+    {
+        var controller = Controller();
+
+        controller.OnSubmapHotkey(0, Tone with { Label = null });
+
+        Assert.Equal(["submap: P Professioneller | L lockerer | U /undo | T /test"], _status.Shown);
+    }
+
+    [Fact]
+    public void The_key_list_shows_each_key_as_a_hotkey_would_and_the_target_as_written()
+    {
+        var submap = Tone with { Label = null, Keys = [new SubmapKey("f5", 0x74, "/undo"), new SubmapKey("0x4B", 0x4B, "kürzen")] };
+
+        var view = SubmapView.For(submap, layout: null);
+
+        Assert.Null(view.Label);
+        Assert.Equal([new SubmapViewRow("F5", "/undo"), new SubmapViewRow("K", "kürzen")], view.Rows);
+        Assert.Equal("Tone: P L", SubmapView.For(Tone, null).Label);
+    }
 }
