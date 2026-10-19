@@ -28,13 +28,13 @@ public sealed record OverlayRow
     /// <summary>Greyed out and skipped by the keys; Enter and click do nothing on it.</summary>
     public bool IsEnabled { get; private init; } = true;
 
-    /// <param name="mods">[mods] of settings.toml: the hotkey is shown filled in ("$card+S" as Ctrl+Alt+S), as in the log and tray.</param>
-    public static OverlayRow For(PromptDefinition prompt, string number, IReadOnlyDictionary<string, HotkeyModifiers>? mods = null) => new()
+    /// <summary>The prompt's hotkey from keybinds.toml ([mods] already filled in) is shown in one fixed spelling, as in the log and tray.</summary>
+    public static OverlayRow For(PromptDefinition prompt, string number) => new()
     {
         Prompt = prompt,
         Number = number,
         Name = prompt.Name,
-        Trailing = prompt.Hotkey is { } hotkey ? HotkeyGesture.Display(hotkey, mods, KeyLayouts.Current) : string.Empty,
+        Trailing = prompt.Hotkey is { } hotkey ? HotkeyGesture.Display(hotkey, null, KeyLayouts.Current) : string.Empty,
     };
 
     /// <summary>The "/" list: the commands matching <paramref name="name"/>, in their fixed order.</summary>

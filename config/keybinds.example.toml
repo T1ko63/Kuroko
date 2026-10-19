@@ -1,0 +1,66 @@
+#:schema ../schemas/keybinds.schema.json
+# Kuroko - example keybinds.toml
+#
+# Template with every key. The app does not read this file.
+# To use it, copy it to %APPDATA%\Kuroko\keybinds.toml and edit it.
+# If that file is missing, the app creates one on first start: from the hotkeys of an older settings.toml and
+# prompts.toml if there are any (those files are not changed), otherwise with the default hotkeys.
+# Changes are applied as soon as the file is saved. If the file has an error, the last working
+# keybinds stay active and a message names the file and line.
+#
+# Every hotkey of Kuroko is in this file, and only here: settings.toml says how Kuroko behaves, prompts.toml what
+# the prompts do, keybinds.toml which key does what.
+#
+# A hotkey is modifiers Ctrl, Alt, Shift, Win joined with + and one key. The key is A-Z, 0-9, F1-F24, a name
+# (Space, Enter, Num1, PrintScreen, VolumeUp, Oem102, ...), a key code (Ctrl+Alt+0xE2) or the character printed on the
+# key in your keyboard layout (Ctrl+Alt+ü, Ctrl+Alt+<, Ctrl+Alt+# on German; "++" ends a hotkey on the + key).
+# Only the key's own character: > or | (Shift/AltGr) is an error. On layouts with AltGr, Ctrl+Alt+<key> also takes
+# away the AltGr character of that key (Ctrl+Alt+Q = @ on German); the app warns about it.
+# Plain Ctrl+C, Ctrl+A and Ctrl+V are not allowed for any hotkey: the app sends those keys itself to read and replace text.
+# Each hotkey can be used once. All keys, codes and messages: docs/keybindings.md.
+
+
+# Modifier variables: a name for a modifier combination, used in any hotkey of this file as $name.
+# Change one line and every hotkey that uses it moves along. Names: letters, digits and _, not case-sensitive.
+# Values: modifiers only (Ctrl, Alt, Shift, Win), no key and no other variable. They only name keys and decide
+# nothing: whether a prompt replaces the text or shows a card is its output in prompts.toml.
+[mods]
+main = "Ctrl"
+replace = "Shift+Alt"    # prompts that replace the text: "$replace+C"
+card = "Ctrl+Alt"        # prompts that show a card: "$card+S"
+
+
+# The app's own hotkeys. A missing line keeps the default shown here.
+[app]
+overlay = "$main+Shift+Space"   # opens the prompt picker
+undo = "Ctrl+Alt+Z"             # undoes the last replacement; only active while undo_history in settings.toml is above 0
+result_copy = "Ctrl+Alt+C"      # copies the result card and closes it; only registered while a card (or the pill of a
+                                # failed paste) is visible
+
+
+# Prompt hotkeys: the name of a prompt in prompts.toml = its hotkey; it runs the prompt directly, without the overlay.
+# Names are not case-sensitive. A name with spaces or other characters than A-Z, 0-9, _ and - is written in quotes.
+# A name prompts.toml does not have is an error that names the line (also after renaming a prompt there).
+# "" means no hotkey.
+[prompts]
+Universal = "Ctrl+Alt+U"
+Correction = "Ctrl+Alt+K"
+Summary = "$replace+Z"
+Task = ""
+# "Übersetzen DE↔EN" = "$card+T"
+
+
+# Submaps: one hotkey opens a small set of plain keys for a moment (like a leader key). While the submap is open,
+# the pill shows its label and each listed key runs its prompt (as its own hotkey would) or its /command (as the
+# tray does). Esc or the timeout closes it; keys that are not listed type as usual. One [submaps.<name>] per submap:
+#   open    = hotkey that opens it ($mods work; pressing it again closes the submap)
+#   label   = text in the pill (default: the name)
+#   timeout = milliseconds it stays open, 100-60000 (default 2000)
+#   keys    = key = target. Keys without modifiers (P, 5, F5, Space, "<", "ü", 0xE2), not Esc. Target: a prompt name
+#             from prompts.toml, or /undo, /copy, /prompts, /settings, /keybinds, /folder, /reload, /keys, /test,
+#             /autostart, /about, /quit.
+[submaps.tools]
+open = "Ctrl+Alt+Shift+K"
+label = "U undo · C copy last result · R reload · K correct"
+timeout = 2000
+keys = { U = "/undo", C = "/copy", R = "/reload", K = "Correction" }

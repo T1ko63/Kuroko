@@ -8,3 +8,7 @@ schema.path = "./schemas/prompts.schema.json"
 [[rule]]
 include = ["config/settings.example.toml", "**/settings.toml"]
 schema.path = "./schemas/settings.schema.json"
+
+[[rule]]
+include = ["config/keybinds.example.toml", "**/keybinds.toml"]
+schema.path = "./schemas/keybinds.schema.json"

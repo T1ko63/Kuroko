@@ -60,14 +60,6 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
 
     private static readonly HashSet<int> LayoutKeys = OemNames.Select(n => n.Code).ToHashSet();
 
-    private static readonly Dictionary<string, HotkeyModifiers> ModifierNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Ctrl"] = HotkeyModifiers.Ctrl, ["Control"] = HotkeyModifiers.Ctrl, ["Strg"] = HotkeyModifiers.Ctrl,
-        ["Alt"] = HotkeyModifiers.Alt,
-        ["Shift"] = HotkeyModifiers.Shift, ["Umschalt"] = HotkeyModifiers.Shift,
-        ["Win"] = HotkeyModifiers.Win, ["Windows"] = HotkeyModifiers.Win,
-    };
-
     // Codes that are not keyboard keys of their own: mouse buttons and the modifier keys.
     private static readonly Dictionary<int, string> MouseButtons = new()
     {
@@ -141,7 +133,7 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
         var modifiers = HotkeyModifiers.None;
         foreach (var part in modifierParts)
         {
-            if (!ModifierNames.TryGetValue(part, out var modifier))
+            if (!HotkeyMods.TryGetModifier(part, out var modifier))
             {
                 error = $"Unknown modifier '{part}' in hotkey '{text}'.";
                 return false;
@@ -156,7 +148,7 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
             modifiers |= modifier;
         }
 
-        if (ModifierNames.ContainsKey(keyName))
+        if (HotkeyMods.IsModifier(keyName))
         {
             error = $"Hotkey '{text}' has no key: '{keyName}' is a modifier, and a modifier alone cannot be a hotkey.{DocsHint}";
             return false;
@@ -197,7 +189,7 @@ public readonly record struct HotkeyGesture(HotkeyModifiers Modifiers, int Virtu
             return false;
         }
 
-        if (ModifierNames.ContainsKey(key))
+        if (HotkeyMods.IsModifier(key))
         {
             error = $"Submap key '{text}' is a modifier: a modifier alone cannot be a key.{DocsHint}";
             return false;

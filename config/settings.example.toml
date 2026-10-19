@@ -8,27 +8,10 @@
 # configuration stays active and a message names the file and line.
 # Never put API keys in this template or in the repository.
 
-# Hotkeys: modifiers Ctrl, Alt, Shift, Win joined with + and one key. The key is A-Z, 0-9, F1-F24, a name
-# (Space, Enter, Num1, PrintScreen, VolumeUp, Oem102, ...), a key code (Ctrl+Alt+0xE2) or the character printed on the
-# key in your keyboard layout (Ctrl+Alt+ü, Ctrl+Alt+<, Ctrl+Alt+# on German; "++" ends a hotkey on the + key).
-# Only the key's own character: > or | (Shift/AltGr) is an error. On layouts with AltGr, Ctrl+Alt+<key> also takes
-# away the AltGr character of that key (Ctrl+Alt+Q = @ on German); the app warns about it.
-# Modifiers can also come from a variable of the [mods] table below: "$card+S" (see there).
-# All keys, codes and messages: docs/keybindings.md.
+# Hotkeys are not set here: every hotkey lives in keybinds.toml (see config/keybinds.example.toml and docs/keybindings.md).
 
-# Global hotkey that opens the overlay.
-overlay_hotkey = "Ctrl+Shift+Space"
-
-# Undoes the last replacement (press again to go further back).
-undo_hotkey = "Ctrl+Alt+Z"
-# Number of replacements kept in memory, 0-100 (0 = undo off).
+# Number of replacements kept in memory, 0-100 (0 = undo off). The undo hotkey is undo in keybinds.toml.
 undo_history = 10
-
-# Copies the whole text of the result card (prompts with output = "overlay") and closes the card.
-# Only registered while a card is visible; Esc closes the card (and cancels a request that is still running).
-# Also copies the finished answer while the error pill of a failed paste is shown (tray: "Copy last result" works later too).
-# Plain Ctrl+C, Ctrl+A and Ctrl+V are not allowed: the app sends those keys itself when it reads text.
-result_copy_hotkey = "Ctrl+Alt+C"
 
 # Where the result card appears: fixed (at result_fixed_position on the monitor the target window is on) | follow (where the prompt
 # picker opens, see overlay_position) | caret (at the text cursor, otherwise at the mouse) | mouse (at the mouse).
@@ -94,38 +77,6 @@ default_provider = "gemini"
 # never more than one step, and never by local providers (their text stays on the PC unless their own block says otherwise).
 # A provider block can override it with its own fallback_provider ("" = no fallback for that provider).
 fallback_provider = ""
-
-
-# Modifier variables: a name for a modifier combination, used in any hotkey (here and in prompts.toml) as $name.
-# Change one line and every hotkey that uses it moves along. Names: letters, digits and _, not case-sensitive.
-# Values: modifiers only (Ctrl, Alt, Shift, Win), no key and no other variable. Empty by default.
-# Example:
-#   main = "Ctrl"            # "$main+Alt+K" is Ctrl+Alt+K, "$main+Shift+K" is Ctrl+Shift+K
-#   replace = "Shift+Alt"    # prompts that replace the text: "$replace+C"
-#   card = "Ctrl+Alt"        # prompts that show a card: "$card+S"
-[mods]
-
-
-# Submaps: one hotkey opens a small set of plain keys for a moment (like a leader key). While the submap is open,
-# the pill shows its label and each listed key runs its prompt (as its own hotkey would) or its /command (as the
-# tray does). Esc or the timeout closes it; keys that are not listed type as usual. One [submaps.<name>] per submap:
-#   open    = hotkey that opens it ($mods work; pressing it again closes the submap)
-#   label   = text in the pill (default: the name)
-#   timeout = milliseconds it stays open, 100-60000 (default 2000)
-#   keys    = key = target. Keys without modifiers (P, 5, F5, Space, "<", "ü", 0xE2), not Esc. Target: a prompt name
-#             from prompts.toml, or /undo, /copy, /prompts, /settings, /folder, /reload, /keys, /test, /autostart, /about, /quit.
-# None by default. Example (the prompts must exist in prompts.toml):
-#   [submaps.tone]
-#   open = "$replace+^"
-#   label = "Ton: P professionell · L locker · K kürzer · A ausführlicher"
-#   timeout = 3000
-#   keys = { P = "Professioneller", L = "Lockerer", K = "Kürzen", A = "Ausführlicher" }
-#
-#   [submaps.tools]
-#   open = "Ctrl+Alt+Shift+K"
-#   label = "U undo · C copy last result · R reload"
-#   keys = { U = "/undo", C = "/copy", R = "/reload" }
-[submaps]
 
 
 [appearance]

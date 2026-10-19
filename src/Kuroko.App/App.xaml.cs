@@ -20,7 +20,7 @@ using Kuroko.Platform.Tray;
 
 namespace Kuroko.App;
 
-public partial class App : Application
+public partial class App : Application, ICommandActions
 {
     private static readonly TimeSpan ReloadQuietPeriod = TimeSpan.FromMilliseconds(300);
 
@@ -165,8 +165,8 @@ public partial class App : Application
         if (loaded.HasErrors || loaded.Issues.Any(i => i.Show)) ReportIssues(loaded, manual: false);
         else ShowStartupHint(firstRun);
 
-        // From here on, edits to settings.toml / prompts.toml are picked up while the app runs.
-        _watcher = new ConfigWatcher(_configDir, ReloadQuietPeriod, SettingsLoader.FileName, PromptsLoader.FileName);
+        // From here on, edits to settings.toml / prompts.toml / keybinds.toml are picked up while the app runs.
+        _watcher = new ConfigWatcher(_configDir, ReloadQuietPeriod, SettingsLoader.FileName, PromptsLoader.FileName, KeybindsLoader.FileName);
         _watcher.Changed += () => Dispatcher.BeginInvoke(() => ReloadConfig(manual: false));
 
         AppLog.Info($"Ready after {Stopwatch.GetElapsedTime(started).TotalMilliseconds:F0} ms, {_config.Current.Prompts.Count} prompts "
@@ -273,7 +273,11 @@ public partial class App : Application
         LogIssues(result);
         ApplyConfig(result, initial: false);
         ReportIssues(result, manual);
-        if (result.Changed) AppLog.Info($"Configuration reloaded: settings changed={result.SettingsChanged}, prompts changed={result.PromptsChanged}");
+        if (result.Changed)
+        {
+            AppLog.Info($"Configuration reloaded: settings changed={result.SettingsChanged}, prompts changed={result.PromptsChanged}, "
+                + $"keybinds changed={result.KeybindsChanged}");
+        }
     }
 
     /// <summary>Puts a new snapshot into effect: theme, language, providers, and all hotkeys.</summary>
@@ -281,6 +285,7 @@ public partial class App : Application
     {
         var settings = _config!.Current.Settings;
         var prompts = _config.Current.Prompts;
+        var keybinds = _config.Current.Keybinds;
 
         if (initial || result.SettingsChanged)
         {
@@ -291,12 +296,10 @@ public partial class App : Application
             _controller.Position = Enum.TryParse<OverlayPosition>(settings.OverlayPosition, ignoreCase: true, out var position)
                 ? position
                 : OverlayPosition.Caret;
-            _controller.ResultCopyHotkey = settings.ResultCopyHotkey;
             _controller.OverlaySpot = ParseSpot(settings.OverlayFixedPosition, CardSpot.TopThird);
             _controller.OverlayScreenMargin = settings.OverlayScreenMargin;
             _controller.SetOverlayLayout(settings.OverlayWidth, settings.OverlayMinHeight, settings.OverlayMaxHeight, settings.OverlayFontSize);
             _controller.SetOverlayPlaceholder(settings.Appearance.Placeholder);
-            _controller.SetOverlayHotkeyMods(settings.Mods);
             _controller.ResultPlacement = Enum.TryParse<ResultPlacement>(settings.ResultPosition, ignoreCase: true, out var placement)
                 ? placement
                 : ResultPlacement.Fixed;
@@ -322,13 +325,18 @@ public partial class App : Application
             // A result card on screen holds Esc and the copy hotkey temporarily. They are released while the configured
             // hotkeys are registered anew (a prompt may just have been given the card's copy key) and taken again afterwards.
             _controller!.ReleaseResultHotkeys();
-            RegisterHotkeys(settings, prompts);
+            _controller.ResultCopyHotkey = keybinds.ResultCopyHotkey;
+            RegisterHotkeys(settings, keybinds, prompts);
             _controller.RestoreResultHotkeys();
+        }
+
+        if (initial || result.KeybindsChanged)
+        {
+            _tray!.SetTooltip($"Kuroko - {HotkeyGesture.Display(keybinds.OverlayHotkey, null, KeyLayouts.Current)}");
         }
 
         if (initial || result.SettingsChanged)
         {
-            _tray!.SetTooltip($"Kuroko - {(HotkeyGesture.TryParse(settings.OverlayHotkey, out var overlayGesture, out _) ? overlayGesture.ToString() : settings.OverlayHotkey)}");
 
             // Only a configuration read from a valid file may switch autostart: a broken settings.toml must never
             // silently turn it off.
@@ -345,7 +353,7 @@ public partial class App : Application
     /// </summary>
     private void ShowStartupHint(bool firstRun)
     {
-        if (StartupHint.Build(_config!.Current.Settings, firstRun) is not { } hint) return;
+        if (StartupHint.Build(_config!.Current.Settings, _config.Current.Keybinds, firstRun) is not { } hint) return;
         _controller!.ShowNotice(hint);
 
         // The pill is gone after a few seconds; the notification stays in the action center, so the variable name can be read again.
@@ -448,39 +456,37 @@ public partial class App : Application
     private static CardSpot ParseSpot(string name, CardSpot fallback)
         => Enum.TryParse<CardSpot>(name.Replace("-", string.Empty), ignoreCase: true, out var spot) ? spot : fallback;
 
-    /// <summary>Registers the overlay, inline and all prompt hotkeys anew. Hotkeys another app already owns are reported.</summary>
-    private void RegisterHotkeys(AppSettings settings, IReadOnlyList<PromptDefinition> prompts)
+    /// <summary>Registers the app, prompt and submap hotkeys of keybinds.toml anew. Invalid hotkeys and hotkeys another app owns are reported.</summary>
+    private void RegisterHotkeys(AppSettings settings, KeybindSettings keybinds, IReadOnlyList<PromptDefinition> prompts)
     {
         _hotkeys!.UnregisterAll();
         var failures = new List<string>();
 
         void Register(string gesture, string label, Action<long> callback)
         {
-            var shown = gesture;
-            try
+            // keybinds.toml comes with [mods] filled in and was checked when it was read. A hotkey can still fail to parse
+            // here when it names a character the keyboard layout in use now does not have (ü on a US layout).
+            if (!HotkeyGesture.TryParse(gesture, KeyLayouts.Current, out var parsed, out var error))
             {
-                // Prompt hotkeys may still hold [mods] variables ("$card+S"); settings hotkeys come already filled in.
-                var parsed = HotkeyGesture.Parse(gesture, settings.Mods, KeyLayouts.Current);
-                shown = parsed.ToString();
-                var result = _hotkeys.Register(parsed, callback);
-                if (result.Success)
-                {
-                    AppLog.Info($"Hotkey registered: {shown} ({label})");
-                    return;
-                }
-
-                AppLog.Error($"Hotkey registration failed: {result.Error}");
-            }
-            catch (FormatException ex)
-            {
-                AppLog.Error($"Hotkey '{gesture}' ({label}) is invalid: {ex.Message}");
+                AppLog.Error($"Hotkey '{gesture}' ({label}) is invalid: {error}");
+                failures.Add(Loc.Get("err_hotkey_invalid", gesture, label, error));
+                return;
             }
 
+            var shown = parsed.ToString();
+            var result = _hotkeys.Register(parsed, callback);
+            if (result.Success)
+            {
+                AppLog.Info($"Hotkey registered: {shown} ({label})");
+                return;
+            }
+
+            AppLog.Error($"Hotkey registration failed: {result.Error}");
             failures.Add(Loc.Get("err_hotkey_in_use", shown, label));
         }
 
-        Register(settings.OverlayHotkey, "Overlay", _controller!.OnOverlayHotkey);
-        if (settings.UndoHistory > 0) Register(settings.UndoHotkey, Loc.Get("undo_label"), _controller.OnUndoHotkey);
+        Register(keybinds.OverlayHotkey, "Overlay", _controller!.OnOverlayHotkey);
+        if (settings.UndoHistory > 0) Register(keybinds.UndoHotkey, Loc.Get("undo_label"), _controller.OnUndoHotkey);
         // The result-copy hotkey is not registered here: it only exists while a result card is on screen (AppController).
         foreach (var prompt in prompts.Where(p => p.Hotkey is not null))
         {
@@ -488,7 +494,7 @@ public partial class App : Application
             Register(prompt.Hotkey!, prompt.Name, ts => _controller.OnPromptHotkey(ts, captured));
         }
 
-        foreach (var submap in settings.Submaps)
+        foreach (var submap in keybinds.Submaps)
         {
             var captured = submap;
             Register(submap.Open, $"submap {submap.Name}", ts => _controller.OnSubmapHotkey(ts, captured));
@@ -548,31 +554,34 @@ public partial class App : Application
 
     private IReadOnlyList<TrayMenuItem> BuildMenu() => AppCommand.ToTrayMenu(Commands());
 
-    /// <summary>
-    /// All app commands in their fixed order: the tray menu and the overlay's command list are built from this one list.
-    /// Built anew each time, so the labels follow the current language. The names come from <see cref="CommandNames"/>, which
-    /// settings.toml is checked against ("/name" in a submap): a new command gets its name there.
-    /// </summary>
-    private IReadOnlyList<AppCommand> Commands() =>
-    [
-        new(CommandNames.Copy, Loc.Get("tray_copy_last"), () => _controller!.CopyLastResult(), CommandFocus.Field)
-        {
-            IsEnabled = () => _controller!.HasLastResult, GroupEnd = true,
-        },
-        new(CommandNames.Prompts, Loc.Get("tray_edit_prompts"), () => OpenFile(_config!.PromptsPath), CommandFocus.Window),
-        new(CommandNames.Settings, Loc.Get("tray_edit_settings"), () => OpenFile(_config!.SettingsPath), CommandFocus.Window),
-        new(CommandNames.Folder, Loc.Get("tray_open_config"),
-            () => Process.Start(new ProcessStartInfo(_configDir) { UseShellExecute = true }), CommandFocus.Window),
-        new(CommandNames.Reload, Loc.Get("tray_reload"), () => ReloadConfig(manual: true), CommandFocus.Field) { GroupEnd = true },
-        new(CommandNames.Keys, Loc.Get("tray_keys"), ShowKeysWindow, CommandFocus.Window),
-        new(CommandNames.Test, Loc.Get("tray_test"), TestConnection, CommandFocus.Field),
-        new(CommandNames.Autostart, Loc.Get("tray_autostart"), ToggleAutostart, CommandFocus.Field)
-        {
-            State = () => _config!.Current.Settings.Autostart, GroupEnd = true,
-        },
-        new(CommandNames.About, Loc.Get("tray_about"), ShowAbout, CommandFocus.Window),
-        new(CommandNames.Quit, Loc.Get("tray_quit"), Shutdown, CommandFocus.None),
-    ];
+    /// <summary>The tray menu and the overlay's command list (<see cref="AppCommands.Create"/>).</summary>
+    private IReadOnlyList<AppCommand> Commands() => AppCommands.Create(this);
+
+    bool ICommandActions.HasLastResult => _controller!.HasLastResult;
+
+    bool ICommandActions.Autostart => _config!.Current.Settings.Autostart;
+
+    void ICommandActions.CopyLastResult() => _controller!.CopyLastResult();
+
+    void ICommandActions.OpenPrompts() => OpenFile(_config!.PromptsPath);
+
+    void ICommandActions.OpenSettings() => OpenFile(_config!.SettingsPath);
+
+    void ICommandActions.OpenKeybinds() => OpenFile(_config!.KeybindsPath);
+
+    void ICommandActions.OpenFolder() => Process.Start(new ProcessStartInfo(_configDir) { UseShellExecute = true });
+
+    void ICommandActions.Reload() => ReloadConfig(manual: true);
+
+    void ICommandActions.ShowKeys() => ShowKeysWindow();
+
+    void ICommandActions.TestConnection() => TestConnection();
+
+    void ICommandActions.ToggleAutostart() => ToggleAutostart();
+
+    void ICommandActions.ShowAbout() => ShowAbout();
+
+    void ICommandActions.Quit() => Shutdown();
 
     private static void ShowAbout()
         => MessageBox.Show(Loc.Get("about_text", AppVersion.Current), "Kuroko", MessageBoxButton.OK, MessageBoxImage.Information);

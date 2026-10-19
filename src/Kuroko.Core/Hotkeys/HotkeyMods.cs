@@ -4,7 +4,7 @@ using System.Text;
 namespace Kuroko.Core.Hotkeys;
 
 /// <summary>
-/// Modifier variables ([mods] in settings.toml): a name for a modifier combination, used in hotkeys as "$name"
+/// Modifier variables ([mods] in keybinds.toml): a name for a modifier combination, used in hotkeys as "$name"
 /// ("$card+S" with card = "Ctrl+Alt" is Ctrl+Alt+S). Every hotkey goes through <see cref="TryExpand"/> before it is parsed.
 /// </summary>
 public static class HotkeyMods
@@ -12,6 +12,7 @@ public static class HotkeyMods
     public static IReadOnlyDictionary<string, HotkeyModifiers> None { get; } =
         new Dictionary<string, HotkeyModifiers>(StringComparer.OrdinalIgnoreCase);
 
+    // The one table of modifier names: hotkeys (HotkeyGesture) and [mods] values are both read through it.
     private static readonly Dictionary<string, HotkeyModifiers> ModifierNames = new(StringComparer.OrdinalIgnoreCase)
     {
         ["Ctrl"] = HotkeyModifiers.Ctrl, ["Control"] = HotkeyModifiers.Ctrl, ["Strg"] = HotkeyModifiers.Ctrl,
@@ -19,6 +20,11 @@ public static class HotkeyMods
         ["Shift"] = HotkeyModifiers.Shift, ["Umschalt"] = HotkeyModifiers.Shift,
         ["Win"] = HotkeyModifiers.Win, ["Windows"] = HotkeyModifiers.Win,
     };
+
+    /// <summary>A modifier written in any of its spellings: Ctrl (Control, Strg), Alt, Shift (Umschalt), Win (Windows).</summary>
+    public static bool TryGetModifier(string name, out HotkeyModifiers modifier) => ModifierNames.TryGetValue(name, out modifier);
+
+    public static bool IsModifier(string name) => ModifierNames.ContainsKey(name);
 
     /// <summary>Letters, digits and underscore.</summary>
     public static bool IsValidName(string name) => name.Length > 0 && name.All(IsNameChar);
@@ -44,7 +50,7 @@ public static class HotkeyMods
                 return false;
             }
 
-            if (!ModifierNames.TryGetValue(part, out var modifier))
+            if (!TryGetModifier(part, out var modifier))
             {
                 error = $"\"{value}\": '{part}' is not a modifier (Ctrl, Alt, Shift or Win); a variable holds modifiers only, the key comes in the hotkey";
                 return false;
@@ -105,8 +111,8 @@ public static class HotkeyMods
             if (mods is null || !mods.TryGetValue(name, out var modifiers))
             {
                 var known = mods is { Count: > 0 }
-                    ? $"Defined in [mods] of settings.toml: {string.Join(", ", mods.Keys.Order(StringComparer.OrdinalIgnoreCase).Select(k => "$" + k))}."
-                    : "No variables are defined: add them to a [mods] table in settings.toml.";
+                    ? $"Defined in [mods] of keybinds.toml: {string.Join(", ", mods.Keys.Order(StringComparer.OrdinalIgnoreCase).Select(k => "$" + k))}."
+                    : "No variables are defined: add them to a [mods] table in keybinds.toml.";
                 error = $"Unknown variable '${name}' in hotkey '{text}'. {known}{HotkeyGesture.DocsHint}";
                 return false;
             }

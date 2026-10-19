@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Kuroko keybinds.toml",
+  "description": "Every hotkey of Kuroko (%APPDATA%\\Kuroko\\keybinds.toml). Mirrors src/Kuroko.Core/Config/KeybindsLoader.cs; the app itself reports errors with file and line, also for hotkeys used twice, plain Ctrl+C/A/V and prompt names that prompts.toml does not have. See docs/keybindings.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "mods": {
+      "type": "object",
+      "description": "Modifier variables: a name for a modifier combination, used in every hotkey of this file as $name (main = \"Ctrl\" makes \"$main+Alt+K\" Ctrl+Alt+K). Names: letters, digits and _, not case-sensitive. Values: modifiers only (Ctrl, Alt, Shift, Win), no key and no other variable.",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_]+$" },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^\\s*[A-Za-z]+(\\s*\\+\\s*[A-Za-z]+)*\\s*$"
+      },
+      "examples": [{ "main": "Ctrl", "card": "Ctrl+Alt", "replace": "Shift+Alt" }]
+    },
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The app's own hotkeys. A missing one keeps its default.",
+      "properties": {
+        "overlay": {
+          "allOf": [{ "$ref": "#/definitions/hotkey" }],
+          "default": "Ctrl+Shift+Space",
+          "description": "Opens the prompt picker."
+        },
+        "undo": {
+          "allOf": [{ "$ref": "#/definitions/hotkey" }],
+          "default": "Ctrl+Alt+Z",
+          "description": "Undoes the last replacement (press again to go further back). Only active while undo_history in settings.toml is above 0."
+        },
+        "result_copy": {
+          "allOf": [{ "$ref": "#/definitions/hotkey" }],
+          "default": "Ctrl+Alt+C",
+          "description": "Copies the whole text of the result card and closes it. Also copies the finished answer while the error pill of a failed paste is shown. Only registered while one of them is visible."
+        }
+      }
+    },
+    "prompts": {
+      "type": "object",
+      "description": "Prompt hotkeys: the name of a prompt in prompts.toml (not case-sensitive) = its hotkey, which runs the prompt directly. \"\" = no hotkey. A name prompts.toml does not have is an error.",
+      "additionalProperties": {
+        "anyOf": [{ "$ref": "#/definitions/hotkey" }, { "type": "string", "maxLength": 0 }]
+      },
+      "examples": [{ "Correction": "Ctrl+Alt+K", "Übersetzen DE↔EN": "$card+T" }]
+    },
+    "submaps": {
+      "type": "object",
+      "description": "One [submaps.<name>] block per submap: its open hotkey shows the label in the pill and, for timeout milliseconds, makes each listed key a hotkey of its own without modifiers. Names: letters, digits, _ and -.",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_-]+$" },
+      "additionalProperties": { "$ref": "#/definitions/submap" }
+    }
+  },
+  "definitions": {
+    "hotkey": {
+      "type": "string",
+      "description": "Modifiers Ctrl (Control, Strg), Alt, Shift (Umschalt), Win (Windows) joined with + and one key: A-Z, 0-9, F1-F24; a name (Space, Enter, Tab, Esc, Backspace, Insert, Delete, Home, End, PageUp, PageDown, Left, Up, Right, Down, Num0-Num9, NumAdd, NumSubtract, NumMultiply, NumDivide, NumDecimal, Oem1-Oem8, Oem102, OemPlus, OemComma, OemMinus, OemPeriod, Plus, PrintScreen, Pause, ScrollLock, CapsLock, NumLock, Menu, media, volume and browser keys); a key code 0x01-0xFE (Ctrl+Alt+0xE2); or the character printed on the key in the active keyboard layout (Ctrl+Alt+ü, Ctrl+Alt+<, Ctrl+Alt++). Only the key's own character counts: characters typed with Shift or AltGr (> | °) are an error. At least one modifier unless the key is F1-F24. Not plain Ctrl+C, Ctrl+A or Ctrl+V. A variable from [mods] stands for its modifiers: \"$card+S\", \"$main+Alt+K\".",
+      "pattern": "^\\s*((\\$[A-Za-z0-9_]+|[A-Za-z]+)\\s*\\+\\s*)*([A-Za-z][A-Za-z0-9]*|0[xX][0-9A-Fa-f]{1,2}|[^\\s+]|\\+)\\s*$",
+      "not": { "pattern": "^\\s*([Cc][Tt][Rr][Ll]|[Cc][Oo][Nn][Tt][Rr][Oo][Ll]|[Ss][Tt][Rr][Gg])\\s*\\+\\s*[AaCcVv]\\s*$" },
+      "examples": ["Ctrl+Shift+Space", "Ctrl+Alt+K", "F8", "Ctrl+Alt+ü", "Ctrl+Alt+0xE2", "Ctrl+Alt++", "$main+Shift+Space"]
+    },
+    "submap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["open", "keys"],
+      "properties": {
+        "open": {
+          "allOf": [{ "$ref": "#/definitions/hotkey" }],
+          "description": "Hotkey that opens the submap; pressed again while it is open, it closes it. Counts in the check for hotkeys used twice."
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Text the pill shows while the submap is open, e.g. which key does what. The submap's name when missing."
+        },
+        "timeout": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 60000,
+          "default": 2000,
+          "description": "Milliseconds the submap stays open without a key. Esc closes it earlier."
+        },
+        "keys": {
+          "type": "object",
+          "minProperties": 1,
+          "description": "Key = what it runs. The key is written alone, without modifiers: a letter, digit, F-key, name (Space, Num5), code (0xE2) or the character on the key (\"<\", \"ü\"); not Esc. The target is a prompt name from prompts.toml or a command with a slash: /undo, /copy, /prompts, /settings, /keybinds, /folder, /reload, /keys, /test, /autostart, /about, /quit.",
+          "propertyNames": { "pattern": "^\\s*([A-Za-z][A-Za-z0-9]*|0[xX][0-9A-Fa-f]{1,2}|[^\\s+]|\\+)\\s*$" },
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "examples": [{ "P": "Professioneller", "L": "Lockerer", "U": "/undo" }]
+        }
+      }
+    }
+  }
+}

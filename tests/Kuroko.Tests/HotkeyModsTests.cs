@@ -92,20 +92,32 @@ public class HotkeyModsTests
         Assert.Equal(shown, HotkeyGesture.Display(text, Mods, FakeKeyLayout.German));
     }
 
-    // ---- [mods] in settings.toml ----
+    // ---- [mods] in keybinds.toml ----
+
+    private static KeybindsLoadResult Parse(string toml) => KeybindsLoader.Parse(toml, FakeKeyLayout.German);
+
+    private static KeybindSettings Load(string toml)
+    {
+        var result = Parse(toml);
+        Assert.True(result.Ok, string.Join("; ", result.Issues));
+        return result.Keybinds!;
+    }
+
+    private static readonly AppSettings Settings = SettingsLoader.Parse(Provider, _ => null).Settings!;
+
+    private static readonly IReadOnlyList<Core.Prompts.PromptDefinition> Prompts = [new("A", "x"), new("B", "y"), new("C", "z")];
 
     [Fact]
-    public void Settings_read_mods_and_store_their_hotkeys_filled_in()
+    public void Keybinds_read_mods_and_store_their_hotkeys_filled_in()
     {
-        var result = SettingsLoader.Parse(
-            "overlay_hotkey = \"$main+Shift+Space\"\nundo_hotkey = \"$card+Z\"\n" + Provider + "[mods]\nmain = \"Ctrl\"\ncard = \"Ctrl+Alt\"\nReplace = \"Shift + Alt\"\n",
-            _ => null);
-        Assert.True(result.Ok, string.Join("; ", result.Issues));
-        var settings = result.Settings!;
-        Assert.Equal("Ctrl+Shift+Space", settings.OverlayHotkey);
-        Assert.Equal("Ctrl+Alt+Z", settings.UndoHotkey);
-        Assert.Equal(ShiftAlt, settings.Mods["replace"]);
-        Assert.Equal(3, settings.Mods.Count);
+        var keybinds = Load("[mods]\nmain = \"Ctrl\"\ncard = \"Ctrl+Alt\"\nReplace = \"Shift + Alt\"\n\n"
+            + "[app]\noverlay = \"$main+Shift+Space\"\nundo = \"$card+Z\"\n\n[prompts]\nA = \"$replace+S\"\n");
+
+        Assert.Equal("Ctrl+Shift+Space", keybinds.OverlayHotkey);
+        Assert.Equal("Ctrl+Alt+Z", keybinds.UndoHotkey);
+        Assert.Equal("Alt+Shift+S", keybinds.HotkeyOf("a"));
+        Assert.Equal(ShiftAlt, keybinds.Mods["replace"]);
+        Assert.Equal(3, keybinds.Mods.Count);
     }
 
     [Theory]
@@ -119,8 +131,7 @@ public class HotkeyModsTests
     [InlineData("main = \"Ctrl\"\nMAIN = \"Alt\"", "defined twice")]
     public void Bad_mods_are_an_error_with_their_line(string entry, string expected)
     {
-        var toml = Provider + "[mods]\n" + entry + "\n";
-        var result = SettingsLoader.Parse(toml, _ => null);
+        var result = Parse("[app]\noverlay = \"Ctrl+Shift+Space\"\n\n[mods]\n" + entry + "\n");
         Assert.False(result.Ok);
         var issue = Assert.Single(result.Issues, i => i.IsError);
         Assert.Contains("[mods]", issue.Message);
@@ -131,77 +142,58 @@ public class HotkeyModsTests
     [Fact]
     public void Mods_must_be_a_table()
     {
-        var result = SettingsLoader.Parse("mods = \"Ctrl\"\n" + Provider, _ => null);
+        var result = Parse("mods = \"Ctrl\"\n");
         Assert.Contains(result.Issues, i => i.IsError && i.Message.Contains("mods must be a table") && i.Line == 1);
     }
 
     [Fact]
-    public void Settings_hotkey_with_unknown_variable_is_an_error_with_its_line()
+    public void Hotkey_with_unknown_variable_is_an_error_with_its_line()
     {
-        var result = SettingsLoader.Parse("undo_hotkey = \"$cards+Z\"\n" + Provider + "[mods]\ncard = \"Ctrl+Alt\"\n", _ => null);
+        var result = Parse("[app]\nundo = \"$cards+Z\"\n\n[mods]\ncard = \"Ctrl+Alt\"\n");
         Assert.False(result.Ok);
-        Assert.Contains(result.Issues, i => i.IsError && i.Line == 1 && i.Message.StartsWith("undo_hotkey: Unknown variable '$cards'") && i.Message.Contains("$card."));
-    }
-
-    // ---- prompt hotkeys: checked with both files ----
-
-    private static AppSettings SettingsWith(string mods)
-        => SettingsLoader.Parse(Provider + "[mods]\n" + mods, _ => null).Settings!;
-
-    private static IReadOnlyList<Core.Prompts.PromptDefinition> Prompts(string toml)
-    {
-        var result = PromptsLoader.Parse(toml);
-        Assert.True(result.Ok, string.Join("; ", result.Issues));
-        return result.Prompts!;
+        Assert.Contains(result.Issues, i => i.IsError && i.Line == 2 && i.Message.StartsWith("[app] undo: Unknown variable '$cards'") && i.Message.Contains("$card."));
     }
 
     [Fact]
-    public void Prompt_hotkeys_keep_the_variable_and_are_checked_against_settings()
+    public void Prompt_hotkey_with_unknown_variable_is_an_error_with_its_line()
     {
-        var prompts = Prompts("[[prompt]]\nname = \"Shorten\"\nhotkey = \"$replace+S\"\nprompt = \"x\"\n");
-        Assert.Equal("$replace+S", prompts[0].Hotkey);
-
-        Assert.DoesNotContain(ConfigValidator.Validate(SettingsWith("replace = \"Shift+Alt\"\n"), prompts), i => i.IsError);
-
-        var issues = ConfigValidator.Validate(SettingsWith("card = \"Ctrl+Alt\"\n"), prompts, new Dictionary<string, int> { ["Shorten"] = 1 });
-        var issue = Assert.Single(issues, i => i.IsError);
-        Assert.Equal("prompts.toml", issue.File);
-        Assert.Equal(1, issue.Line);
-        Assert.StartsWith("prompt 'Shorten': Unknown variable '$replace'", issue.Message);
+        var result = Parse("[mods]\ncard = \"Ctrl+Alt\"\n\n[prompts]\nShorten = \"$replace+S\"\n");
+        var issue = Assert.Single(result.Issues, i => i.IsError);
+        Assert.Equal("keybinds.toml", issue.File);
+        Assert.Equal(5, issue.Line);
+        Assert.StartsWith("[prompts] 'Shorten': Unknown variable '$replace'", issue.Message);
         Assert.Contains("$card", issue.Message);
     }
 
     [Fact]
     public void Duplicate_hotkeys_are_found_after_expansion()
     {
-        var settings = SettingsWith("card = \"Ctrl+Alt\"\nalso = \"Alt+Ctrl\"\n");
-        var prompts = Prompts(
-            "[[prompt]]\nname = \"A\"\nhotkey = \"$card+S\"\nprompt = \"x\"\n\n[[prompt]]\nname = \"B\"\nhotkey = \"$also+S\"\nprompt = \"y\"\n\n"
-            + "[[prompt]]\nname = \"C\"\nhotkey = \"Ctrl+Alt+Z\"\nprompt = \"z\"\n");
+        var keybinds = Load("[mods]\ncard = \"Ctrl+Alt\"\nalso = \"Alt+Ctrl\"\n\n[prompts]\nA = \"$card+S\"\nB = \"$also+S\"\nC = \"Ctrl+Alt+Z\"\n");
 
-        var issues = ConfigValidator.Validate(settings, prompts);
+        var issues = ConfigValidator.Validate(Settings, Prompts, keybinds);
 
-        Assert.Contains(issues, i => i.IsError && i.Message == "hotkey Ctrl+Alt+S is used twice: prompt 'A' and prompt 'B'");
-        // Ctrl+Alt+Z is also the default undo_hotkey.
-        Assert.Contains(issues, i => i.IsError && i.Message == "hotkey Ctrl+Alt+Z is used twice: undo_hotkey and prompt 'C'");
+        Assert.Contains(issues, i => i.IsError && i.Message == "hotkey Ctrl+Alt+S is used twice: prompt 'A' and prompt 'B'" && i.Line == 7);
+        // Ctrl+Alt+Z is also the default undo hotkey.
+        Assert.Contains(issues, i => i.IsError && i.Message == "hotkey Ctrl+Alt+Z is used twice: [app] undo and prompt 'C'");
     }
 
     [Fact]
-    public void Settings_hotkey_and_prompt_hotkey_collide_through_variables()
+    public void App_hotkey_and_prompt_hotkey_collide_through_variables()
     {
-        var settings = SettingsLoader.Parse("overlay_hotkey = \"$main+Space\"\n" + Provider + "[mods]\nmain = \"Win\"\n", _ => null).Settings!;
-        var prompts = Prompts("[[prompt]]\nname = \"A\"\nhotkey = \"$main+Space\"\nprompt = \"x\"\n");
-        Assert.Contains(ConfigValidator.Validate(settings, prompts), i => i.IsError && i.Message.Contains("hotkey Win+Space is used twice: overlay_hotkey and prompt 'A'"));
+        var keybinds = Load("[mods]\nmain = \"Win\"\n\n[app]\noverlay = \"$main+Space\"\n\n[prompts]\nA = \"$main+Space\"\n");
+        Assert.Contains(ConfigValidator.Validate(Settings, Prompts, keybinds),
+            i => i.IsError && i.Message.Contains("hotkey Win+Space is used twice: [app] overlay and prompt 'A'"));
     }
 
     [Fact]
     public void AltGr_warning_also_for_prompt_hotkeys_with_variables()
     {
-        var settings = SettingsWith("card = \"Ctrl+Alt\"\n");
-        var prompts = Prompts("[[prompt]]\nname = \"A\"\nhotkey = \"$card+Q\"\nprompt = \"x\"\n");
-        var issue = Assert.Single(ConfigValidator.Validate(settings, prompts, keyLayout: FakeKeyLayout.German));
+        var result = Parse("[mods]\ncard = \"Ctrl+Alt\"\n\n[prompts]\nA = \"$card+Q\"\n");
+        Assert.True(result.Ok);
+        var issue = Assert.Single(result.Issues);
         Assert.False(issue.IsError);
         Assert.True(issue.Show);
+        Assert.Equal(5, issue.Line);
         Assert.Contains("'@'", issue.Message);
     }
 }
@@ -210,13 +202,11 @@ public sealed class HotkeyModsReloadTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "ip-mods-" + Guid.NewGuid().ToString("N"));
 
-    private string SettingsPath => Path.Combine(_dir, "settings.toml");
-
-    private string PromptsPath => Path.Combine(_dir, "prompts.toml");
+    private string KeybindsPath => Path.Combine(_dir, "keybinds.toml");
 
     private const string Provider = "[providers.x]\ntype = \"openai-compatible\"\nmodel = \"m\"\n";
 
-    private const string Prompts = "[[prompt]]\nname = \"Shorten\"\nhotkey = \"$replace+S\"\nprompt = \"x\"\n";
+    private const string PromptBindings = "\n[prompts]\nShorten = \"$replace+S\"\n";
 
     public void Dispose()
     {
@@ -226,45 +216,60 @@ public sealed class HotkeyModsReloadTests : IDisposable
     private ConfigManager Started()
     {
         Directory.CreateDirectory(_dir);
-        File.WriteAllText(SettingsPath, Provider + "[mods]\nreplace = \"Shift+Alt\"\n");
-        File.WriteAllText(PromptsPath, Prompts);
+        File.WriteAllText(Path.Combine(_dir, "settings.toml"), Provider);
+        File.WriteAllText(Path.Combine(_dir, "prompts.toml"), "[[prompt]]\nname = \"Shorten\"\nprompt = \"x\"\n");
+        File.WriteAllText(KeybindsPath, "[mods]\nreplace = \"Shift+Alt\"\n" + PromptBindings);
         var manager = new ConfigManager(_dir, _ => null);
         var result = manager.Load();
         Assert.False(result.HasErrors, string.Join("; ", result.Issues));
         return manager;
     }
 
-    private static HotkeyGesture PromptGesture(ConfigManager manager)
-        => HotkeyGesture.Parse(manager.Current.Prompts[0].Hotkey!, manager.Current.Settings.Mods, null);
+    private static HotkeyGesture PromptGesture(ConfigManager manager) => HotkeyGesture.Parse(manager.Current.Prompts[0].Hotkey!, null);
 
     [Fact]
     public void Changing_only_mods_changes_the_prompt_hotkeys()
     {
         var manager = Started();
+        var promptsBefore = manager.Current.Prompts;
         Assert.Equal(HotkeyGesture.Parse("Shift+Alt+S", null), PromptGesture(manager));
 
-        File.WriteAllText(SettingsPath, Provider + "[mods]\nreplace = \"Ctrl+Shift\"\n");
+        File.WriteAllText(KeybindsPath, "[mods]\nreplace = \"Ctrl+Shift\"\n" + PromptBindings);
         var result = manager.Reload();
 
         Assert.False(result.HasErrors, string.Join("; ", result.Issues));
-        Assert.True(result.SettingsChanged);
+        Assert.True(result.KeybindsChanged);
         Assert.False(result.PromptsChanged);
+        Assert.False(result.SettingsChanged);
         Assert.True(result.Changed); // the app registers all hotkeys again on any change
+        Assert.NotSame(promptsBefore, manager.Current.Prompts); // a new list, so the overlay shows the new hotkey
         Assert.Equal(HotkeyGesture.Parse("Ctrl+Shift+S", null), PromptGesture(manager));
     }
 
     [Fact]
-    public void Removing_a_variable_that_prompts_still_use_keeps_the_old_settings()
+    public void Removing_a_variable_that_a_hotkey_still_uses_keeps_the_old_keybinds()
     {
         var manager = Started();
-        var before = manager.Current.Settings;
+        var before = manager.Current.Keybinds;
 
-        File.WriteAllText(SettingsPath, Provider + "[mods]\ncard = \"Ctrl+Alt\"\n");
+        File.WriteAllText(KeybindsPath, "[mods]\ncard = \"Ctrl+Alt\"\n" + PromptBindings);
         var result = manager.Reload();
 
         Assert.True(result.HasErrors);
-        Assert.False(result.SettingsChanged);
-        Assert.Same(before, manager.Current.Settings);
-        Assert.Contains(result.Issues, i => i.IsError && i.File == "prompts.toml" && i.Message.Contains("Unknown variable '$replace'"));
+        Assert.False(result.KeybindsChanged);
+        Assert.Same(before, manager.Current.Keybinds);
+        Assert.Contains(result.Issues, i => i.IsError && i.File == "keybinds.toml" && i.Line == 5 && i.Message.Contains("Unknown variable '$replace'"));
+    }
+
+    [Fact]
+    public void An_unchanged_reload_keeps_the_same_prompt_list()
+    {
+        var manager = Started();
+        var before = manager.Current.Prompts;
+
+        var result = manager.Reload();
+
+        Assert.False(result.Changed);
+        Assert.Same(before, manager.Current.Prompts);
     }
 }

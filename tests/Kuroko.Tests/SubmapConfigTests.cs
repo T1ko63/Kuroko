@@ -4,23 +4,25 @@ using Kuroko.Core.Prompts;
 
 namespace Kuroko.Tests;
 
-/// <summary>[submaps.name] in settings.toml: reading, every error with its line, and the checks against prompts.toml.</summary>
+/// <summary>[submaps.name] in keybinds.toml: reading, every error with its line, and the checks against prompts.toml.</summary>
 public class SubmapConfigTests
 {
     private const string Provider = "[providers.x]\ntype = \"openai-compatible\"\nmodel = \"m\"\n";
 
+    private static readonly AppSettings Settings = SettingsLoader.Parse(Provider, _ => null).Settings!;
+
     private static readonly IReadOnlyList<PromptDefinition> Prompts =
     [
-        new("Professioneller", "p"), new("Lockerer", "l"), new("Kürzen", "k"), new("Ausführlicher", "a"),
+        new("Professioneller", "p"), new("Lockerer", "l"), new("Kürzen", "k"), new("Ausführlicher", "a"), new("Fix", "f"),
     ];
 
-    private static SettingsLoadResult Parse(string toml) => SettingsLoader.Parse(toml + "\n" + Provider, _ => null, keyLayout: FakeKeyLayout.German);
+    private static KeybindsLoadResult Parse(string toml) => KeybindsLoader.Parse(toml, FakeKeyLayout.German);
 
-    private static AppSettings Load(string toml)
+    private static KeybindSettings Load(string toml)
     {
         var result = Parse(toml);
         Assert.True(result.Ok, string.Join("; ", result.Issues));
-        return result.Settings!;
+        return result.Keybinds!;
     }
 
     private static ConfigIssue SingleError(string toml)
@@ -33,7 +35,7 @@ public class SubmapConfigTests
     [Fact]
     public void A_submap_is_read_with_its_keys_and_targets()
     {
-        var settings = Load("""
+        var keybinds = Load("""
             [mods]
             replace = "Shift+Alt"
 
@@ -44,7 +46,7 @@ public class SubmapConfigTests
             keys = { P = "Professioneller", l = "Lockerer", "<" = "Kürzen", 0x41 = "Ausführlicher", F5 = "/undo" }
             """);
 
-        var tone = Assert.Single(settings.Submaps);
+        var tone = Assert.Single(keybinds.Submaps);
         Assert.Equal("tone", tone.Name);
         Assert.Equal("Alt+Shift+^", HotkeyGesture.Parse(tone.Open, FakeKeyLayout.German).ToString(FakeKeyLayout.German));
         Assert.Equal("Ton: P L K A", tone.Label);
@@ -68,7 +70,7 @@ public class SubmapConfigTests
     [Fact]
     public void Keys_may_also_be_a_table_of_their_own_with_one_line_per_key()
     {
-        var settings = Load("""
+        var keybinds = Load("""
             [submaps.tone]
             open = "Alt+Shift+T"
 
@@ -77,7 +79,7 @@ public class SubmapConfigTests
             "#" = "/copy"
             """);
 
-        Assert.Equal([0x50, 0xBF], Assert.Single(settings.Submaps).Keys.Select(k => k.VirtualKey));
+        Assert.Equal([0x50, 0xBF], Assert.Single(keybinds.Submaps).Keys.Select(k => k.VirtualKey));
     }
 
     [Theory]
@@ -137,47 +139,46 @@ public class SubmapConfigTests
     [Fact]
     public void Prompt_targets_must_exist_in_prompts_toml()
     {
-        var settings = Load("[submaps.tone]\nopen = \"Alt+Shift+T\"\nkeys = { P = \"Professioneller\", K = \"Kurz\", U = \"/undo\" }\n");
+        var keybinds = Load("[submaps.tone]\nopen = \"Alt+Shift+T\"\nkeys = { P = \"Professioneller\", K = \"Kurz\", U = \"/undo\" }\n");
 
-        var issue = Assert.Single(ConfigValidator.Validate(settings, Prompts, keyLayout: FakeKeyLayout.German), i => i.IsError);
+        var issue = Assert.Single(ConfigValidator.Validate(Settings, Prompts, keybinds, keyLayout: FakeKeyLayout.German), i => i.IsError);
 
         Assert.Contains("key 'K' runs 'Kurz', but prompts.toml has no prompt of that name", issue.Message);
-        Assert.Equal(SettingsLoader.FileName, issue.File);
+        Assert.Equal(KeybindsLoader.FileName, issue.File);
         Assert.Equal(3, issue.Line);
     }
 
     [Fact]
     public void Prompt_targets_are_not_case_sensitive()
     {
-        var settings = Load("[submaps.tone]\nopen = \"Alt+Shift+T\"\nkeys = { P = \"professioneller\" }\n");
-        Assert.DoesNotContain(ConfigValidator.Validate(settings, Prompts, keyLayout: FakeKeyLayout.German), i => i.IsError);
+        var keybinds = Load("[submaps.tone]\nopen = \"Alt+Shift+T\"\nkeys = { P = \"professioneller\" }\n");
+        Assert.DoesNotContain(ConfigValidator.Validate(Settings, Prompts, keybinds, keyLayout: FakeKeyLayout.German), i => i.IsError);
     }
 
     [Fact]
     public void The_open_hotkey_counts_in_the_duplicate_check()
     {
-        var settings = Load("[mods]\ncard = \"Ctrl+Alt\"\n\n[submaps.tone]\nopen = \"$card+K\"\nkeys = { P = \"Professioneller\" }\n");
-        IReadOnlyList<PromptDefinition> prompts = [.. Prompts, new PromptDefinition("Fix", "f", Hotkey: "Ctrl+Alt+K")];
+        var keybinds = Load("[mods]\ncard = \"Ctrl+Alt\"\n\n[prompts]\nFix = \"Ctrl+Alt+K\"\n\n[submaps.tone]\nopen = \"$card+K\"\nkeys = { P = \"Professioneller\" }\n");
 
-        var issue = Assert.Single(ConfigValidator.Validate(settings, prompts, keyLayout: FakeKeyLayout.German), i => i.IsError);
+        var issue = Assert.Single(ConfigValidator.Validate(Settings, Prompts, keybinds, keyLayout: FakeKeyLayout.German), i => i.IsError);
 
         Assert.Contains("hotkey Ctrl+Alt+K is used twice", issue.Message);
         Assert.Contains("submap 'tone'", issue.Message);
+        Assert.Equal(7, issue.Line);
     }
 
     [Fact]
     public void A_submap_key_cannot_be_a_hotkey_that_already_stands_alone()
     {
-        var settings = Load("[submaps.tone]\nopen = \"Alt+Shift+T\"\nkeys = { F8 = \"Professioneller\" }\n");
-        IReadOnlyList<PromptDefinition> prompts = [.. Prompts, new PromptDefinition("Fix", "f", Hotkey: "F8")];
+        var keybinds = Load("[prompts]\nFix = \"F8\"\n\n[submaps.tone]\nopen = \"Alt+Shift+T\"\nkeys = { F8 = \"Professioneller\" }\n");
 
-        var issue = Assert.Single(ConfigValidator.Validate(settings, prompts, keyLayout: FakeKeyLayout.German), i => i.IsError);
+        var issue = Assert.Single(ConfigValidator.Validate(Settings, Prompts, keybinds, keyLayout: FakeKeyLayout.German), i => i.IsError);
 
         Assert.Contains("key 'F8' is also the hotkey of prompt 'Fix'", issue.Message);
     }
 
     [Fact]
-    public void A_settings_file_whose_submap_names_a_missing_prompt_is_rejected_and_the_old_one_stays()
+    public void A_keybinds_file_whose_submap_names_a_missing_prompt_is_rejected_and_the_old_one_stays()
     {
         var dir = Directory.CreateTempSubdirectory("kuroko-submaps").FullName;
         try
@@ -187,13 +188,12 @@ public class SubmapConfigTests
             var manager = new ConfigManager(dir, _ => null);
             Assert.False(manager.Load().HasErrors);
 
-            File.WriteAllText(Path.Combine(dir, SettingsLoader.FileName),
-                "[submaps.tone]\nopen = \"Alt+Shift+T\"\nkeys = { P = \"Professioneller\" }\n" + Provider);
+            File.WriteAllText(Path.Combine(dir, KeybindsLoader.FileName), "[submaps.tone]\nopen = \"Alt+Shift+T\"\nkeys = { P = \"Professioneller\" }\n");
             var result = manager.Reload();
 
             Assert.True(result.HasErrors);
-            Assert.False(result.SettingsChanged);
-            Assert.Empty(manager.Current.Settings.Submaps);
+            Assert.False(result.KeybindsChanged);
+            Assert.Empty(manager.Current.Keybinds.Submaps);
         }
         finally
         {

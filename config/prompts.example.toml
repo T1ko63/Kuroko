@@ -16,17 +16,15 @@
 #               replace      the result replaces the selected text (or the whole field)
 #               overlay      the result is shown in a small card, the text in the app stays as it is.
 #                            Needs a selection (only the selected text is read, never the whole field),
-#                            works on read-only text such as web pages. Esc closes the card, result_copy_hotkey copies it
-#   hotkey    optional: runs the prompt directly, without the overlay. Written like the hotkeys in settings.toml:
-#               "Ctrl+Alt+K", "Ctrl+Alt+ü", "Ctrl+Alt+0xE2", "Ctrl+Alt++" (all keys: docs/keybindings.md),
-#               or with a variable from [mods] in settings.toml: "$card+S" (card = "Ctrl+Alt" there)
+#                            works on read-only text such as web pages. Esc closes the card, result_copy (keybinds.toml) copies it
 #   provider  optional: name of a [providers.*] block in settings.toml
 #   model     optional: overrides the provider's model
+#
+# A prompt gets its hotkey in keybinds.toml, under [prompts]: Correction = "Ctrl+Alt+K" (see config/keybinds.example.toml).
 
 [[prompt]]
 name = "Universal"
 mode = "universal"
-hotkey = "Ctrl+Alt+U"
 prompt = """
 You are a writing assistant. Write naturally and match the purpose and tone. Use plain text without Markdown.
 Output only the resulting text, without any introduction or comment.
@@ -35,7 +33,6 @@ Output only the resulting text, without any introduction or comment.
 [[prompt]]
 name = "Correction"
 mode = "transform"
-hotkey = "Ctrl+Alt+K"
 prompt = """
 Fix spelling, grammar and punctuation. Do not change content or style, and keep the language of the text.
 Output only the resulting text, without any introduction or comment.
@@ -60,12 +57,11 @@ Output only the resulting text, without any introduction or comment.
 """
 
 # Overlay output: the answer appears in a small card instead of replacing the text. Mark text on any page, press the hotkey, read.
-# Lines that start with "- " are shown as a bullet list. Esc closes the card, Ctrl+Alt+C (result_copy_hotkey) copies it.
+# Lines that start with "- " are shown as a bullet list. Esc closes the card, Ctrl+Alt+C (result_copy in keybinds.toml) copies it.
 [[prompt]]
 name = "Summary"
 mode = "transform"
 output = "overlay"
-hotkey = "Alt+Shift+Z"
 prompt = """
 Summarize the key points of the text in three to at most five short bullet points. Very short texts need only one or two.
 Each point states one concrete core message; avoid repetition and minor details.

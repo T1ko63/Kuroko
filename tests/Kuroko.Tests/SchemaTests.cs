@@ -62,6 +62,7 @@ public class SchemaTests
     [Theory]
     [InlineData("config/prompts.example.toml", "../schemas/prompts.schema.json")]
     [InlineData("config/settings.example.toml", "../schemas/settings.schema.json")]
+    [InlineData("config/keybinds.example.toml", "../schemas/keybinds.schema.json")]
     public void Example_points_at_its_schema_in_the_first_line_and_is_plain_utf8(string example, string schema)
     {
         var bytes = File.ReadAllBytes(Path.Combine(Root, example));
@@ -73,6 +74,7 @@ public class SchemaTests
     [Theory]
     [InlineData("prompts.schema.json")]
     [InlineData("settings.schema.json")]
+    [InlineData("keybinds.schema.json")]
     public void Schema_is_plain_utf8_json(string name)
     {
         var bytes = File.ReadAllBytes(Path.Combine(Root, "schemas", name));
@@ -94,6 +96,43 @@ public class SchemaTests
         var result = SettingsLoader.Parse(ReadFile("config/settings.example.toml"), _ => null);
         Assert.True(result.Ok, string.Join("; ", result.Issues));
         Assert.DoesNotContain(result.Issues, i => i.Message.Contains("unknown", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Example_keybinds_load_without_issues_and_fit_the_example_prompts()
+    {
+        var result = KeybindsLoader.Parse(ReadFile("config/keybinds.example.toml"), FakeKeyLayout.German);
+        Assert.True(result.Ok, string.Join("; ", result.Issues));
+        Assert.Empty(result.Issues);
+
+        var settings = SettingsLoader.Parse(ReadFile("config/settings.example.toml"), _ => null).Settings!;
+        var prompts = PromptsLoader.Parse(ReadFile("config/prompts.example.toml")).Prompts!;
+        Assert.DoesNotContain(ConfigValidator.Validate(settings, prompts, result.Keybinds!, keyLayout: FakeKeyLayout.German), i => i.IsError || i.Show);
+    }
+
+    [Fact]
+    public void Keybinds_schema_names_exactly_the_keys_of_the_example_and_the_loader()
+    {
+        var schema = Schema("keybinds.schema.json");
+        var example = Toml("config/keybinds.example.toml");
+        var app = schema.GetProperty("properties").GetProperty("app");
+
+        Assert.Equal(Keys(schema, schema).Order(), example.Keys.Order());
+        Assert.Equal(Keys(schema, app).Order(), ((TomlTable)example["app"]).Keys.Order());
+        Assert.Equal(Keys(schema, app).Order(), KeybindsLoader.AppKeys.Select(k => k.Key).Order());
+        foreach (var (key, fallback) in KeybindsLoader.AppKeys)
+        {
+            Assert.Equal(fallback, app.GetProperty("properties").GetProperty(key).GetProperty("default").GetString());
+        }
+    }
+
+    [Theory]
+    [InlineData("settings.schema.json")]
+    [InlineData("prompts.schema.json")]
+    public void Settings_and_prompts_schemas_name_no_hotkeys(string name)
+    {
+        var text = ReadFile(Path.Combine("schemas", name));
+        foreach (var moved in SettingsLoader.MovedToKeybinds.Append("\"hotkey\"")) Assert.DoesNotContain($"\"{moved.Trim('"')}\":", text);
     }
 
     [Fact]
@@ -224,7 +263,7 @@ public class SchemaTests
     [InlineData("$card_2 + S")]
     public void Hotkey_pattern_allows_every_way_to_write_a_key(string hotkey)
     {
-        foreach (var name in new[] { "settings.schema.json", "prompts.schema.json" })
+        foreach (var name in new[] { "keybinds.schema.json" })
         {
             var schema = Schema(name);
             var pattern = schema.GetProperty("definitions").GetProperty("hotkey").GetProperty("pattern").GetString()!;
@@ -237,7 +276,7 @@ public class SchemaTests
     [Fact]
     public void Submap_schema_names_the_fields_the_loader_reads()
     {
-        var schema = Schema("settings.schema.json");
+        var schema = Schema("keybinds.schema.json");
         var submap = schema.GetProperty("definitions").GetProperty("submap");
         Assert.Equal(["keys", "label", "open", "timeout"], Keys(schema, submap).Order());
         Assert.Equal(SubmapDefinition.DefaultTimeoutMs, submap.GetProperty("properties").GetProperty("timeout").GetProperty("default").GetInt32());
@@ -261,7 +300,7 @@ public class SchemaTests
     [InlineData("+")]
     public void Submap_key_pattern_allows_every_way_to_write_a_key(string key)
     {
-        var keys = Schema("settings.schema.json").GetProperty("definitions").GetProperty("submap").GetProperty("properties").GetProperty("keys");
+        var keys = Schema("keybinds.schema.json").GetProperty("definitions").GetProperty("submap").GetProperty("properties").GetProperty("keys");
         Assert.Matches(keys.GetProperty("propertyNames").GetProperty("pattern").GetString()!, key);
         Assert.True(Kuroko.Core.Hotkeys.HotkeyGesture.TryParseSubmapKey(key, FakeKeyLayout.German, out _, out var error), error);
     }
@@ -274,7 +313,7 @@ public class SchemaTests
     [InlineData("$my-mod+K")]
     public void Hotkey_pattern_rejects_malformed_text(string hotkey)
     {
-        var pattern = Schema("settings.schema.json").GetProperty("definitions").GetProperty("hotkey").GetProperty("pattern").GetString()!;
+        var pattern = Schema("keybinds.schema.json").GetProperty("definitions").GetProperty("hotkey").GetProperty("pattern").GetString()!;
         Assert.DoesNotMatch(pattern, hotkey);
     }
 }

@@ -3,13 +3,16 @@ using Kuroko.Core.Prompts;
 
 namespace Kuroko.Core.Config;
 
-/// <summary>Checks that need both files at once: providers named by prompts, hotkeys used twice, prompts named by submaps.</summary>
+/// <summary>
+/// Checks that need more than one file: providers named by prompts, prompts named by keybinds.toml, and the one place
+/// where every hotkey is checked against the others and against the keys the app sends itself.
+/// </summary>
 public static class ConfigValidator
 {
-    /// <param name="keyLayout">Resolves hotkey keys written as a character; null uses <see cref="KeyLayouts.Current"/>.</param>
+    /// <param name="keyLayout">Shows hotkeys in messages with the characters of this layout; null uses <see cref="KeyLayouts.Current"/>.</param>
     public static List<ConfigIssue> Validate(
-        AppSettings settings, IReadOnlyList<PromptDefinition> prompts, IReadOnlyDictionary<string, int>? promptLines = null,
-        IKeyLayout? keyLayout = null)
+        AppSettings settings, IReadOnlyList<PromptDefinition> prompts, KeybindSettings keybinds,
+        IReadOnlyDictionary<string, int>? promptLines = null, IKeyLayout? keyLayout = null)
     {
         var layout = keyLayout ?? KeyLayouts.Current;
         var issues = new List<ConfigIssue>();
@@ -32,58 +35,67 @@ public static class ConfigValidator
             }
         }
 
-        // Every hotkey may be used once: the overlay, undo and result-copy hotkeys and the prompt hotkeys share one namespace.
-        var owners = new Dictionary<HotkeyGesture, string>();
-        void Claim(string hotkey, string owner, string file, int? line)
-        {
-            // Plain hotkeys were checked by the loaders; "$name" prompt hotkeys are first checked here, against [mods].
-            var usesMods = HotkeyMods.UsesVariables(hotkey);
-            if (!HotkeyGesture.TryParse(hotkey, settings.Mods, layout, out var gesture, out var error))
-            {
-                if (usesMods) issues.Add(new ConfigIssue(file, line, $"{owner}: {error}", IsError: true));
-                return;
-            }
+        const string KeybindsFile = KeybindsLoader.FileName;
+        var promptNames = prompts.Count == 0 ? "none" : string.Join(", ", prompts.Select(p => p.Name));
 
-            if (usesMods && gesture.AltGrWarning(layout) is { } warning)
+        // Every hotkey may be used once: the app hotkeys, the prompt hotkeys and the submap open hotkeys share one namespace.
+        // The loader has filled in [mods] and checked each hotkey on its own already.
+        var owners = new Dictionary<HotkeyGesture, string>();
+        void Claim(string hotkey, string owner, int? line)
+        {
+            if (!HotkeyGesture.TryParse(hotkey, layout, out var gesture, out _)) return;
+
+            if (KeybindsLoader.CollidesWithCapture(gesture))
             {
-                issues.Add(new ConfigIssue(file, line, $"{owner}: {warning}", IsError: false, Show: true));
+                // The app sends exactly these keys to read and replace text; RegisterHotKey would catch those too, and they
+                // would stop working in every other app while Kuroko runs.
+                issues.Add(new ConfigIssue(KeybindsFile, line,
+                    $"{owner}: {gesture.ToString(layout)} is used by the app to read and replace text (Ctrl+C, Ctrl+A, Ctrl+V); choose another hotkey", IsError: true));
+                return;
             }
 
             if (owners.TryGetValue(gesture, out var existing))
             {
-                issues.Add(new ConfigIssue(file, line, $"hotkey {gesture.ToString(layout)} is used twice: {existing} and {owner}", IsError: true));
+                issues.Add(new ConfigIssue(KeybindsFile, line, $"hotkey {gesture.ToString(layout)} is used twice: {existing} and {owner}", IsError: true));
                 return;
             }
 
             owners[gesture] = owner;
         }
 
-        Claim(settings.OverlayHotkey, "overlay_hotkey", SettingsLoader.FileName, null);
-        if (settings.UndoHistory > 0) Claim(settings.UndoHotkey, "undo_hotkey", SettingsLoader.FileName, null);
-        Claim(settings.ResultCopyHotkey, "result_copy_hotkey", SettingsLoader.FileName, null);
-        foreach (var prompt in prompts.Where(p => p.Hotkey is not null))
+        Claim(keybinds.OverlayHotkey, "[app] overlay", keybinds.Overlay.Line);
+        if (settings.UndoHistory > 0) Claim(keybinds.UndoHotkey, "[app] undo", keybinds.Undo.Line);
+        Claim(keybinds.ResultCopyHotkey, "[app] result_copy", keybinds.ResultCopy.Line);
+        foreach (var binding in keybinds.Prompts)
         {
-            Claim(prompt.Hotkey!, $"prompt '{prompt.Name}'", PromptsLoader.FileName, LineOf(prompt.Name));
+            if (!prompts.Any(p => p.Name.Equals(binding.Prompt, StringComparison.OrdinalIgnoreCase)))
+            {
+                issues.Add(new ConfigIssue(KeybindsFile, binding.Line,
+                    $"[prompts] no prompt '{binding.Prompt}' in prompts.toml (prompts: {promptNames})", IsError: true));
+                continue;
+            }
+
+            Claim(binding.Hotkey, $"prompt '{binding.Prompt}'", binding.Line);
         }
 
-        foreach (var submap in settings.Submaps) Claim(submap.Open, $"submap '{submap.Name}'", SettingsLoader.FileName, submap.Line);
+        foreach (var submap in keybinds.Submaps) Claim(submap.Open, $"submap '{submap.Name}'", submap.Line);
 
-        foreach (var submap in settings.Submaps)
+        foreach (var submap in keybinds.Submaps)
         {
             foreach (var key in submap.Keys)
             {
                 // A configured hotkey without modifiers (F1-F24) is already registered, so the submap could never take that key.
                 if (owners.TryGetValue(new HotkeyGesture(HotkeyModifiers.None, key.VirtualKey), out var owner))
                 {
-                    issues.Add(new ConfigIssue(SettingsLoader.FileName, key.Line,
+                    issues.Add(new ConfigIssue(KeybindsFile, key.Line,
                         $"[submaps.{submap.Name}] key '{key.Key}' is also the hotkey of {owner}; give one of them another key", IsError: true));
                 }
 
                 if (!key.IsCommand && !prompts.Any(p => p.Name.Equals(key.Target, StringComparison.OrdinalIgnoreCase)))
                 {
-                    issues.Add(new ConfigIssue(SettingsLoader.FileName, key.Line,
+                    issues.Add(new ConfigIssue(KeybindsFile, key.Line,
                         $"[submaps.{submap.Name}] key '{key.Key}' runs '{key.Target}', but prompts.toml has no prompt of that name "
-                        + $"(prompts: {string.Join(", ", prompts.Select(p => p.Name))}; a command starts with /, e.g. \"/undo\")", IsError: true));
+                        + $"(prompts: {promptNames}; a command starts with /, e.g. \"/undo\")", IsError: true));
                 }
             }
         }

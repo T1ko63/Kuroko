@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Kuroko prompts.toml",
-  "description": "Prompts for Kuroko (%APPDATA%\\Kuroko\\prompts.toml). One [[prompt]] block per prompt. Mirrors src/Kuroko.Core/Config/PromptsLoader.cs; the app itself reports errors with file and line.",
+  "description": "Prompts for Kuroko (%APPDATA%\\Kuroko\\prompts.toml). One [[prompt]] block per prompt. Mirrors src/Kuroko.Core/Config/PromptsLoader.cs; the app itself reports errors with file and line. A prompt gets its hotkey in keybinds.toml, under [prompts].",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -40,7 +40,6 @@
           "default": "replace",
           "description": "Where the result goes, independent of mode. replace: the result replaces the selected text (or the whole field). overlay: the result is shown in a small card and the text stays as it is; works on read-only text such as web pages."
         },
-        "hotkey": { "$ref": "#/definitions/hotkey" },
         "provider": {
           "type": "string",
           "description": "Name of a [providers.<name>] block in settings.toml. Empty or missing: default_provider."
@@ -50,12 +49,6 @@
           "description": "Overrides the provider's model for this prompt."
         }
       }
-    },
-    "hotkey": {
-      "type": "string",
-      "description": "Runs the prompt directly, without the overlay. Modifiers Ctrl (Control, Strg), Alt, Shift (Umschalt), Win (Windows) joined with + and one key: A-Z, 0-9, F1-F24; a name (Space, Enter, Tab, Esc, Backspace, Insert, Delete, Home, End, PageUp, PageDown, Left, Up, Right, Down, Num0-Num9, NumAdd, NumSubtract, NumMultiply, NumDivide, NumDecimal, Oem1-Oem8, Oem102, OemPlus, OemComma, OemMinus, OemPeriod, Plus, PrintScreen, Pause, ScrollLock, CapsLock, NumLock, Menu, media, volume and browser keys); a key code 0x01-0xFE (Ctrl+Alt+0xE2); or the character printed on the key in the active keyboard layout (Ctrl+Alt+ü, Ctrl+Alt+<, Ctrl+Alt++). Only the key's own character counts: characters typed with Shift or AltGr (> | °) are an error. At least one modifier unless the key is F1-F24. A variable from [mods] in settings.toml stands for its modifiers: \"$card+S\", \"$main+Alt+K\". Empty: no hotkey. See docs/keybindings.md.",
-      "pattern": "^\\s*$|^\\s*((\\$[A-Za-z0-9_]+|[A-Za-z]+)\\s*\\+\\s*)*([A-Za-z][A-Za-z0-9]*|0[xX][0-9A-Fa-f]{1,2}|[^\\s+]|\\+)\\s*$",
-      "examples": ["Ctrl+Alt+K", "Alt+Shift+Z", "F8", "Ctrl+Alt+ü", "Ctrl+Alt+0xE2"]
     }
   }
 }

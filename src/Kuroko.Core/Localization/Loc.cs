@@ -45,6 +45,7 @@ public static class Loc
         ["err_marker_empty"] = ("Der Marker enthält keine Anweisung.", "The marker contains no instruction."),
         ["err_hotkey_in_use"] = ("Hotkey {0} ({1}) ist bereits von einer anderen App belegt.",
             "Hotkey {0} ({1}) is already used by another app."),
+        ["err_hotkey_invalid"] = ("Hotkey {0} ({1}) ist ungültig: {2}", "Hotkey {0} ({1}) is invalid: {2}"),
         ["cfg_error"] = ("{0} Die letzte funktionierende Konfiguration bleibt aktiv.", "{0} The last working configuration stays active."),
         ["cfg_more"] = (" (+{0} weitere)", " (+{0} more)"),
         ["cfg_line"] = ("Zeile", "line"),
@@ -64,6 +65,7 @@ public static class Loc
         ["tray_reload"] = ("Config neu laden", "Reload config"),
         ["tray_edit_prompts"] = ("Prompts bearbeiten", "Edit prompts"),
         ["tray_edit_settings"] = ("Einstellungen bearbeiten", "Edit settings"),
+        ["tray_edit_keybinds"] = ("Tastenbelegung bearbeiten", "Edit keybinds"),
         ["err_open_file"] = ("{0} konnte nicht geöffnet werden.", "{0} could not be opened."),
 
         ["tray_test"] = ("Verbindung testen", "Test connection"),

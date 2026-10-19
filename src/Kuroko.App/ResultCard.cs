@@ -28,7 +28,7 @@ internal sealed class ResultCard
     private Anchor _anchor;
     private IDisposable? _watcher;
 
-    /// <param name="copyHotkey">result_copy_hotkey, read when the card opens and after a configuration reload.</param>
+    /// <param name="copyHotkey">result_copy in keybinds.toml, read when the card opens and after a configuration reload.</param>
     public ResultCard(IStatusView status, IDesktop desktop, IHotkeyRegistry? hotkeys, IClipboard? clipboard, RunState run, Func<string> copyHotkey)
     {
         _status = status;
@@ -160,7 +160,7 @@ internal sealed class ResultCard
     /// <summary>Releases Esc and the copy hotkey for a configuration reload.</summary>
     public void ReleaseForReload() => UnregisterHotkeys();
 
-    /// <summary>Registers Esc and the copy hotkey (with the current result_copy_hotkey) again if the card is still up.</summary>
+    /// <summary>Registers Esc and the copy hotkey (with the current result_copy hotkey) again if the card is still up.</summary>
     public void RestoreAfterReload()
     {
         if (IsLive) RegisterHotkeys();

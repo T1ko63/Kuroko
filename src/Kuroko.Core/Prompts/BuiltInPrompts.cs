@@ -1,6 +1,6 @@
 namespace Kuroko.Core.Prompts;
 
-/// <summary>Default prompt collection (written to prompts.toml on first start, editable afterwards).</summary>
+/// <summary>Default prompt collection (written to prompts.toml on first start, editable afterwards). Their hotkeys are in <see cref="Config.DefaultKeybinds"/>.</summary>
 public static class BuiltInPrompts
 {
     private const string OutputRule =
@@ -18,16 +18,14 @@ public static class BuiltInPrompts
             außer die Aufgabe verlangt ausdrücklich eine Formatierung.
             {OutputRule}
             """,
-            PromptMode.Universal,
-            Hotkey: "Ctrl+Alt+U"),
+            PromptMode.Universal),
 
         new("Correction",
             $"""
             Du bist mein Experte für Rechtschreibung und Grammatik. Prüfe den Text auf Rechtschreibung, Grammatik,
             Zeichensetzung, Groß-/Kleinschreibung und Satzbau und korrigiere ihn. Ändere weder Inhalt noch Stil
             und behalte die Sprache des Textes bei. {OutputRule}
-            """,
-            Hotkey: "Ctrl+Alt+K"),
+            """),
 
         new("Rewrite",
             $"""

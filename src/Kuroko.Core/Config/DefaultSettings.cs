@@ -15,24 +15,14 @@ public static class DefaultSettings
             : "gemini";
 
         return string.Create(CultureInfo.InvariantCulture, $$"""
-            # Kuroko - Einstellungen. Änderungen werden nach dem Speichern automatisch übernommen (auch Hotkeys).
+            # Kuroko - Einstellungen. Änderungen werden nach dem Speichern automatisch übernommen.
             # Bei einem Fehler in der Datei bleibt die letzte funktionierende Konfiguration aktiv und es erscheint eine Meldung.
-            # Prompts stehen in prompts.toml.
+            # Prompts stehen in prompts.toml, alle Hotkeys in keybinds.toml.
 
-            # Globaler Hotkey, der das Overlay öffnet.
-            overlay_hotkey = "{{AppSettings.DefaultOverlayHotkey}}"
-
-            # Macht die letzte Ersetzung rückgängig und schreibt den ursprünglichen Text zurück (mehrfach drücken = Schritt für Schritt weiter).
+            # Rückgängig (Hotkey undo in keybinds.toml) schreibt den ursprünglichen Text zurück (mehrfach drücken = Schritt für Schritt weiter).
             # Es wird nichts überschrieben, wenn der Text im Feld inzwischen geändert wurde oder ein anderes Feld den Fokus hat.
-            undo_hotkey = "{{AppSettings.DefaultUndoHotkey}}"
             # So viele Ersetzungen merkt sich die App (nur im Arbeitsspeicher, nie auf der Festplatte; 0 = Rückgängig aus).
             undo_history = {{AppSettings.DefaultUndoHistory}}
-
-            # Kopiert den ganzen Text der Ergebnis-Karte (Prompts mit output = "overlay" in prompts.toml) in die Zwischenablage und schließt die Karte.
-            # Der Hotkey ist nur registriert, solange eine Karte sichtbar ist; Esc schließt die Karte (und bricht eine laufende Anfrage ab).
-            # Er kopiert auch die fertige Antwort, solange die Fehlerpille eines gescheiterten Einfügens zu sehen ist (später: Tray → Letztes Ergebnis kopieren).
-            # Nicht erlaubt ist einfaches Strg+C, Strg+A und Strg+V: Diese Tasten sendet die App beim Lesen des Textes selbst.
-            result_copy_hotkey = "{{AppSettings.DefaultResultCopyHotkey}}"
 
             # Wo die Ergebnis-Karte erscheint: "fixed" (an result_fixed_position auf dem Monitor, auf dem das Zielfenster liegt, Standard)
             # | "follow" (dort, wo sich das Prompt-Menü öffnet, siehe overlay_position) | "caret" (am Textcursor, sonst an der Maus) | "mouse" (an der Maus).

@@ -25,7 +25,7 @@ public enum PromptOutput
     Overlay,
 }
 
-/// <summary>One saved prompt. Mirrors an entry of prompts.toml.</summary>
+/// <summary>One saved prompt. Mirrors an entry of prompts.toml; <see cref="Hotkey"/> comes from [prompts] in keybinds.toml.</summary>
 public sealed record PromptDefinition(
     string Name,
     string Prompt,

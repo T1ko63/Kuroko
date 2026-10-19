@@ -1,4 +1,3 @@
-using Kuroko.Core.Hotkeys;
 using Kuroko.Core.Prompts;
 using Tomlyn;
 using Tomlyn.Model;
@@ -24,13 +23,11 @@ public static class PromptsLoader
 
     private static readonly HashSet<string> PromptKeys = new(StringComparer.Ordinal)
     {
-        "name", "prompt", "mode", "output", "hotkey", "provider", "model",
+        "name", "prompt", "mode", "output", "hotkey", "provider", "model", // hotkey: only to warn that it moved to keybinds.toml
     };
 
-    /// <param name="keyLayout">Resolves hotkey keys written as a character; null uses <see cref="KeyLayouts.Current"/>.</param>
-    public static PromptsLoadResult Parse(string toml, IKeyLayout? keyLayout = null)
+    public static PromptsLoadResult Parse(string toml)
     {
-        var layout = keyLayout ?? KeyLayouts.Current;
         var issues = new List<ConfigIssue>();
         var lines = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
@@ -69,7 +66,7 @@ public static class PromptsLoader
                 var header = index < headers.Count ? headers[index] : (int?)null;
                 var end = index + 1 < headers.Count ? headers[index + 1] - 1 : reader.LastLine;
                 index++;
-                if (ReadPrompt(table, reader, header, end, layout) is { } prompt)
+                if (ReadPrompt(table, reader, header, end) is { } prompt)
                 {
                     if (lines.ContainsKey(prompt.Name))
                     {
@@ -91,7 +88,7 @@ public static class PromptsLoader
         return new PromptsLoadResult(issues.Any(i => i.IsError) ? null : prompts, issues, lines);
     }
 
-    private static PromptDefinition? ReadPrompt(TomlTable table, TomlReader reader, int? header, int end, IKeyLayout? layout)
+    private static PromptDefinition? ReadPrompt(TomlTable table, TomlReader reader, int? header, int end)
     {
         int? Line(string key) => header is { } start ? reader.LineOf(key, start, end) ?? start : null;
         var label = table.TryGetValue("name", out var n) && n is string s && s.Length > 0 ? $"prompt '{s}'" : "prompt";
@@ -134,17 +131,10 @@ public static class PromptsLoader
 
         var output = reader.Choice(table, "output", "replace", Outputs, Line) == "overlay" ? PromptOutput.Overlay : PromptOutput.Replace;
 
-        var hotkey = reader.Choice(table, "hotkey", string.Empty, null, Line).Trim();
-        // "$name" hotkeys need [mods] from settings.toml; ConfigValidator checks them with both files at hand.
-        if (hotkey.Length > 0 && !HotkeyMods.UsesVariables(hotkey))
+        if (table.ContainsKey("hotkey"))
         {
-            if (!HotkeyGesture.TryParse(hotkey, layout, out var gesture, out var hotkeyError))
-            {
-                reader.Issue(Line("hotkey"), $"{label}: {hotkeyError}", isError: true);
-                return null;
-            }
-
-            if (gesture.AltGrWarning(layout) is { } warning) reader.Issue(Line("hotkey"), $"{label}: {warning}", isError: false, show: true);
+            // Read once, when keybinds.toml was created from it (KeybindsMigration); ignored since then.
+            reader.Issue(Line("hotkey"), $"{label}: hotkey in prompts.toml is no longer read; keybinds live in keybinds.toml", isError: false, show: true);
         }
 
         var provider = reader.Choice(table, "provider", string.Empty, null, Line).Trim();
@@ -154,7 +144,7 @@ public static class PromptsLoader
             name,
             text.Trim(),
             mode,
-            hotkey.Length == 0 ? null : hotkey,
+            Hotkey: null,
             provider.Length == 0 ? null : provider,
             model.Length == 0 ? null : model,
             output);

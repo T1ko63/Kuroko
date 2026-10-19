@@ -55,3 +55,46 @@ public class AppCommandTests
         Assert.Equal(1, ran);
     }
 }
+
+public class AppCommandListTests
+{
+    private sealed class NoActions : ICommandActions
+    {
+        public bool HasLastResult => false;
+
+        public bool Autostart => false;
+
+        public void CopyLastResult() { }
+
+        public void OpenPrompts() { }
+
+        public void OpenSettings() { }
+
+        public void OpenKeybinds() { }
+
+        public void OpenFolder() { }
+
+        public void Reload() { }
+
+        public void ShowKeys() { }
+
+        public void TestConnection() { }
+
+        public void ToggleAutostart() { }
+
+        public void ShowAbout() { }
+
+        public void Quit() { }
+    }
+
+    [Fact]
+    public void The_app_has_a_command_for_every_name_a_submap_may_use_except_undo()
+    {
+        // keybinds.toml is checked against CommandNames; a name the app does not have would load fine and then do nothing.
+        var names = AppCommands.Create(new NoActions()).Select(c => c.Name).ToList();
+
+        Assert.Equal(names.Distinct().Count(), names.Count);
+        Assert.Equal(Kuroko.Core.Config.CommandNames.All.Where(n => n != Kuroko.Core.Config.CommandNames.Undo).Order(), names.Order());
+        Assert.Contains("keybinds", names);
+    }
+}
