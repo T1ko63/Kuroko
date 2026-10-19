@@ -3,7 +3,7 @@
 Eigene KI-Prompts in **jedem** Textfeld unter Windows: Text markieren (oder einfach tippen), Hotkey drücken,
 Prompt wählen, das Ergebnis ersetzt den Text direkt im Feld. Kein Fensterwechsel, kein Kopieren und Einfügen.
 
-Die App lebt im Tray, hat kein Hauptfenster und wird über zwei TOML-Dateien konfiguriert.
+Die App lebt im Tray, hat kein Hauptfenster und wird über drei TOML-Dateien konfiguriert: `settings.toml`, `prompts.toml` und `keybinds.toml`.
 
 Dies ist die vollständige Anleitung. Eine englische Kurzfassung steht in der [Root-README](../README.md), der
 Audit-Bericht vom Oktober 2026 in [`refactoring-report.md`](refactoring-report.md).
@@ -25,7 +25,7 @@ Audit-Bericht vom Oktober 2026 in [`refactoring-report.md`](refactoring-report.m
 Mausklick geht auch, `Esc` bricht ab. Danach liegt der Fokus wieder genau dort, wo du warst.
 
 **Befehle im Overlay:** Beginnt die Eingabe mit `/`, zeigt die Liste statt der Prompts die Einträge des Tray-Menüs als Befehle:
-`/copy`, `/prompts`, `/settings`, `/folder`, `/reload`, `/keys`, `/test`, `/autostart` (zeigt „an“/„aus“), `/about`, `/quit`.
+`/copy`, `/prompts`, `/settings`, `/keybinds`, `/folder`, `/reload`, `/keys`, `/test`, `/autostart` (zeigt „an“/„aus“), `/about`, `/quit`.
 Weiteres Tippen filtert, die Reihenfolge bleibt fest. Nicht verfügbare Befehle (z. B. `/copy` ohne letztes Ergebnis) sind ausgegraut
 und werden übersprungen. `Enter` schließt das Overlay und führt den Befehl aus wie im Tray; Befehle, die ein Fenster öffnen, geben den
 Fokus an dieses Fenster, die übrigen ins Textfeld zurück. Ein Prompt-Name darf deshalb nicht mit `/` beginnen.
@@ -147,20 +147,20 @@ noch, bittet Kuroko darum, sie zu beenden, und startet nicht. Alte Autostart-Ein
 „InstaPrompt (Claude)“) entfernt Kuroko bei jedem Start. Umgebungsvariablen heißen jetzt `KUROKO_*` statt `GHOSTWRITER_*`.
 
 Vollständige Vorlagen mit allen Schlüsseln, Standardwerten und kurzen Kommentaren liegen im Repository unter
-[`config/settings.example.toml`](config/settings.example.toml), [`config/prompts.example.toml`](config/prompts.example.toml) und [`config/keybinds.example.toml`](config/keybinds.example.toml).
+[`config/settings.example.toml`](../config/settings.example.toml), [`config/prompts.example.toml`](../config/prompts.example.toml) und [`config/keybinds.example.toml`](../config/keybinds.example.toml).
 Zum Verwenden nach `%APPDATA%\Kuroko\` kopieren und `.example` aus dem Namen entfernen. Die Vorlagen enthalten keine
 API-Schlüssel; Schlüssel nie ins Repository einchecken.
 
 ### Editor-Unterstützung (JSON-Schema)
 
-Für alle drei Dateien liegt ein JSON-Schema unter [`schemas/`](schemas/): `settings.schema.json`, `prompts.schema.json` und `keybinds.schema.json`.
+Für alle drei Dateien liegt ein JSON-Schema unter [`schemas/`](../schemas/): `settings.schema.json`, `prompts.schema.json` und `keybinds.schema.json`.
 Editoren mit [Taplo](https://taplo.tamasfe.dev/), etwa VSCodium/VS Code mit der Erweiterung **Even Better TOML**, zeigen
 damit Vervollständigung, Beschreibungen beim Überfahren und Fehler wie unbekannte Schlüssel, falsche Typen, Werte außerhalb
 der erlaubten Liste (`mode`, `output`, `theme`, Positionen …) oder Zahlen außerhalb des Bereichs. Die App prüft beim Laden
 unabhängig davon selbst und meldet Fehler mit Datei und Zeile; das Schema ist nur eine Hilfe beim Schreiben.
 
 * Die Vorlagen in `config/` verweisen in der ersten Zeile per `#:schema ../schemas/….schema.json` darauf. Für TOML ist das ein
-  Kommentar, die App ignoriert ihn. Zusätzlich ordnet [`.taplo.toml`](.taplo.toml) die Dateien den Schemas zu, damit auch
+  Kommentar, die App ignoriert ihn. Zusätzlich ordnet [`.taplo.toml`](../.taplo.toml) die Dateien den Schemas zu, damit auch
   `taplo check` im Repository-Ordner funktioniert.
 * Für die echten Dateien in `%APPDATA%\Kuroko\` entweder die passende Zeile als erste Zeile einfügen, mit absolutem Pfad zum
   Repository, z. B. `#:schema file:///C:/Pfad/zum/Repository/schemas/settings.schema.json`, oder in den
@@ -544,6 +544,8 @@ Während die Antwort noch läuft, wird der Kopier-Hotkey ignoriert (kein halbes 
   (siehe [Bauen, testen, ausführen](#bauen-testen-ausführen)) oder die Variante mit `-SelfContained` verwenden.
 * **Log:** `kuroko.log` im Config-Ordner (Inhalt siehe [Datenschutz](#datenschutz); nie Texte oder Schlüssel).
 * **Hotkey reagiert nicht:** Wenn eine andere App ihn belegt, meldet Kuroko das beim Start/Neuladen. Anderen Hotkey wählen.
+  Lässt sich ein Hotkey nicht lesen (etwa eine Taste wie `ü`, die das aktuelle Tastaturlayout nicht hat), meldet Kuroko ihn
+  als „ungültig“ und nennt den Grund: „Hotkey {Hotkey} ({Aktion}) ist ungültig: {Grund}“. Hotkey in `keybinds.toml` anpassen.
 * **„API-Schlüssel fehlt":** Schlüssel über Tray-Symbol → „API-Schlüssel …“ speichern, oder `api_key` bzw.
   `api_key_env` im Provider-Block setzen. Eine neu gesetzte Umgebungsvariable sieht nur eine neu gestartete App
   (Kuroko beenden und wieder starten; „Config neu laden“ reicht dafür nicht). Danach mit „Verbindung testen“ prüfen.
