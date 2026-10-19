@@ -55,6 +55,7 @@ public partial class StatusWindow : Window, IStatusView
     private bool _wheelPending;
     private CardGrowth _growth;
     private int _fixedXPx;
+    private int _cardWidthPx;
     private int _fixedEdgePx;
     private double _cardInnerWidth;
     private double _cardMaxHeight;
@@ -333,6 +334,7 @@ public partial class StatusWindow : Window, IStatusView
         ResultScroll.MinHeight = Math.Max(0, Math.Min(_resultMinHeight + 2 * shadow, _cardMaxHeight) - chrome);
 
         var widthPx = (int)Math.Ceiling((_cardInnerWidth + 2 * shadow) * scale);
+        _cardWidthPx = widthPx;
         var maxHeightPx = (int)Math.Ceiling(_cardMaxHeight * scale);
 
         if (anchor.Spot is { } spot)
@@ -356,6 +358,19 @@ public partial class StatusWindow : Window, IStatusView
     {
         var heightPx = (int)Math.Ceiling(heightDip * _anchor.Monitor.Scale);
         return (_fixedXPx, new CardPlacement(_fixedXPx, _fixedEdgePx, _growth).TopFor(heightPx));
+    }
+
+    /// <summary>
+    /// Top-left position for the progress pill of a card that shows no text yet: horizontally centered over the place the
+    /// card will take, vertically at the edge it grows from. When the card replaces the pill, the middle stays where it was.
+    /// </summary>
+    private (int X, int Y) PillInCardPosition(double widthDip, double heightDip)
+    {
+        var scale = _anchor.Monitor.Scale;
+        var widthPx = (int)Math.Ceiling(widthDip * scale);
+        var (_, y) = CardPosition(heightDip);
+        var x = CardSpots.CenterIn(_fixedXPx, _cardWidthPx, widthPx, _anchor.Monitor, (int)Math.Round(_anchor.MarginDip * scale));
+        return (x, y);
     }
 
     private void Flush()
@@ -504,7 +519,7 @@ public partial class StatusWindow : Window, IStatusView
         else ChunkShift.BeginAnimation(TranslateTransform.XProperty, null);
 
         var height = ActualHeight > 0 ? ActualHeight : Root.DesiredSize.Height + 2 * shadow;
-        var (x, y) = _resultMode ? CardPosition(height) : anchor.PlaceWindow(new Size(Width, height));
+        var (x, y) = _resultMode ? PillInCardPosition(Width, height) : anchor.PlaceWindow(new Size(Width, height));
         WindowHelper.MoveTo(_hwnd, x, y);
         if (!IsVisible)
         {

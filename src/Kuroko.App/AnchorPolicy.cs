@@ -1,4 +1,5 @@
 using Kuroko.App.Overlay;
+using Kuroko.App.Themes;
 using Kuroko.Core.Config;
 using Kuroko.Platform.TextIntegration;
 
@@ -26,6 +27,9 @@ internal sealed class AnchorPolicy
 
     /// <summary>result_screen_margin: distance of the card to the screen edge, in device-independent pixels.</summary>
     public double ResultScreenMargin { get; set; } = AppSettings.DefaultResultScreenMargin;
+
+    /// <summary>result_width: the card's width in device-independent pixels, without the shadow margin.</summary>
+    public double ResultWidth { get; set; } = AppSettings.DefaultResultWidth;
 
     /// <summary>pill_position: where the status pill goes (follow = where the picker opens).</summary>
     public PillPlacement PillPlacement { get; set; } = PillPlacement.Follow;
@@ -67,7 +71,7 @@ internal sealed class AnchorPolicy
         PillPlacement.Fixed => Anchor.ResolveSpot(target, PillSpot, PillScreenMargin),
         PillPlacement.Caret => Refine(Anchor.Resolve(target, OverlayPosition.Caret), target, probe, OverlayPosition.Caret) with { MarginDip = PillScreenMargin },
         PillPlacement.Mouse => Anchor.Resolve(target, OverlayPosition.Mouse) with { MarginDip = PillScreenMargin },
-        PillPlacement.Card => ForResult(target, probe, pickerAnchor),
+        PillPlacement.Card => ForResult(target, probe, pickerAnchor) with { AlignWidthDip = ResultWidth + 2 * WindowSkin.ShadowMargin },
         _ => pickerAnchor,
     };
 }

@@ -132,7 +132,11 @@ public sealed class AppController
     }
 
     /// <summary>result_width, result_min_height and result_max_height: size of the card; used for the next card that opens.</summary>
-    public void SetResultSize(double width, double minHeight, double maxHeight) => _status.SetResultSize(width, minHeight, maxHeight);
+    public void SetResultSize(double width, double minHeight, double maxHeight)
+    {
+        _anchors.ResultWidth = width; // a pill with pill_position = "card" is centered over the card's place
+        _status.SetResultSize(width, minHeight, maxHeight);
+    }
 
     /// <summary>pill_position: where the status pill appears.</summary>
     public PillPlacement PillPlacement

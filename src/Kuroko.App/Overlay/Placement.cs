@@ -105,13 +105,32 @@ public static class CardSpots
         edge = Math.Max(low, Math.Min(edge, Math.Max(low, high)));
         return new CardPlacement(x, edge, growth);
     }
+
+    /// <summary>
+    /// Left edge of a window of <paramref name="widthPx"/> centered horizontally over a box (the place of a card) that starts
+    /// at <paramref name="boxX"/> and is <paramref name="boxWidthPx"/> wide, kept between the margins of the work area.
+    /// </summary>
+    public static int CenterIn(int boxX, int boxWidthPx, int widthPx, MonitorArea monitor, int marginPx)
+    {
+        var work = monitor.WorkArea;
+        var x = boxX + (boxWidthPx - widthPx) / 2;
+        var min = work.Left + marginPx;
+        return Math.Max(min, Math.Min(x, work.Right - widthPx - marginPx));
+    }
 }
 
 /// <summary>Where the overlay and the status pill appear for one run: resolved once at hotkey time.</summary>
 /// <param name="Spot">Set for the result card with a fixed place: the window goes there (see <see cref="CardSpots"/>), not near <paramref name="Point"/>.</param>
 /// <param name="MarginDip">Distance kept to the screen edge (result_screen_margin for the card).</param>
+/// <param name="AlignWidthDip">Set for a pill that stands where a card would appear (pill_position = "card"): the card's width.
+/// The pill is then centered over the place a card of that width would take, instead of starting at its left edge.</param>
 public readonly record struct Anchor(
-    ScreenPoint Point, int Height, MonitorArea Monitor, CardSpot? Spot = null, double MarginDip = Anchor.DefaultMarginDip)
+    ScreenPoint Point,
+    int Height,
+    MonitorArea Monitor,
+    CardSpot? Spot = null,
+    double MarginDip = Anchor.DefaultMarginDip,
+    double? AlignWidthDip = null)
 {
     public const double DefaultMarginDip = 8;
 
@@ -146,12 +165,22 @@ public readonly record struct Anchor(
         var heightPx = (int)Math.Ceiling(sizeDip.Height * Monitor.Scale);
         var marginPx = (int)Math.Round(MarginDip * Monitor.Scale);
 
+        // The box the window is placed in: its own width, or the card's (never wider than the work area between the margins).
+        var boxWidthPx = AlignWidthDip is { } align
+            ? Math.Min((int)Math.Ceiling(align * Monitor.Scale), Monitor.WorkArea.Width - 2 * marginPx)
+            : widthPx;
+
+        int x, y;
         if (Spot is { } spot)
         {
-            var placement = CardSpots.Place(spot, Monitor, widthPx, heightPx, marginPx);
-            return (placement.X, placement.TopFor(heightPx));
+            var placement = CardSpots.Place(spot, Monitor, boxWidthPx, heightPx, marginPx);
+            (x, y) = (placement.X, placement.TopFor(heightPx));
+        }
+        else
+        {
+            (x, y) = WindowHelper.PlaceNear(Point, Height, boxWidthPx, heightPx, Monitor, MarginDip);
         }
 
-        return WindowHelper.PlaceNear(Point, Height, widthPx, heightPx, Monitor, MarginDip);
+        return (boxWidthPx == widthPx ? x : CardSpots.CenterIn(x, boxWidthPx, widthPx, Monitor, marginPx), y);
     }
 }
