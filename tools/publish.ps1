@@ -1,5 +1,5 @@
 # Builds a release version of Kuroko into publish\Kuroko (framework-dependent) or publish\Kuroko-selfcontained,
-# and zips it as publish\Kuroko-<version>-win-x64.zip (or ...-win-x64-selfcontained.zip) for the GitHub release.
+# and zips it as publish\Kuroko-<version>-win-x64.zip (or ...-win-x64-selfcontained.zip) to copy it elsewhere.
 # The version comes from Directory.Build.props.
 #   powershell -File tools\publish.ps1                 # needs the .NET 10 Desktop Runtime on the target PC (small)
 #   powershell -File tools\publish.ps1 -SelfContained  # runs anywhere, ~150 MB
