@@ -12,7 +12,7 @@ public static class Loc
         ["question_hint"] = ("Frage zum markierten Text, Enter zum Senden", "Question about the selected text, Enter to send"),
         ["question_name"] = ("Frage", "Question"),
         ["no_results"] = ("Keine Treffer", "No matches"),
-        ["working"] = ("{0} …", "{0} …"),
+        ["working"] = ("{0}", "{0}"), // the moving line already says it is working
 
         ["err_elevated"] = ("{0} läuft mit Administratorrechten; dort ist kein Zugriff möglich.",
             "{0} runs as administrator; access is not possible."),
@@ -38,7 +38,7 @@ public static class Loc
         ["llm_truncated"] = ("{0}: Die Antwort war zu lang und wurde abgeschnitten. Der Text blieb unverändert.", "{0}: the answer was cut off. The text is unchanged."),
         ["llm_empty"] = ("{0}: Leere Antwort. Der Text blieb unverändert.", "{0}: empty answer. The text is unchanged."),
         ["llm_protocol"] = ("{0}: Unerwartete Antwort{1}. Der Text blieb unverändert.", "{0}: unexpected answer{1}. The text is unchanged."),
-        ["fallback_working"] = ("{0} nicht erreichbar, frage {1} …", "{0} unavailable, asking {1} …"),
+        ["fallback_working"] = ("{0} nicht erreichbar, frage {1}", "{0} unavailable, asking {1}"),
         ["fallback_done"] = ("Antwort von {1} ({0} war nicht erreichbar).", "Answer from {1} ({0} was unavailable)."),
         ["llm_config"] = ("Kein Anbieter eingerichtet: {0}", "No provider set up: {0}"),
         ["err_marker_unclosed"] = ("Marker {0} ohne schließendes {1}.", "Marker {0} without a closing {1}."),
@@ -69,7 +69,7 @@ public static class Loc
         ["err_open_file"] = ("{0} konnte nicht geöffnet werden.", "{0} could not be opened."),
 
         ["tray_test"] = ("Verbindung testen", "Test connection"),
-        ["conn_testing"] = ("Verbindung zu „{0}“ wird getestet …", "Testing the connection to \"{0}\" …"),
+        ["conn_testing"] = ("Verbindung zu „{0}“ wird getestet", "Testing the connection to \"{0}\""),
         ["conn_ok"] = ("Verbindung zu „{0}“ klappt ({1}, {2} ms).", "The connection to \"{0}\" works ({1}, {2} ms)."),
         ["conn_network"] = ("{0}: Keine Verbindung (Internet, Proxy oder base_url prüfen).", "{0}: no connection (check internet, proxy or base_url)."),
         ["conn_timeout"] = ("{0}: Keine Antwort innerhalb der Zeitgrenze.", "{0}: no answer in time."),

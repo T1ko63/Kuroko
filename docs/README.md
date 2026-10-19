@@ -58,7 +58,7 @@ der Text im Feld oder auf der Seite bleibt unverändert. Gedacht für Zusammenfa
 schreibgeschützten Inhalten, aber auch für Analysen in einem Entwurf, ohne ihn zu ändern. `output` ist unabhängig von `mode`
 (`mode` beschreibt die Eingabe, `output` das Ziel des Ergebnisses). Aufruf wie jeder Prompt: Hotkey des Prompts oder Overlay-Palette.
 
-* Ablauf: Hotkey, dann die gewohnte Fortschrittspille („Summary …“ mit Linie). Mit dem ersten Text wird daraus die Karte, die mit der
+* Ablauf: Hotkey, dann die gewohnte Fortschrittspille („Summary“ mit Linie). Mit dem ersten Text wird daraus die Karte, die mit der
   Antwort wächst (feste Breite (`result_width`), höchstens `result_max_height` hoch, darüber dünne Scrollbar; sie scrollt selbst mit, bis du von Hand scrollst). Die Linie
   verschwindet, wenn die Antwort vollständig ist. Zeilen mit `- ` erscheinen als Aufzählung; reiner Text, kein Markdown.
 * Die Karte nimmt nie den Fokus, hat keinen Taskleisteneintrag und ändert die Auswahl in der Ziel-App nicht. Sie hat standardmäßig
@@ -297,7 +297,7 @@ fallback_provider = "openai"    # nur für diesen Anbieter; gilt vor dem globale
   nicht: Ein Text, der den Rechner nicht verlassen soll, geht nicht in die Cloud, nur weil Ollama gerade aus ist. Wer
   das trotzdem will, trägt `fallback_provider` im Block des lokalen Anbieters ein.
 * **Modell:** Der Ausweich-Anbieter nutzt sein eigenes `model`; ein `model` aus dem Prompt gehört zum Anbieter des Prompts.
-* **Anzeige:** Die Pille zeigt während des Wartens „gemini nicht erreichbar, frage local …“. Nach dem Ersetzen meldet
+* **Anzeige:** Die Pille zeigt während des Wartens „gemini nicht erreichbar, frage local“. Nach dem Ersetzen meldet
   sie kurz, von welchem Anbieter die Antwort kam.
 * **Prüfung:** Ein unbekannter Name oder ein Anbieter, der auf sich selbst zeigt, ist ein Config-Fehler mit Zeilenangabe.
 
