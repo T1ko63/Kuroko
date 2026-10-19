@@ -103,7 +103,8 @@ Textcursor bzw. an der Maus. Es wächst vom Bildschirmrand weg, wenn die Liste b
 **Pille:** Fortschritt, kurze Hinweise und Fehler zeigt eine kleine Pille. Sie steht standardmäßig dort, wo sich das Prompt-Menü
 öffnet (`pill_position = "follow"`). Mit `caret` steht sie am Textcursor, mit `mouse` an der Maus, mit `fixed` an
 `pill_fixed_position` (dieselben elf Plätze) und mit `card` dort, wo die Ergebnis-Karte erscheint.
-Bei Prompts mit Ergebnis-Karte steht sie immer am Platz der Karte, weil aus ihr die Karte wird. `pill_screen_margin` (Standard 8 px)
+Bei Prompts mit Ergebnis-Karte steht sie immer am Platz der Karte, weil aus ihr die Karte wird. In beiden Fällen steht sie
+waagrecht mittig über der Fläche der Karte, an der Kante, von der aus die Karte wächst. `pill_screen_margin` (Standard 8 px)
 ist bei `fixed`, `caret` und `mouse` der Abstand zum Bildschirmrand. Größe und Schrift stellen
 `pill_min_width`, `pill_max_width`, `pill_min_height` und `pill_font_size` ein, `pill_duration` die Sekunden, die ein Hinweis steht.
 
