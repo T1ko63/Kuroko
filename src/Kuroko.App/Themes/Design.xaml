@@ -30,6 +30,8 @@
     <Thickness x:Key="Status.Padding">18,12,18,24</Thickness>
     <Thickness x:Key="Status.LineMargin">18,0,18,11</Thickness>
     <sys:Double x:Key="Status.LineHeight">2</sys:Double>
+    <sys:Double x:Key="Status.ListGap">4</sys:Double>             <!-- between two rows of a submap's key list -->
+    <sys:Double x:Key="Status.ListKeyGap">16</sys:Double>         <!-- between the key and its target -->
 
     <!-- Result card (overlay output): the status window grown to a text card -->
     <sys:Double x:Key="Result.Width">480</sys:Double>             <!-- fixed width of the card (never wider than the monitor) -->

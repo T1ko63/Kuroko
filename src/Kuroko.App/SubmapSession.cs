@@ -7,7 +7,7 @@ using Kuroko.Platform.Hotkeys;
 namespace Kuroko.App;
 
 /// <summary>
-/// An open submap: its label in the pill, its keys and Esc registered as temporary hotkeys without modifiers, and a timer.
+/// An open submap: its label (or its key list) in the pill, its keys and Esc registered as temporary hotkeys without modifiers, and a timer.
 /// A listed key, Esc, the timeout, a click on the pill or anything else the controller starts closes it, and closing
 /// always releases every key it took. Keys that are not listed are never taken, so they type as usual (there is no
 /// keyboard hook). Without a registry nothing is registered.
@@ -33,7 +33,7 @@ internal sealed class SubmapSession(IStatusView status, IDesktop desktop, IHotke
         try
         {
             // The pill first: it replaces an error pill whose copy hotkey is then released before the keys are taken.
-            status.ShowSubmap(submap.Label, anchor);
+            status.ShowSubmap(SubmapView.For(submap, KeyLayouts.Current), anchor);
 
             _esc = new TemporaryHotkey(hotkeys, $"Submap '{submap.Name}': Esc could not be registered");
             _esc.Register(TemporaryHotkey.Escape, _ =>
@@ -90,3 +90,14 @@ internal sealed class SubmapSession(IStatusView status, IDesktop desktop, IHotke
         if (hidePill) status.HideStatus();
     }
 }
+
+/// <summary>What the pill shows for an open submap: its own <see cref="Label"/>, or, without one, <see cref="Rows"/>.</summary>
+public sealed record SubmapView(string? Label, IReadOnlyList<SubmapViewRow> Rows)
+{
+    /// <summary>The submap's label, and one row per key in file order: the key as a hotkey shows it ("K", "&lt;") and the target as written.</summary>
+    public static SubmapView For(SubmapDefinition submap, IKeyLayout? layout)
+        => new(submap.Label, submap.Keys.Select(k => new SubmapViewRow(HotkeyGesture.DisplayKey(k.VirtualKey, layout), k.Target)).ToList());
+}
+
+/// <summary>One line of a submap's key list.</summary>
+public sealed record SubmapViewRow(string Key, string Target);

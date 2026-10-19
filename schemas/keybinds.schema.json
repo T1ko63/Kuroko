@@ -72,7 +72,7 @@
         "label": {
           "type": "string",
           "minLength": 1,
-          "description": "Text the pill shows while the submap is open, e.g. which key does what. The submap's name when missing."
+          "description": "Text the pill shows while the submap is open; line breaks (\\n or a \"\"\"multi-line\"\"\" string) are kept. Without a label the pill lists the keys, one per line: key and target."
         },
         "timeout": {
           "type": "integer",

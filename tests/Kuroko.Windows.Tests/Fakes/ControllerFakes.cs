@@ -279,10 +279,10 @@ internal sealed class FakeStatus : IStatusView
         IsActionShown = true;
     }
 
-    public void ShowSubmap(string text, Anchor anchor)
+    public void ShowSubmap(SubmapView view, Anchor anchor)
     {
         Leave();
-        Shown.Add($"submap: {text}");
+        Shown.Add($"submap: {view.Label ?? string.Join(" | ", view.Rows.Select(r => $"{r.Key} {r.Target}"))}");
     }
 
     public void HideStatus()

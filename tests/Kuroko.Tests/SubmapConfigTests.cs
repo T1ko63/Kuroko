@@ -59,10 +59,10 @@ public class SubmapConfigTests
     }
 
     [Fact]
-    public void Label_defaults_to_the_name_and_timeout_to_two_seconds()
+    public void Without_a_label_the_pill_lists_the_keys_and_timeout_defaults_to_two_seconds()
     {
         var submap = Assert.Single(Load("[submaps.quick]\nopen = \"Ctrl+Alt+Q\"\nkeys = { P = \"Professioneller\" }\n").Submaps);
-        Assert.Equal("quick", submap.Label);
+        Assert.Null(submap.Label);
         Assert.Equal(SubmapDefinition.DefaultTimeoutMs, submap.TimeoutMs);
         Assert.Equal(2000, submap.TimeoutMs);
     }
@@ -242,5 +242,12 @@ public class SubmapConfigTests
         Assert.Null(shorter.Hotkey);
         Assert.Equal(new SubmapCall("Alt+Shift+T", 0x4B), shorter.Submap);
         Assert.Equal((null, null), (other.Hotkey, other.Submap));
+    }
+
+    [Fact]
+    public void A_label_keeps_its_line_breaks()
+    {
+        var submap = Assert.Single(Load("[submaps.tone]\nopen = \"Ctrl+Alt+Q\"\nlabel = \"\"\"\nP  Professioneller\nL  Lockerer\n\"\"\"\nkeys = { P = \"Professioneller\" }\n").Submaps);
+        Assert.Equal("P  Professioneller\nL  Lockerer", submap.Label!.ReplaceLineEndings("\n"));
     }
 }
