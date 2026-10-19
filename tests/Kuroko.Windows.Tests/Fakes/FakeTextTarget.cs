@@ -14,6 +14,7 @@ internal sealed class FakeTextTarget : IClipboard, IKeyboard
     private readonly object _gate = new();
     private uint _sequence = 1;
     private DelayedTextOffer? _offer;
+    private string? _secondCopyStep;
 
     public FakeTextTarget(string userClipboard = "user clipboard")
     {
@@ -59,7 +60,10 @@ internal sealed class FakeTextTarget : IClipboard, IKeyboard
     /// <summary>Delay before the app answers Ctrl+C or Ctrl+V; zero answers synchronously.</summary>
     public TimeSpan ReactionDelay { get; set; }
 
-    /// <summary>The app first empties the clipboard and fills it in a second update (seen in some editors).</summary>
+    /// <summary>
+    /// The app first empties the clipboard and fills it in a second update (seen in some editors). The second update
+    /// comes once the reader has seen the empty clipboard and waits again, so the test does not race a timer.
+    /// </summary>
     public bool CopiesInTwoSteps { get; set; }
 
     /// <summary>Called right after Ctrl+C was sent (e.g. to cancel while the read waits for the copy).</summary>
@@ -131,13 +135,9 @@ internal sealed class FakeTextTarget : IClipboard, IKeyboard
             return;
         }
 
-        // The second update comes a little later, so the reader sees the empty clipboard first.
+        // The second update waits for the reader (see WaitForChangeAsync), so it sees the empty clipboard first.
         Update(string.Empty, "app cleared clipboard");
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(20);
-            Update(text, "app copied selection");
-        });
+        Volatile.Write(ref _secondCopyStep, text);
     }
 
     private void Render(DelayedTextOffer offer)
@@ -163,6 +163,14 @@ internal sealed class FakeTextTarget : IClipboard, IKeyboard
         while (SequenceNumber == since)
         {
             ct.ThrowIfCancellationRequested();
+
+            // The reader has caught up with the cleared clipboard and waits for more: now the app fills it.
+            if (Interlocked.Exchange(ref _secondCopyStep, null) is { } late)
+            {
+                Update(late, "app copied selection");
+                continue;
+            }
+
             if (Environment.TickCount64 >= deadline) return false;
             await Task.Delay(1, ct);
         }

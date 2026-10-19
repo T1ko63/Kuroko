@@ -5,13 +5,14 @@ namespace Kuroko.Core.Config;
 /// <summary>Calls an action once after a burst of triggers has been quiet for the given time.</summary>
 public sealed class Debouncer : IDisposable
 {
-    private readonly Timer _timer;
+    private readonly ITimer _timer;
     private readonly TimeSpan _quiet;
 
-    public Debouncer(TimeSpan quiet, Action action)
+    /// <param name="time">The clock the quiet period runs on; tests pass a manual one. Null: the system clock.</param>
+    public Debouncer(TimeSpan quiet, Action action, TimeProvider? time = null)
     {
         _quiet = quiet;
-        _timer = new Timer(_ =>
+        _timer = (time ?? TimeProvider.System).CreateTimer(_ =>
         {
             try
             {
@@ -22,7 +23,7 @@ public sealed class Debouncer : IDisposable
                 // A failing handler must not take the process down from a timer thread.
                 AppLog.Error("Debounced action failed.", ex);
             }
-        });
+        }, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
     }
 
     public void Trigger() => _timer.Change(_quiet, Timeout.InfiniteTimeSpan);
@@ -42,9 +43,15 @@ public sealed class ConfigWatcher : IDisposable
     private readonly HashSet<string> _files;
 
     public ConfigWatcher(string directory, TimeSpan quietPeriod, params string[] fileNames)
+        : this(directory, quietPeriod, TimeProvider.System, fileNames)
+    {
+    }
+
+    /// <param name="time">The clock the quiet period runs on; tests pass a manual one.</param>
+    public ConfigWatcher(string directory, TimeSpan quietPeriod, TimeProvider time, params string[] fileNames)
     {
         _files = new HashSet<string>(fileNames, StringComparer.OrdinalIgnoreCase);
-        _debouncer = new Debouncer(quietPeriod, () => Changed?.Invoke());
+        _debouncer = new Debouncer(quietPeriod, () => Changed?.Invoke(), time);
 
         _watcher = new FileSystemWatcher(directory)
         {
