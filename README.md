@@ -1,10 +1,4 @@
-# 黒子 Kuroko
-
-Designed to be invisible, engineered to be everywhere
-
-<img width="400" height="320" alt="Screenshot 2026-10-08 074916" src="https://github.com/user-attachments/assets/6cbd501e-4fba-42eb-bd5e-9f23caae6523" />
-
-## Features
+ # Kuroko
 
 ### Lightweight and portable
 Kuroko requires no installation or administrator privileges and runs directly on restricted work or corporate computers. It comes in two builds: a small one of about 2 MB that needs the .NET 10 Desktop Runtime, and a self-contained one of about 150 MB that runs on any Windows PC.
