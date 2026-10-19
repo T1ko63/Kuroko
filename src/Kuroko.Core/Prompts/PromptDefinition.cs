@@ -1,3 +1,5 @@
+using Kuroko.Core.Config;
+
 namespace Kuroko.Core.Prompts;
 
 public enum PromptMode
@@ -41,4 +43,10 @@ public sealed record PromptDefinition(
     /// Not read from prompts.toml.
     /// </summary>
     public bool OpenEndedAnswer { get; init; }
+
+    /// <summary>
+    /// For a prompt without a <see cref="Hotkey"/>: the first submap in keybinds.toml with a key for it, so the picker can show
+    /// how to reach it ("Alt+Shift+T › K"). Not read from prompts.toml.
+    /// </summary>
+    public SubmapCall? Submap { get; init; }
 }

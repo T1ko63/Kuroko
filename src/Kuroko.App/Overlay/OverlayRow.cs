@@ -22,7 +22,10 @@ public sealed record OverlayRow
     /// <summary>Muted text after the name, with its leading gap: the command's tray label. Empty for prompts.</summary>
     public string Detail { get; private init; } = string.Empty;
 
-    /// <summary>Right-aligned subtle text: the prompt's own hotkey (with [mods] filled in), or a command's on/off state.</summary>
+    /// <summary>
+    /// Right-aligned subtle text: the prompt's own hotkey (with [mods] filled in), else the submap and key that run it
+    /// ("Alt+Shift+T › K"), or a command's on/off state.
+    /// </summary>
     public string Trailing { get; private init; } = string.Empty;
 
     /// <summary>Greyed out and skipped by the keys; Enter and click do nothing on it.</summary>
@@ -34,8 +37,15 @@ public sealed record OverlayRow
         Prompt = prompt,
         Number = number,
         Name = prompt.Name,
-        Trailing = prompt.Hotkey is { } hotkey ? HotkeyGesture.Display(hotkey, null, KeyLayouts.Current) : string.Empty,
+        Trailing = HowToRun(prompt, KeyLayouts.Current),
     };
+
+    private static string HowToRun(PromptDefinition prompt, IKeyLayout? layout)
+    {
+        if (prompt.Hotkey is { } hotkey) return HotkeyGesture.Display(hotkey, null, layout);
+        if (prompt.Submap is { } submap) return $"{HotkeyGesture.Display(submap.Open, null, layout)} › {HotkeyGesture.DisplayKey(submap.VirtualKey, layout)}";
+        return string.Empty;
+    }
 
     /// <summary>The "/" list: the commands matching <paramref name="name"/>, in their fixed order.</summary>
     public static List<OverlayRow> ForCommands(IReadOnlyList<AppCommand> commands, string name)

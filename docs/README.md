@@ -108,8 +108,8 @@ waagrecht mittig über der Fläche der Karte, an der Kante, von der aus die Kart
 ist bei `fixed`, `caret` und `mouse` der Abstand zum Bildschirmrand. Größe und Schrift stellen
 `pill_min_width`, `pill_max_width`, `pill_min_height` und `pill_font_size` ein, `pill_duration` die Sekunden, die ein Hinweis steht.
 
-**Aussehen:** Das Overlay ist bewusst reduziert: oben die Suche, darunter nur Name und (falls vorhanden) Hotkey jedes Prompts,
-links die Ziffern zum Direktwählen. Hell/Dunkel folgt Windows (`theme`). Transparenz, Eckenradius, Blur und die drei Farben jedes
+**Aussehen:** Das Overlay ist bewusst reduziert: oben die Suche, darunter nur Name und (falls vorhanden) Hotkey jedes Prompts
+(ohne eigenen Hotkey die Submap, die ihn startet, z. B. `Alt+Shift+T › K`), links die Ziffern zum Direktwählen. Hell/Dunkel folgt Windows (`theme`). Transparenz, Eckenradius, Blur und die drei Farben jedes
 Themes stehen im Block `[appearance]` der `settings.toml` (siehe unten); alle Nebenfarben (gedämpfter Text, Trennlinie, Scrollbar,
 Hover) werden aus der Textfarbe abgeleitet. `accent` färbt nur noch Textcursor, Textmarkierung und Fortschrittslinie, die Auswahlzeile
 bestimmt `selection`. Maße, Schriftgrößen und Abstände stehen weiter an einer Stelle: `src\Kuroko.App\Themes\Design.xaml`.

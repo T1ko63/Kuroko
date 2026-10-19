@@ -181,8 +181,9 @@ public sealed class ConfigManager
             if (useKeybinds) _keybindsText = keybindsText;
 
             // A new list only when prompts or their hotkeys changed: the overlay redraws its rows when the list is another one.
+            // A prompt without a hotkey of its own shows the submap key that runs it.
             var withHotkeys = promptsChanged || keybindsChanged
-                ?prompts.Select(p => p with { Hotkey = keybinds.HotkeyOf(p.Name) }).ToList()
+                ? prompts.Select(keybinds.ApplyTo).ToList()
                 : old.Prompts;
             _prompts = prompts;
 
