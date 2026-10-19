@@ -21,8 +21,10 @@ namespace Kuroko.App.Overlay;
 /// </summary>
 public partial class StatusWindow : Window, IStatusView
 {
-    private static readonly TimeSpan ErrorDuration = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan ActionDuration = TimeSpan.FromSeconds(15);
+    /// <summary>A longer info (ShowInfo with longer: true), e.g. "configuration loaded".</summary>
+    private static readonly TimeSpan LongInfoDuration = TimeSpan.FromSeconds(5);
+
+    private static readonly TimeSpan MinActionDuration = TimeSpan.FromSeconds(Kuroko.Core.Config.AppSettings.MinActionPillDuration);
 
     private readonly DispatcherTimer _autoHide;
 
@@ -31,9 +33,13 @@ public partial class StatusWindow : Window, IStatusView
     private double _pillMaxWidth;
     private double _pillMinHeight;
     private TimeSpan _infoDuration = TimeSpan.FromSeconds(2);
+
+    // pill_error_duration; null = an error stays until it is clicked or Esc is pressed.
+    private TimeSpan? _errorDuration = TimeSpan.FromSeconds(Kuroko.Core.Config.AppSettings.DefaultPillErrorDuration);
     private nint _hwnd;
     private bool _isProgress;
     private bool _actionPill;
+    private bool _errorShown;
 
     // ---- result card ----
 
@@ -74,7 +80,7 @@ public partial class StatusWindow : Window, IStatusView
         System.Windows.Documents.TextElement.SetFontSize(ResultLines, (double)FindResource("Font.Result"));
         _resultWidth = (double)FindResource("Result.Width");
         _resultMaxHeight = (double)FindResource("Result.MaxHeight");
-        _autoHide = new DispatcherTimer { Interval = ErrorDuration };
+        _autoHide = new DispatcherTimer { Interval = LongInfoDuration };
         _autoHide.Tick += (_, _) => HideStatus();
         SourceInitialized += (_, _) =>
         {
@@ -94,6 +100,15 @@ public partial class StatusWindow : Window, IStatusView
 
     /// <summary>True while an error pill from <see cref="ShowErrorWithAction"/> is on screen.</summary>
     public bool IsActionShown => _actionPill;
+
+    /// <summary>An error pill appeared (<see cref="ShowError"/>, <see cref="ShowErrorWithAction"/>); raised after the pill is up.</summary>
+    public event Action? ErrorShown;
+
+    /// <summary>The error pill went away: hidden (click, Esc, timeout) or replaced by anything else, also by the next error.</summary>
+    public event Action? ErrorEnded;
+
+    /// <summary>True while an error pill is on screen.</summary>
+    public bool IsErrorShown => _errorShown;
 
     public void RunOnUi(Action action)
     {
@@ -130,6 +145,7 @@ public partial class StatusWindow : Window, IStatusView
         _pillMaxWidth = Math.Max(layout.MaxWidth, layout.MinWidth) + 2 * shadow;
         _pillMinHeight = layout.MinHeight;
         _infoDuration = layout.InfoDuration;
+        _errorDuration = layout.ErrorDuration;
         FontSize = layout.FontSize; // the card text has its own size (result_font_size)
         MaxWidth = Math.Max(_pillMaxWidth, _resultWidth + 2 * shadow);
     }
@@ -170,9 +186,9 @@ public partial class StatusWindow : Window, IStatusView
     public void ShowProgress(string text, Anchor anchor)
     {
         EndAction();
+        EndError();
         LeaveResultMode();
         _isProgress = true;
-        _autoHide.Interval = ErrorDuration;
         _autoHide.Stop();
         Present(text, anchor, showBar: true);
     }
@@ -187,26 +203,37 @@ public partial class StatusWindow : Window, IStatusView
         Present(text, _resultMode ? _anchor : anchor, showBar: true);
     }
 
-    public void ShowError(string text, Anchor anchor)
+    /// <summary>An error in red, gone after pill_error_duration, or with 0 when it is clicked or Esc is pressed (<see cref="ErrorShown"/>).</summary>
+    public void ShowError(string text, Anchor anchor) => ShowErrorFor(text, anchor, _errorDuration);
+
+    private void ShowErrorFor(string text, Anchor anchor, TimeSpan? duration)
     {
         EndAction();
+        EndError();
         LeaveResultMode();
         _isProgress = false;
         Present(text, anchor, showBar: false, isError: true);
-        _autoHide.Interval = ErrorDuration;
         _autoHide.Stop();
-        _autoHide.Start();
+        if (duration is { } shown)
+        {
+            _autoHide.Interval = shown;
+            _autoHide.Start();
+        }
+
+        _errorShown = true;
+        ErrorShown?.Invoke();
     }
 
-    /// <summary>A short, quiet confirmation (muted text, gone after two seconds unless <paramref name="longer"/>), e.g. "Undone".</summary>
+    /// <summary>A short, quiet confirmation (muted text, gone after pill_duration, or five seconds if <paramref name="longer"/>), e.g. "Undone".</summary>
     public void ShowInfo(string text, Anchor anchor, bool longer = false)
     {
         EndAction();
+        EndError();
         LeaveResultMode();
         _isProgress = false;
         Present(text, anchor, showBar: false);
         _autoHide.Stop();
-        _autoHide.Interval = longer ? ErrorDuration : _infoDuration;
+        _autoHide.Interval = longer ? LongInfoDuration : _infoDuration;
         _autoHide.Start();
     }
 
@@ -217,6 +244,7 @@ public partial class StatusWindow : Window, IStatusView
     public void ShowSubmap(SubmapView view, Anchor anchor)
     {
         EndAction();
+        EndError();
         LeaveResultMode();
         _isProgress = true;
         _autoHide.Stop();
@@ -251,15 +279,12 @@ public partial class StatusWindow : Window, IStatusView
 
     /// <summary>
     /// An error pill that offers something the user can still do, through a temporary hotkey the caller holds (copy an
-    /// answer that could not be pasted). It stays longer than a plain error; <see cref="ActionEnded"/> tells the caller
-    /// when to release the hotkey.
+    /// answer that could not be pasted). It stays at least 15 seconds (longer with a longer pill_error_duration, until a
+    /// click or Esc with 0); <see cref="ActionEnded"/> tells the caller when to release the hotkey.
     /// </summary>
     public void ShowErrorWithAction(string text, Anchor anchor)
     {
-        ShowError(text, anchor);
-        _autoHide.Stop();
-        _autoHide.Interval = ActionDuration;
-        _autoHide.Start();
+        ShowErrorFor(text, anchor, _errorDuration is { } duration ? (duration > MinActionDuration ? duration : MinActionDuration) : null);
         _actionPill = true;
     }
 
@@ -270,6 +295,13 @@ public partial class StatusWindow : Window, IStatusView
         ActionEnded?.Invoke();
     }
 
+    private void EndError()
+    {
+        if (!_errorShown) return;
+        _errorShown = false;
+        ErrorEnded?.Invoke();
+    }
+
     public void HideStatus()
     {
         _autoHide.Stop();
@@ -277,6 +309,7 @@ public partial class StatusWindow : Window, IStatusView
         ChunkShift.BeginAnimation(TranslateTransform.XProperty, null);
         Hide();
         EndAction();
+        EndError();
         LeaveResultMode();
     }
 
@@ -290,6 +323,7 @@ public partial class StatusWindow : Window, IStatusView
     public void BeginResult(string label, Anchor anchor)
     {
         EndAction();
+        EndError();
         LeaveResultMode();
         _resultMode = true;
         _anchor = anchor;

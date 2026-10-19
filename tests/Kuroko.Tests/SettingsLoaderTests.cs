@@ -189,6 +189,20 @@ public class SettingsLoaderTests
 
         Assert.Equal(("follow", "top-third", 8d), (s.PillPosition, s.PillFixedPosition, s.PillScreenMargin));
         Assert.Equal((200d, 420d, 0d, 13d, 2d), (s.PillMinWidth, s.PillMaxWidth, s.PillMinHeight, s.PillFontSize, s.PillDuration));
+        Assert.Equal(5d, s.PillErrorDuration);
+    }
+
+    [Theory]
+    [InlineData("pill_error_duration = 0", 0d)] // stays until a click or Esc
+    [InlineData("pill_error_duration = 0.0", 0d)]
+    [InlineData("pill_error_duration = 0.5", 0.5)]
+    [InlineData("pill_error_duration = 300", 300d)]
+    [InlineData("pill_error_duration = 12", 12d)]
+    public void The_error_duration_is_read_and_0_means_it_stays(string line, double seconds)
+    {
+        var result = Parse(line + "\n");
+        Assert.True(result.Ok, string.Join("; ", result.Issues));
+        Assert.Equal(seconds, result.Settings!.PillErrorDuration);
     }
 
     [Fact]
@@ -218,6 +232,10 @@ public class SettingsLoaderTests
     [InlineData("pill_min_height = -1", "pill_min_height must be a number")]
     [InlineData("pill_font_size = 40", "pill_font_size must be a number")]
     [InlineData("pill_duration = 0", "pill_duration must be a number")]
+    [InlineData("pill_error_duration = 0.3", "pill_error_duration must be a number between 0.5 and 300 (or 0")]
+    [InlineData("pill_error_duration = 301", "pill_error_duration must be a number between 0.5 and 300")]
+    [InlineData("pill_error_duration = -1", "pill_error_duration must be a number")]
+    [InlineData("pill_error_duration = \"long\"", "pill_error_duration must be a number")]
     [InlineData("pill_min_width = 500\npill_max_width = 300", "pill_min_width must not be larger")]
     public void Invalid_pill_settings_are_errors(string lines, string expectedMessagePart)
     {

@@ -106,7 +106,10 @@ Textcursor bzw. an der Maus. Es wächst vom Bildschirmrand weg, wenn die Liste b
 Bei Prompts mit Ergebnis-Karte steht sie immer am Platz der Karte, weil aus ihr die Karte wird. In beiden Fällen steht sie
 waagrecht mittig über der Fläche der Karte, an der Kante, von der aus die Karte wächst. `pill_screen_margin` (Standard 8 px)
 ist bei `fixed`, `caret` und `mouse` der Abstand zum Bildschirmrand. Größe und Schrift stellen
-`pill_min_width`, `pill_max_width`, `pill_min_height` und `pill_font_size` ein, `pill_duration` die Sekunden, die ein Hinweis steht.
+`pill_min_width`, `pill_max_width`, `pill_min_height` und `pill_font_size` ein, `pill_duration` die Sekunden, die ein Hinweis steht,
+`pill_error_duration` die Sekunden, die eine Fehlermeldung steht (Standard 5). Mit `pill_error_duration = 0` bleibt sie, bis du sie
+anklickst oder Esc drückst. Solange eine Fehlermeldung steht, gehört Esc Kuroko (wie bei offener Karte); jeder neue Hotkey ersetzt sie,
+und das Menü schließt sie beim Öffnen. Die Pille nach einem gescheiterten Einfügen bleibt mindestens 15 s.
 
 **Aussehen:** Das Overlay ist bewusst reduziert: oben die Suche, darunter nur Name und (falls vorhanden) Hotkey jedes Prompts
 (ohne eigenen Hotkey die Submap, die ihn startet, z. B. `Alt+Shift+T › K`), links die Ziffern zum Direktwählen. Hell/Dunkel folgt Windows (`theme`). Transparenz, Eckenradius, Blur und die drei Farben jedes
@@ -224,7 +227,8 @@ pill_min_width = 200        # Breite der Pille in px, 100-1600; ab pill_max_widt
 pill_max_width = 420
 pill_min_height = 0         # Mindesthöhe in px, 0-400 (0 = so hoch wie der Text; sonst Text mittig)
 pill_font_size = 13         # Schriftgröße der Pille, 8-32
-pill_duration = 2           # Sekunden, die ein Hinweis steht, 0.5-60 (Fehler 5 s, gescheitertes Einfügen 15 s)
+pill_duration = 2           # Sekunden, die ein Hinweis steht, 0.5-60
+pill_error_duration = 5     # Sekunden, die ein Fehler steht, 0.5-300; 0 = bis Klick oder Esc (gescheitertes Einfügen: mindestens 15 s)
 autostart = false
 idle_trim_seconds = 90      # gibt nach Ruhe ungenutzten Speicher frei (0 = nie)
 default_provider = "gemini"

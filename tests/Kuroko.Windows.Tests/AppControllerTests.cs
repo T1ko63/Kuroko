@@ -34,6 +34,14 @@ public class AppControllerTests
 
     private static async Task Idle(AppController controller) => await UiThread.Until(() => !controller.IsBusy, "controller idle");
 
+    /// <summary>An error pill is up: Esc is held for it and nothing else.</summary>
+    private void AssertOnlyErrorEsc()
+    {
+        Assert.True(_status.IsErrorShown);
+        Assert.True(_hotkeys.IsRegistered(FakeHotkeys.Esc));
+        Assert.Equal(1, _hotkeys.Count);
+    }
+
     // ---- a normal run ----
 
     [Fact]
@@ -216,7 +224,7 @@ public class AppControllerTests
 
         Assert.Equal($"error: {Loc.Get(key)}", _status.Last);
         Assert.Empty(_runner.Inputs);
-        Assert.Equal(0, _hotkeys.Count);
+        AssertOnlyErrorEsc(); // the run's keys are gone; Esc closes the error pill
     });
 
     [Fact]
@@ -326,7 +334,7 @@ public class AppControllerTests
 
         Assert.Equal($"error: {Loc.Get("err_unexpected", nameof(InvalidOperationException))}", _status.Last);
         Assert.False(controller.HasLastResult);
-        Assert.Equal(0, _hotkeys.Count);
+        AssertOnlyErrorEsc(); // the run's keys are gone; Esc closes the error pill
     });
 
     // ---- fallback provider ----
@@ -753,7 +761,7 @@ public class AppControllerTests
 
         Assert.Equal($"error: {Loc.Get("llm_network", "OpenAI")}", _status.Last);
         Assert.False(controller.HasLastResult);
-        Assert.Equal(0, _hotkeys.Count);
+        AssertOnlyErrorEsc(); // the run's keys are gone; Esc closes the error pill
     });
 
     [Fact]
@@ -766,7 +774,7 @@ public class AppControllerTests
         await Idle(controller);
 
         Assert.Equal($"error: {Loc.Get("err_no_selection")}", _status.Last);
-        Assert.Equal(0, _hotkeys.Count);
+        AssertOnlyErrorEsc(); // the run's keys are gone; Esc closes the error pill
     });
 
     // ---- undo ----
@@ -888,5 +896,112 @@ public class AppControllerTests
         Assert.DoesNotContain(_status.Shown, s => s.Contains("configuration loaded"));
         _runner.Answer("x");
         await Idle(controller);
+    });
+
+    // ---- Esc of the error pill ----
+
+    private async Task<AppController> WithErrorPill()
+    {
+        var controller = Controller();
+        _text.CaptureFailure = CaptureFailure.NoText;
+        controller.OnPromptHotkey(0, Fix);
+        await Idle(controller);
+        _text.CaptureFailure = null;
+        AssertOnlyErrorEsc();
+        return controller;
+    }
+
+    [Fact]
+    public void Esc_closes_the_error_pill_and_is_released_with_it() => UiThread.Run(async () =>
+    {
+        await WithErrorPill();
+
+        Assert.True(_hotkeys.Press(FakeHotkeys.Esc));
+
+        Assert.Equal("hide", _status.Last);
+        Assert.False(_status.IsErrorShown);
+        Assert.Equal(0, _hotkeys.Count);
+    });
+
+    [Fact]
+    public void A_click_or_the_timeout_releases_esc_of_the_error_pill() => UiThread.Run(async () =>
+    {
+        await WithErrorPill();
+
+        _status.Expire(); // a click on an error pill hides it the same way
+
+        Assert.Equal(0, _hotkeys.Count);
+        Assert.False(_hotkeys.Press(FakeHotkeys.Esc));
+    });
+
+    [Fact]
+    public void A_run_started_while_an_error_pill_is_up_takes_esc_over_without_a_conflict() => UiThread.Run(async () =>
+    {
+        var controller = await WithErrorPill();
+        _runner.AutoAnswer = null;
+
+        controller.OnPromptHotkey(0, Fix);
+        await UiThread.Until(() => _runner.Waiting, "AI call");
+
+        Assert.False(_status.IsErrorShown);
+        Assert.Equal(1, _hotkeys.Count);
+        Assert.True(_hotkeys.Press(FakeHotkeys.Esc)); // Esc now cancels the run
+        await Idle(controller);
+        Assert.Equal("hide", _status.Last);
+        Assert.Equal(0, _hotkeys.Count);
+    });
+
+    [Fact]
+    public void A_failed_paste_holds_esc_and_the_copy_hotkey_and_esc_releases_both() => UiThread.Run(async () =>
+    {
+        var controller = Controller();
+        _text.ReplaceFailure = ReplaceFailure.TargetChanged;
+        controller.OnPromptHotkey(0, Fix);
+        await Idle(controller);
+
+        Assert.True(_hotkeys.IsRegistered(FakeHotkeys.Esc));
+        Assert.True(_hotkeys.IsRegistered(FakeHotkeys.Copy));
+
+        Assert.True(_hotkeys.Press(FakeHotkeys.Esc));
+        Assert.Equal(0, _hotkeys.Count);
+    });
+
+    [Fact]
+    public void A_reload_releases_esc_of_the_error_pill_and_takes_it_again() => UiThread.Run(async () =>
+    {
+        var controller = await WithErrorPill();
+
+        controller.ReleaseResultHotkeys();
+        Assert.Equal(0, _hotkeys.Count);
+
+        controller.RestoreResultHotkeys();
+        AssertOnlyErrorEsc();
+    });
+
+    [Fact]
+    public void Opening_the_overlay_closes_the_error_pill_so_the_overlay_gets_esc() => UiThread.Run(async () =>
+    {
+        var controller = await WithErrorPill();
+
+        controller.OnOverlayHotkey(0);
+        await UiThread.Until(() => _overlay.IsShown, "overlay shown");
+
+        Assert.False(_status.IsErrorShown);
+        Assert.False(_hotkeys.IsRegistered(FakeHotkeys.Esc));
+        _overlay.Cancel();
+        await Idle(controller);
+    });
+
+    [Fact]
+    public void A_configuration_error_notice_holds_esc_too() => UiThread.Run(() =>
+    {
+        var controller = Controller();
+
+        controller.ShowNotice("settings.toml line 3: wrong");
+
+        AssertOnlyErrorEsc();
+        Assert.True(_hotkeys.Press(FakeHotkeys.Esc));
+        Assert.Equal(0, _hotkeys.Count);
+        return Task.CompletedTask;
     });
 }

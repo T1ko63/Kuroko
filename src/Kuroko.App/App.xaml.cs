@@ -313,7 +313,8 @@ public partial class App : Application, ICommandActions
             _controller.PillSpot = ParseSpot(settings.PillFixedPosition, CardSpot.TopThird);
             _controller.PillScreenMargin = settings.PillScreenMargin;
             _controller.SetPillLayout(new PillLayout(
-                settings.PillMinWidth, settings.PillMaxWidth, settings.PillMinHeight, settings.PillFontSize, TimeSpan.FromSeconds(settings.PillDuration)));
+                settings.PillMinWidth, settings.PillMaxWidth, settings.PillMinHeight, settings.PillFontSize, TimeSpan.FromSeconds(settings.PillDuration),
+                PillLayout.ErrorDurationOf(settings.PillErrorDuration)));
 
             // A fresh registry for the new provider settings; the HttpClient (and its warm connections) is kept.
             _providers = new ProviderRegistry(settings.Providers, settings.DefaultProvider, _http);
