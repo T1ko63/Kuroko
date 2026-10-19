@@ -613,7 +613,12 @@ public sealed class ConfigManagerTests : IDisposable
 
 public sealed class ConfigWatcherTests : IDisposable
 {
+    // The quiet periods run on a manual clock, so no test depends on how quickly the machine schedules timers. Only the
+    // FileSystemWatcher itself runs in real time; the tests wait for its events, never for a timer.
+    private static readonly TimeSpan Quiet = TimeSpan.FromMilliseconds(150);
+
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "ip-watch-" + Guid.NewGuid().ToString("N"));
+    private readonly ManualTimeProvider _time = new();
 
     public ConfigWatcherTests() => Directory.CreateDirectory(_dir);
 
@@ -623,46 +628,55 @@ public sealed class ConfigWatcherTests : IDisposable
     }
 
     [Fact]
-    public async Task Debouncer_turns_a_burst_of_triggers_into_one_call()
+    public void Debouncer_turns_a_burst_of_triggers_into_one_call()
     {
         var calls = 0;
-        using var debouncer = new Debouncer(TimeSpan.FromMilliseconds(120), () => Interlocked.Increment(ref calls));
+        using var debouncer = new Debouncer(TimeSpan.FromMilliseconds(120), () => calls++, _time);
 
+        // The burst lasts longer than the quiet period; every trigger starts the period again.
         for (var i = 0; i < 6; i++)
         {
             debouncer.Trigger();
-            await Task.Delay(20);
+            _time.Advance(TimeSpan.FromMilliseconds(20));
         }
 
-        Assert.Equal(0, Volatile.Read(ref calls)); // still inside the quiet period
-        await Task.Delay(400);
-        Assert.Equal(1, Volatile.Read(ref calls));
+        Assert.Equal(0, calls);
+        _time.Advance(TimeSpan.FromMilliseconds(99)); // 119 ms after the last trigger: still inside the quiet period
+        Assert.Equal(0, calls);
+        _time.Advance(TimeSpan.FromMilliseconds(1));
+        Assert.Equal(1, calls);
+        _time.Advance(TimeSpan.FromSeconds(10));
+        Assert.Equal(1, calls);
     }
 
     [Fact]
-    public async Task Debouncer_survives_a_throwing_handler()
+    public void Debouncer_survives_a_throwing_handler()
     {
-        using var debouncer = new Debouncer(TimeSpan.FromMilliseconds(30), () => throw new InvalidOperationException());
+        var calls = 0;
+        using var debouncer = new Debouncer(TimeSpan.FromMilliseconds(30), () =>
+        {
+            calls++;
+            throw new InvalidOperationException();
+        }, _time);
+
         debouncer.Trigger();
-        await Task.Delay(150);
+        _time.Advance(TimeSpan.FromMilliseconds(30));
         debouncer.Trigger(); // timer still usable
-        await Task.Delay(150);
+        _time.Advance(TimeSpan.FromMilliseconds(30));
+
+        Assert.Equal(2, calls);
     }
 
     [Fact]
     public async Task Saving_a_watched_file_raises_one_change_and_other_files_are_ignored()
     {
         var count = 0;
-        var fired = new TaskCompletionSource();
-        using var watcher = new ConfigWatcher(_dir, TimeSpan.FromMilliseconds(150), "settings.toml", "prompts.toml");
-        watcher.Changed += () =>
-        {
-            Interlocked.Increment(ref count);
-            fired.TrySetResult();
-        };
+        using var watcher = new ConfigWatcher(_dir, Quiet, _time, "settings.toml", "prompts.toml");
+        watcher.Changed += () => Interlocked.Increment(ref count);
 
         File.WriteAllText(Path.Combine(_dir, "other.txt"), "ignored");
-        await Task.Delay(400);
+        await Task.Delay(400); // real time for the watcher to deliver the event; a trigger would wait on the manual clock
+        _time.Advance(Quiet * 10);
         Assert.Equal(0, Volatile.Read(ref count));
 
         // An editor save is several writes in a row.
@@ -671,22 +685,37 @@ public sealed class ConfigWatcherTests : IDisposable
         File.AppendAllText(path, "b");
         File.AppendAllText(path, "c");
 
-        Assert.Same(fired.Task, await Task.WhenAny(fired.Task, Task.Delay(5000)));
+        // However long the watcher takes between the events, the manual clock has not moved, so they are one burst.
         await Task.Delay(500);
+        Assert.True(await AdvanceUntilAsync(() => Volatile.Read(ref count) > 0), "no change was raised");
+        _time.Advance(Quiet * 10);
         Assert.Equal(1, Volatile.Read(ref count));
     }
 
     [Fact]
     public async Task Save_via_temp_file_and_rename_is_noticed()
     {
-        var fired = new TaskCompletionSource();
-        using var watcher = new ConfigWatcher(_dir, TimeSpan.FromMilliseconds(100), "settings.toml");
-        watcher.Changed += () => fired.TrySetResult();
+        var count = 0;
+        using var watcher = new ConfigWatcher(_dir, Quiet, _time, "settings.toml");
+        watcher.Changed += () => Interlocked.Increment(ref count);
 
         var temp = Path.Combine(_dir, "settings.toml.tmp");
         File.WriteAllText(temp, "x");
         File.Move(temp, Path.Combine(_dir, "settings.toml"));
 
-        Assert.Same(fired.Task, await Task.WhenAny(fired.Task, Task.Delay(5000)));
+        Assert.True(await AdvanceUntilAsync(() => Volatile.Read(ref count) > 0), "no change was raised");
+    }
+
+    /// <summary>Gives the watcher real time to deliver its events and lets a quiet period pass, until done (at most 5 s).</summary>
+    private async Task<bool> AdvanceUntilAsync(Func<bool> done)
+    {
+        for (var waited = 0; waited < 5000; waited += 50)
+        {
+            _time.Advance(Quiet);
+            if (done()) return true;
+            await Task.Delay(50);
+        }
+
+        return done();
     }
 }

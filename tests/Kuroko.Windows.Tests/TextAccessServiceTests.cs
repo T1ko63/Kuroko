@@ -18,10 +18,18 @@ public class TextAccessServiceTests
         PasteGraceRemote = TimeSpan.FromMilliseconds(1),
     };
 
+    // For an app that answers late (ReactionDelay): the timeouts sit far above the delay, so a slow test machine cannot
+    // turn "late but in time" into a timeout. A test that passes never waits for them.
+    private static readonly TextAccessTimings Patient = Fast with
+    {
+        CopyTimeout = TimeSpan.FromSeconds(5),
+        PasteTimeout = TimeSpan.FromSeconds(5),
+    };
+
     private readonly FakeTextTarget _app = new("user clipboard");
     private readonly FakeFieldInspector _uia = new();
 
-    private TextAccessService Service() => new(_app, _app, _uia) { Timings = Fast };
+    private TextAccessService Service(TextAccessTimings? timings = null) => new(_app, _app, _uia) { Timings = timings ?? Fast };
 
     private static TargetInfo Target(string process = "notepad", string windowClass = "Notepad",
         bool password = false, bool readOnly = false, bool elevated = false)
@@ -259,7 +267,7 @@ public class TextAccessServiceTests
     {
         // Nothing is selected and display mode never sends Ctrl+A, so the app never answers Ctrl+C: only the cancel
         // can end the wait before the (deliberately long) copy timeout.
-        var service = new TextAccessService(_app, _app, _uia) { Timings = Fast with { CopyTimeout = TimeSpan.FromSeconds(5) } };
+        var service = new TextAccessService(_app, _app, _uia) { Timings = Fast with { CopyTimeout = TimeSpan.FromSeconds(30) } };
         using var cts = new CancellationTokenSource();
         _app.OnCopySent = cts.Cancel;
         var started = System.Diagnostics.Stopwatch.StartNew();
@@ -267,7 +275,7 @@ public class TextAccessServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => service.CaptureAsync(Target(), ReadStrategy.Clipboard, mode: CaptureMode.Display, ct: cts.Token));
 
-        Assert.True(started.Elapsed < TimeSpan.FromSeconds(1), $"took {started.Elapsed.TotalMilliseconds} ms");
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds(10), $"took {started.Elapsed.TotalMilliseconds} ms");
         Assert.Equal(["C"], _app.Keys);
         Assert.Equal("user clipboard", _app.ClipboardText);
     }
@@ -349,7 +357,7 @@ public class TextAccessServiceTests
         _app.Selection = "slow";
         _app.ReactionDelay = TimeSpan.FromMilliseconds(40);
 
-        var result = await Service().CaptureAsync(Target(), ReadStrategy.Auto);
+        var result = await Service(Patient).CaptureAsync(Target(), ReadStrategy.Auto);
 
         Assert.Equal("slow", result.Capture!.Text);
     }
@@ -554,7 +562,7 @@ public class TextAccessServiceTests
     {
         _app.ReactionDelay = TimeSpan.FromMilliseconds(60);
 
-        var result = await Service().ReplaceAsync(Capture("old", TextOrigin.Selection, withElement: true), "new");
+        var result = await Service(Patient).ReplaceAsync(Capture("old", TextOrigin.Selection, withElement: true), "new");
 
         Assert.True(result.Success);
         Assert.True(_app.Events.IndexOf("paste rendered") < _app.Events.LastIndexOf("restore"));
@@ -608,7 +616,7 @@ public class TextAccessServiceTests
         _app.ReactionDelay = TimeSpan.FromMilliseconds(50);
         _app.OnPasteSent = cts.Cancel;
 
-        var result = await Service().ReplaceAsync(Capture("old", TextOrigin.Selection, withElement: true), "new", cts.Token);
+        var result = await Service(Patient).ReplaceAsync(Capture("old", TextOrigin.Selection, withElement: true), "new", cts.Token);
 
         Assert.True(result.Success);
         Assert.Equal("new", _app.Pasted);

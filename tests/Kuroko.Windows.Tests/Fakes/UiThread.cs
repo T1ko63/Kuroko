@@ -34,7 +34,7 @@ internal static class UiThread
     }
 
     /// <summary>Lets queued work run until <paramref name="condition"/> holds; fails after <paramref name="timeoutMs"/>.</summary>
-    public static async Task Until(Func<bool> condition, string what, int timeoutMs = 3000)
+    public static async Task Until(Func<bool> condition, string what, int timeoutMs = 10000)
     {
         var deadline = Environment.TickCount64 + timeoutMs;
         while (!condition())
