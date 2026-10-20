@@ -16,7 +16,7 @@ public sealed record SubmapDefinition(string Name, string Open, string? Label, i
 
 /// <summary>One key of a submap and what it runs.</summary>
 /// <param name="Key">The key as written in keybinds.toml ("P", "&lt;", "0xE2").</param>
-/// <param name="Target">A prompt name from prompts.toml, or an app command with a leading slash ("/undo").</param>
+/// <param name="Target">A prompt name from prompts.toml, an app command with a leading slash ("/undo") or a program from [programs] with a leading @ ("@firefox").</param>
 /// <param name="Line">Line of the key in keybinds.toml, for messages.</param>
 public sealed record SubmapKey(string Key, int VirtualKey, string Target, int? Line = null)
 {
@@ -24,6 +24,14 @@ public sealed record SubmapKey(string Key, int VirtualKey, string Target, int? L
 
     /// <summary>The command without its slash; only meaningful when <see cref="IsCommand"/>.</summary>
     public string CommandName => IsCommand ? Target[1..] : string.Empty;
+
+    public bool IsProgram => Target.StartsWith('@');
+
+    /// <summary>The program without its @; only meaningful when <see cref="IsProgram"/>.</summary>
+    public string ProgramName => IsProgram ? Target[1..] : string.Empty;
+
+    /// <summary>A prompt name: neither a "/command" nor an "@program".</summary>
+    public bool IsPrompt => !IsCommand && !IsProgram;
 }
 
 /// <summary>How a prompt is reached through a submap, for the picker's hotkey column: the submap's hotkey, then the key.</summary>

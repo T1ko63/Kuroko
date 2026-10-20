@@ -22,6 +22,8 @@ public sealed class AppController
     private readonly IStatusView _status;
     private readonly Func<IReadOnlyList<PromptDefinition>> _prompts;
     private readonly Func<IReadOnlyList<AppCommand>> _commands;
+    private readonly Func<IReadOnlyList<ProgramDefinition>> _programs;
+    private readonly IProgramLauncher _launcher;
 
     private RunSession? _session;
     private readonly Action? _warmUp;
@@ -42,12 +44,17 @@ public sealed class AppController
     /// <param name="clipboard">Needed to copy the text of the result card and the last result.</param>
     /// <param name="desktop">Target window, focus, timer resolution and foreground watch; <see cref="Win32Desktop"/> when not given.</param>
     /// <param name="commands">The app commands for the overlay's "/" list (the same list as the tray menu); read on every use.</param>
+    /// <param name="programs">The programs of keybinds.toml, for submap keys "@name"; read on every use.</param>
+    /// <param name="launcher">Starts programs; <see cref="Win32ProgramLauncher"/> when not given.</param>
     public AppController(
         ITextAccess text, IOverlayView overlay, IStatusView status, IPromptRunner runner,
         Func<IReadOnlyList<PromptDefinition>> prompts, Action? warmUp = null,
         IHotkeyRegistry? hotkeys = null, IClipboard? clipboard = null, IDesktop? desktop = null,
-        Func<IReadOnlyList<AppCommand>>? commands = null)
+        Func<IReadOnlyList<AppCommand>>? commands = null,
+        Func<IReadOnlyList<ProgramDefinition>>? programs = null, IProgramLauncher? launcher = null)
     {
+        _programs = programs ?? (() => []);
+        _launcher = launcher ?? new Win32ProgramLauncher();
         _text = text;
         _overlay = overlay;
         _status = status;
@@ -349,6 +356,37 @@ public sealed class AppController
         _ = ExecuteAsync(session, prompt, restoreFocus: false, hotkeyTimestamp);
     }
 
+    // ---- programs ----
+
+    /// <summary>
+    /// A program's hotkey (or its submap key "@name"): starts the program and forgets it. Ignored like the other hotkeys while
+    /// a run is active or the overlay is up. A failed start shows an error pill.
+    /// </summary>
+    public void OnProgramHotkey(long hotkeyTimestamp, ProgramDefinition program)
+    {
+        MarkActivity();
+        AppLog.Info($"hotkey: program '{program.Name}'");
+        _submap.Close();
+        _card.Close(); // a visible result card never blocks the next call
+        if (_run.Busy || _overlay.IsShown)
+        {
+            AppLog.Info($"Program hotkey '{program.Name}' ignored: busy.");
+            return;
+        }
+
+        DismissError();
+        var result = _launcher.Start(program);
+        if (result.Success)
+        {
+            AppLog.Info($"program '{program.Name}': started{(result.ProcessId is { } id ? $" (pid {id})" : string.Empty)}");
+            return;
+        }
+
+        AppLog.Error($"program '{program.Name}': start of '{program.Run}' failed: {result.Error}");
+        var target = _desktop.CaptureTarget();
+        _status.ShowError(Loc.Get("err_program_start", program.Name, result.Error ?? string.Empty), _anchors.ForPill(_anchors.ForTarget(target), target));
+    }
+
     // ---- submaps ----
 
     /// <summary>The submap that is open now, or null.</summary>
@@ -378,12 +416,26 @@ public sealed class AppController
     }
 
     /// <summary>
-    /// A key of the open submap, which has already closed: a prompt runs exactly as from its own hotkey, a command as
+    /// A key of the open submap, which has already closed: a prompt or "@program" runs exactly as from its own hotkey, a command as
     /// from the tray ("/undo" as the undo hotkey).
     /// </summary>
     private void OnSubmapKey(SubmapKey key, long hotkeyTimestamp)
     {
         AppLog.Info($"submap key {key.Key}: {key.Target}");
+        if (key.IsProgram)
+        {
+            if (_programs().FirstOrDefault(p => p.Name.Equals(key.ProgramName, StringComparison.OrdinalIgnoreCase)) is { } program)
+            {
+                OnProgramHotkey(hotkeyTimestamp, program);
+            }
+            else
+            {
+                AppLog.Warn($"Submap key {key.Key}: no program named '{key.ProgramName}'.");
+            }
+
+            return;
+        }
+
         if (!key.IsCommand)
         {
             if (_prompts().FirstOrDefault(p => p.Name.Equals(key.Target, StringComparison.OrdinalIgnoreCase)) is { } prompt)

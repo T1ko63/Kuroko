@@ -1,6 +1,8 @@
 using System.Windows.Media;
 using Kuroko.App.Overlay;
+using Kuroko.Core.Config;
 using Kuroko.Core.Prompts;
+using Kuroko.Platform.Launching;
 using Kuroko.Platform.Native;
 using Kuroko.Platform.TextIntegration;
 using Kuroko.Platform.Windowing;
@@ -153,4 +155,17 @@ public sealed class Win32Desktop : IDesktop
     {
         public void Dispose() => timer.Stop();
     }
+}
+
+/// <summary>Starts a program from [programs] in keybinds.toml. <see cref="Win32ProgramLauncher"/> is the real one; tests use a fake.</summary>
+public interface IProgramLauncher
+{
+    /// <summary>Starts <paramref name="program"/> and does not wait for it; never throws.</summary>
+    ProgramStartResult Start(ProgramDefinition program);
+}
+
+/// <summary>The real <see cref="IProgramLauncher"/>.</summary>
+public sealed class Win32ProgramLauncher : IProgramLauncher
+{
+    public ProgramStartResult Start(ProgramDefinition program) => ProgramLauncher.Start(program);
 }

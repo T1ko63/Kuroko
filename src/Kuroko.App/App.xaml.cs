@@ -158,7 +158,9 @@ public partial class App : Application, ICommandActions
             hotkeys: _hotkeys,
             clipboard: _clipboard,
             desktop: new Win32Desktop(),
-            commands: Commands);
+            commands: Commands,
+            programs: () => _config.Current.Keybinds.Programs,
+            launcher: new Win32ProgramLauncher());
 
         ApplyConfig(loaded, initial: true);
         Lap("apply config+hotkeys");
@@ -457,7 +459,7 @@ public partial class App : Application, ICommandActions
     private static CardSpot ParseSpot(string name, CardSpot fallback)
         => Enum.TryParse<CardSpot>(name.Replace("-", string.Empty), ignoreCase: true, out var spot) ? spot : fallback;
 
-    /// <summary>Registers the app, prompt and submap hotkeys of keybinds.toml anew. Invalid hotkeys and hotkeys another app owns are reported.</summary>
+    /// <summary>Registers the app, prompt, submap and program hotkeys of keybinds.toml anew. Invalid hotkeys and hotkeys another app owns are reported.</summary>
     private void RegisterHotkeys(AppSettings settings, KeybindSettings keybinds, IReadOnlyList<PromptDefinition> prompts)
     {
         _hotkeys!.UnregisterAll();
@@ -499,6 +501,12 @@ public partial class App : Application, ICommandActions
         {
             var captured = submap;
             Register(submap.Open, $"submap {submap.Name}", ts => _controller.OnSubmapHotkey(ts, captured));
+        }
+
+        foreach (var program in keybinds.Programs.Where(p => p.Hotkey is not null))
+        {
+            var captured = program;
+            Register(program.Hotkey!, $"program {program.Name}", ts => _controller.OnProgramHotkey(ts, captured));
         }
 
         if (failures.Count > 0)

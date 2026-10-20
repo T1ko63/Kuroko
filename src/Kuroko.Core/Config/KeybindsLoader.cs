@@ -5,7 +5,7 @@ using Tomlyn.Model;
 namespace Kuroko.Core.Config;
 
 /// <summary>
-/// Reads and validates keybinds.toml: [mods], [app], [prompts] and [submaps.name]. Never throws for bad content: problems
+/// Reads and validates keybinds.toml: [mods], [app], [prompts], [submaps.name] and [programs.name]. Never throws for bad content: problems
 /// come back as <see cref="ConfigIssue"/>s. Checks that need prompts.toml or settings.toml (prompt names, hotkeys used twice,
 /// Ctrl+C/V/A) are made by <see cref="ConfigValidator"/>.
 /// </summary>
@@ -13,7 +13,7 @@ public static class KeybindsLoader
 {
     public const string FileName = "keybinds.toml";
 
-    private static readonly HashSet<string> TopLevelKeys = new(StringComparer.Ordinal) { "mods", "app", "prompts", "submaps" };
+    private static readonly HashSet<string> TopLevelKeys = new(StringComparer.Ordinal) { "mods", "app", "prompts", "submaps", "programs" };
 
     /// <summary>The keys of [app] and their defaults.</summary>
     public static IReadOnlyList<(string Key, string Default)> AppKeys { get; } =
@@ -25,8 +25,11 @@ public static class KeybindsLoader
 
     private static readonly HashSet<string> SubmapFields = new(StringComparer.Ordinal) { "open", "label", "timeout", "keys" };
 
+    private static readonly HashSet<string> ProgramFields = new(StringComparer.Ordinal) { "run", "args", "dir", "hotkey" };
+
     /// <param name="keyLayout">Resolves hotkey keys written as a character; null uses <see cref="KeyLayouts.Current"/>.</param>
-    public static KeybindsLoadResult Parse(string toml, IKeyLayout? keyLayout = null)
+    /// <param name="pathExists">Whether a file or folder named by a program exists (only for a warning); null asks the file system.</param>
+    public static KeybindsLoadResult Parse(string toml, IKeyLayout? keyLayout = null, Func<string, bool>? pathExists = null)
     {
         var issues = new List<ConfigIssue>();
         var layout = keyLayout ?? KeyLayouts.Current;
@@ -48,13 +51,14 @@ public static class KeybindsLoader
 
         foreach (var key in root.Keys.Where(k => !TopLevelKeys.Contains(k)))
         {
-            reader.Issue(reader.LineOf(key), $"unknown entry '{key}' (keybinds.toml has [mods], [app], [prompts] and [submaps.name])", isError: false);
+            reader.Issue(reader.LineOf(key), $"unknown entry '{key}' (keybinds.toml has [mods], [app], [prompts], [submaps.name] and [programs.name])", isError: false);
         }
 
         var mods = ReadMods(root, reader);
         var app = ReadApp(root, reader, layout, mods);
         var prompts = ReadPrompts(root, reader, layout, mods);
-        var submaps = ReadSubmaps(root, reader, layout, mods);
+        var programs = ReadPrograms(root, reader, layout, mods, pathExists ?? (path => File.Exists(path) || Directory.Exists(path)));
+        var submaps = ReadSubmaps(root, reader, layout, mods, programs);
 
         var keybinds = new KeybindSettings
         {
@@ -64,6 +68,7 @@ public static class KeybindsLoader
             Prompts = prompts,
             Mods = mods,
             Submaps = submaps,
+            Programs = programs,
         };
         return new KeybindsLoadResult(issues.Any(i => i.IsError) ? null : keybinds, issues);
     }
@@ -212,7 +217,8 @@ public static class KeybindsLoader
     /// [submaps.name]: open (hotkey), label (pill text, the name when missing), timeout (ms) and keys (key = target). Prompt
     /// targets are checked against prompts.toml later (<see cref="ConfigValidator"/>); "/command" targets are checked here.
     /// </summary>
-    private static List<SubmapDefinition> ReadSubmaps(TomlTable root, TomlReader reader, IKeyLayout? layout, IReadOnlyDictionary<string, HotkeyModifiers> mods)
+    private static List<SubmapDefinition> ReadSubmaps(
+        TomlTable root, TomlReader reader, IKeyLayout? layout, IReadOnlyDictionary<string, HotkeyModifiers> mods, IReadOnlyList<ProgramDefinition> programs)
     {
         var submaps = new List<SubmapDefinition>();
         if (!root.TryGetValue("submaps", out var value)) return submaps;
@@ -276,7 +282,7 @@ public static class KeybindsLoader
                 Error(Line("timeout"), $"timeout must be between {SubmapDefinition.MinTimeoutMs} and {SubmapDefinition.MaxTimeoutMs} (milliseconds)");
             }
 
-            var keys = ReadSubmapKeys(name, table, reader, layout, block, Line);
+            var keys = ReadSubmapKeys(name, table, reader, layout, block, Line, programs);
             if (reader.ErrorCount == errorsBefore) submaps.Add(new SubmapDefinition(name, open, label, timeout, keys, block?.Start));
         }
 
@@ -284,7 +290,8 @@ public static class KeybindsLoader
     }
 
     private static List<SubmapKey> ReadSubmapKeys(
-        string name, TomlTable table, TomlReader reader, IKeyLayout? layout, (int Start, int End)? block, Func<string, int?> line)
+        string name, TomlTable table, TomlReader reader, IKeyLayout? layout, (int Start, int End)? block, Func<string, int?> line,
+        IReadOnlyList<ProgramDefinition> programs)
     {
         var keys = new List<SubmapKey>();
         void Error(int? at, string message) => reader.Issue(at, $"[submaps.{name}] {message}", isError: true);
@@ -319,9 +326,16 @@ public static class KeybindsLoader
 
             seen[vk] = key;
             var target = (raw as string)?.Trim() ?? string.Empty;
-            if (target.Length == 0 || target == "/")
+            if (target.Length == 0 || target is "/" or "@")
             {
-                Error(KeyLine(key), $"key '{key}' must name a prompt from prompts.toml or a command such as \"/undo\"");
+                Error(KeyLine(key), $"key '{key}' must name a prompt from prompts.toml, a command such as \"/undo\" or a program such as \"@firefox\"");
+                continue;
+            }
+
+            if (target.StartsWith('@') && !programs.Any(p => p.Name.Equals(target[1..], StringComparison.OrdinalIgnoreCase)))
+            {
+                var known = programs.Count == 0 ? "none defined" : string.Join(", ", programs.Select(p => "@" + p.Name));
+                Error(KeyLine(key), $"key '{key}': no program '{target[1..]}' in [programs] (programs: {known}; add a [programs.{target[1..]}] block)");
                 continue;
             }
 
@@ -335,6 +349,124 @@ public static class KeybindsLoader
         }
 
         return keys;
+    }
+
+    /// <summary>
+    /// [programs.name]: run (required), args, dir and hotkey. A program is started by its hotkey or by a submap key "@name";
+    /// hotkeys used twice and Ctrl+C/V/A are checked by <see cref="ConfigValidator"/>.
+    /// </summary>
+    private static List<ProgramDefinition> ReadPrograms(
+        TomlTable root, TomlReader reader, IKeyLayout? layout, IReadOnlyDictionary<string, HotkeyModifiers> mods, Func<string, bool> pathExists)
+    {
+        var programs = new List<ProgramDefinition>();
+        if (!root.TryGetValue("programs", out var value)) return programs;
+        if (value is not TomlTable all)
+        {
+            reader.Issue(reader.LineOf("programs"), "programs must contain tables: [programs.name] with run and optionally args, dir and hotkey", isError: true);
+            return programs;
+        }
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, raw) in all)
+        {
+            var block = reader.Block($"[programs.{name}]") ?? reader.Block($"[programs.\"{name}\"]") ?? reader.Block($"[programs.'{name}']");
+            int? Line(string key) => block is { } b ? reader.LineOf(key, b.Start, b.End) ?? b.Start : reader.LineOf(name);
+            void Error(int? line, string message) => reader.Issue(line, $"[programs.{name}] {message}", isError: true);
+
+            if (raw is not TomlTable table)
+            {
+                var top = reader.Block("[programs]");
+                reader.Issue(top is { } t ? reader.LineOf(name, t.Start + 1, t.End) ?? t.Start : reader.LineOf(name), $"programs.{name} must be a table ([programs.{name}] with run = ...)", isError: true);
+                continue;
+            }
+
+            if (!ProgramRules.IsValidName(name))
+            {
+                Error(block?.Start ?? reader.LineOf(name), $"name '{name}' is not allowed: use letters, digits, _ and -.{HotkeyGesture.DocsHint}");
+                continue;
+            }
+
+            if (!names.Add(name))
+            {
+                Error(block?.Start, $"name '{name}' is used twice (names are not case-sensitive)");
+                continue;
+            }
+
+            foreach (var key in table.Keys.Where(k => !ProgramFields.Contains(k)))
+            {
+                reader.Issue(Line(key), $"[programs.{name}] unknown setting '{key}' (known: run, args, dir, hotkey)", isError: false);
+            }
+
+            var errorsBefore = reader.ErrorCount;
+
+            var run = table.ContainsKey("run") ? Environment.ExpandEnvironmentVariables(reader.Choice(table, "run", string.Empty, null, Line).Trim()) : string.Empty;
+            ProgramKind? kind = null;
+            if (run.Length == 0)
+            {
+                if (reader.ErrorCount == errorsBefore)
+                {
+                    Error(table.ContainsKey("run") ? Line("run") : block?.Start,
+                        "run is missing: what to start, e.g. run = 'C:\\Program Files\\App\\app.exe', run = \"wt.exe\" or run = 'shell:AppsFolder\\<AppID>'");
+                }
+            }
+            else
+            {
+                kind = ProgramRules.Classify(run, out var error);
+                if (kind is null) Error(Line("run"), $"run '{run}': {error}");
+                else if (kind is ProgramKind.Executable or ProgramKind.Shortcut && !pathExists(run))
+                {
+                    reader.Issue(Line("run"), $"[programs.{name}] run '{run}' does not exist right now; the start is tried anyway", isError: false);
+                }
+            }
+
+            var args = new List<string>();
+            if (table.TryGetValue("args", out var rawArgs))
+            {
+                if (rawArgs is not TomlArray array || array.Any(a => a is not string))
+                {
+                    Error(Line("args"), "args must be a list of texts, one per argument, e.g. args = [\"-d\", \"C:\\\\Projects\"]");
+                }
+                else if (kind == ProgramKind.AppsFolder)
+                {
+                    Error(Line("args"), "args cannot be passed to a shell:AppsFolder app; leave args out");
+                }
+                else
+                {
+                    args.AddRange(array.Cast<string>());
+                }
+            }
+
+            string? dir = null;
+            if (table.ContainsKey("dir"))
+            {
+                dir = Environment.ExpandEnvironmentVariables(reader.Choice(table, "dir", string.Empty, null, Line).Trim());
+                if (dir.Length == 0)
+                {
+                    Error(Line("dir"), "dir must not be empty: the working folder, e.g. dir = 'C:\\Projects' (leave it out for the default)");
+                }
+                else if (!ProgramRules.IsAbsolute(dir))
+                {
+                    Error(Line("dir"), $"dir '{dir}' must be an absolute folder, e.g. 'C:\\Projects' or '%USERPROFILE%\\Downloads'");
+                }
+                else if (!pathExists(dir))
+                {
+                    reader.Issue(Line("dir"), $"[programs.{name}] dir '{dir}' does not exist right now; the start is tried anyway", isError: false);
+                }
+            }
+
+            string? hotkey = null;
+            if (table.TryGetValue("hotkey", out var rawHotkey) && !(rawHotkey is string text && text.Trim().Length == 0))
+            {
+                hotkey = ReadHotkey(table, reader, "hotkey", string.Empty, layout, mods, Line, $"[programs.{name}] hotkey").Trim();
+            }
+
+            if (reader.ErrorCount == errorsBefore && kind is { } k)
+            {
+                programs.Add(new ProgramDefinition(name, run, k, args, dir, hotkey, block?.Start));
+            }
+        }
+
+        return programs;
     }
 
     private static bool IsValidSubmapName(string name) => name.Length > 0 && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-');

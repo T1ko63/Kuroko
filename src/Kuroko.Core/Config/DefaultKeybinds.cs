@@ -85,6 +85,15 @@ public static class DefaultKeybinds
             foreach (var (field, value) in fields) text.AppendLine($"{Key(field)} = {value}");
         }
 
+        text.AppendLine();
+        text.AppendLine("# Programme: run ist ein absoluter Pfad zu einer .exe oder .lnk, ein Programmname mit .exe (\"wt.exe\") oder");
+        text.AppendLine("# shell:AppsFolder\\<AppID> für Store-Apps. Optional: args (Liste, jedes Argument einzeln), dir (Arbeitsordner),");
+        text.AppendLine("# hotkey. In einer Submap startet \"@name\" das Programm. Pfade in einfachen Anführungszeichen brauchen kein \\\\.");
+        text.AppendLine("# [programs.terminal]");
+        text.AppendLine("# run = \"wt.exe\"");
+        text.AppendLine("# args = [\"-d\", \"C:\\\\Projekte\"]");
+        text.AppendLine("# hotkey = \"Ctrl+Alt+Shift+T\"");
+
         return text.ToString();
     }
 

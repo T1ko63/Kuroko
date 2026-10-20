@@ -86,6 +86,7 @@ public static class Loc
             "The field could not be fully selected; the text is unchanged."),
         ["err_focus"] = ("Das Zielfenster konnte nicht wieder aktiviert werden.", "The target window could not be re-activated."),
         ["err_unexpected"] = ("Unerwarteter Fehler: {0}", "Unexpected error: {0}"),
+        ["err_program_start"] = ("Programm '{0}' konnte nicht gestartet werden: {1}", "Program '{0}' could not be started: {1}"),
         ["undo_label"] = ("Rückgängig", "Undo"),
         ["undo_done"] = ("Rückgängig gemacht", "Undone"),
         ["undo_nothing"] = ("Nichts zum Rückgängigmachen.", "Nothing to undo."),

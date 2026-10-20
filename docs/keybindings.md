@@ -5,7 +5,7 @@ good idea, what is not possible, and what every message means.
 
 **Contents:** [Where keybinds live](#where-keybinds-live) · [Quick start](#quick-start) · [Keys](#keys) ·
 [Finding a key's code](#finding-a-keys-code) · [Modifiers and variables](#modifiers-and-variables) · [Submaps](#submaps) ·
-[Choosing good hotkeys](#choosing-good-hotkeys) · [Recipes](#recipes) · [Limits](#limits) · [Messages](#messages) ·
+[Starting programs](#starting-programs) · [Choosing good hotkeys](#choosing-good-hotkeys) · [Recipes](#recipes) · [Limits](#limits) · [Messages](#messages) ·
 [Migrating](#migrating)
 
 ## Where keybinds live
@@ -24,6 +24,7 @@ and nowhere else. One rule without exceptions:
 | Copy the result card | `result_copy` in `[app]` | `Ctrl+Alt+C` |
 | Run a prompt directly | `[prompts]`: prompt name = hotkey | `Universal = "Ctrl+Alt+U"`, `Correction = "Ctrl+Alt+K"` |
 | Open a [submap](#submaps) of plain keys | `open` of a `[submaps.<name>]` | none |
+| [Start a program](#starting-programs) | `hotkey` of a `[programs.<name>]`, or a submap key `"@name"` | none |
 | Name a modifier combination | `[mods]` | none |
 
 Changes apply as soon as the file is saved. A hotkey with an error is reported with file and line, and the last
@@ -319,6 +320,10 @@ stand alone here, not only F1–F24, because it is a hotkey only while the subma
 |---|---|---|
 | A prompt name from `prompts.toml` | `P = "Professioneller"` | the prompt, exactly as its own hotkey would: it reads the selection (or the whole field), and replaces it or shows the card. Names are not case-sensitive. The prompt needs no hotkey of its own. |
 | A command with `/` | `U = "/undo"` | the command, as the tray menu does. |
+| A program with `@` | `F = "@firefox"` | the program from `[programs.firefox]`, as its own hotkey would, see [Starting programs](#starting-programs). The program needs no hotkey of its own. |
+
+A target that starts with `@` is always a program, and one that starts with `/` always a command: a prompt whose name
+starts with `@` or `/` cannot be a submap target (give it a hotkey in `[prompts]` or rename it).
 
 The commands are the ones of the overlay's `/` list, plus `/undo`:
 
@@ -368,6 +373,78 @@ mode that sees every key:
 * Only one key after `open`: a target cannot be another submap, and there are no sequences of more than two keys.
 * The listed keys are taken as they are pressed, without modifiers: `P` and `Shift+P` cannot do different things.
 * A key that Windows or another app keeps for itself cannot be taken (see the log line above).
+
+## Starting programs
+
+> **Test build.** Starting programs is new and may still change.
+
+A `[programs.<name>]` block names a program. Its `hotkey` starts it, and so does a submap key with `"@name"`:
+
+```toml
+# keybinds.toml
+# Tip: write paths in single quotes, then \ needs no escaping.
+[programs.firefox]
+run = 'C:\Program Files\Mozilla Firefox\firefox.exe'
+hotkey = "$main+Alt+F"
+
+[programs.terminal]
+run = "wt.exe"                      # a name without a folder: Windows looks it up as Win+R does (App Paths, PATH)
+args = ["-d", "C:\\Projects"]       # one text per argument, no shell
+
+[programs.explorer]
+run = "explorer.exe"
+args = ["C:\\Temp"]
+
+[programs.calculator]
+run = 'shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App'   # Store app
+
+[programs.obsidian]
+run = '%LOCALAPPDATA%\Programs\Obsidian\Obsidian.exe'                     # %VARIABLES% work in run and dir
+
+[submaps.start]
+open = "$main+Alt+Space"
+timeout = 3000
+keys = { F = "@firefox", T = "@terminal", E = "@explorer", C = "@calculator", O = "@obsidian" }
+```
+
+### Fields
+
+| Field | Meaning | Default |
+|---|---|---|
+| `run` | What to start (required): the absolute path to an `.exe` or a shortcut (`.lnk`); a program name with `.exe` and no folder (`"wt.exe"`), which Windows looks up as Win+R does; or a Store app as `shell:AppsFolder\<AppID>`. `%VARIABLES%` such as `%LOCALAPPDATA%` are replaced. | none |
+| `args` | Arguments as a list of texts, one per argument (`["-d", "C:\\Projects"]`). Each one arrives exactly as written: no variables, no shell, spaces and quotes inside are fine. Not possible with `shell:AppsFolder`. | none |
+| `dir` | Absolute working folder; `%VARIABLES%` are replaced. | the folder of an `.exe` given by path, otherwise your user folder |
+| `hotkey` | The hotkey that starts the program (`$mods` work). It counts in the check for hotkeys used twice, like every other hotkey. `""` or no line: only through a submap. | none |
+
+Names are letters, digits, `_` and `-`, not case-sensitive (`@Firefox` and `@firefox` are the same).
+
+**Finding the AppID of a Store app** (Calculator, Windows Terminal from the Store, …), in PowerShell:
+
+```powershell
+Get-StartApps | Where-Object Name -like "*Calculator*"
+```
+
+The `AppID` column is what goes after `shell:AppsFolder\`.
+
+### What happens
+
+* Kuroko starts the program and is done: it does not wait for it and does not keep track of it. Pressing the hotkey
+  again starts it again (it does not switch to a running window).
+* **While a prompt runs or the overlay is open**, program hotkeys and `@` submap keys are ignored, like the other hotkeys.
+* **If the start fails** (file missing, no permission, …), a pill says
+  `Program 'firefox' could not be started: <reason>`, and the log has the details. On success the log says
+  `program 'firefox': started (pid 1234)`.
+* An `.exe` given by path is started directly. A program name, a shortcut and a `shell:AppsFolder` app are opened
+  through the Windows shell, which finds them. Never through `cmd`, never as administrator.
+
+**Not in this test build:** scripts (`.bat`, `.cmd`, `.ps1`, `.vbs`), opening URLs, files or folders as `run`, starting
+as administrator, switching to an already running program, and programs in the overlay's `/` list or the tray menu.
+
+### Security
+
+Whoever can write `keybinds.toml` can start programs with it. That is no new risk: the file is in your own profile,
+and anyone who can change it can already run programs as you. A program name without a folder (`"wt.exe"`) is looked up
+by Windows through App Paths and PATH; a full path is safer, because it always means the same file.
 
 ## Choosing good hotkeys
 
@@ -569,7 +646,7 @@ block anything.
 | No key on the active keyboard layout (…) types '…' (hotkey '…'). | The character is not on any key of this layout, or only through a dead key (`é`). | Write the character of the key itself, or its name or code. If the hotkey was written for another layout, switch to it and reload. |
 | '…' in hotkey '…' is Shift+… / AltGr+… on the active keyboard layout (…). A hotkey names the key, not the character: … | You wrote a Shift or AltGr character (`>`, `\|`, `°`, `@`). | Write the key's own character as the message shows, and add `Shift` yourself if you want it: `Ctrl+Shift+<`. |
 | *(warning)* … is also AltGr+…, which types '…' on the active keyboard layout (…); while Kuroko runs, '…' cannot be typed with AltGr. | A `Ctrl+Alt` hotkey takes away an AltGr character, see [the AltGr trap](#the-altgr-trap). | Choose another key or other modifiers. If you never type that character, ignore it. |
-| hotkey … is used twice: … and … | Two settings, prompts or submap `open` hotkeys are the same (also when written differently, e.g. `<` and `0xE2`, or `$card+S` and `Ctrl+Alt+S`). | Give one of them another hotkey. |
+| hotkey … is used twice: … and … | Two settings, prompts, submap `open` or program hotkeys are the same (also when written differently, e.g. `<` and `0xE2`, or `$card+S` and `Ctrl+Alt+S`). | Give one of them another hotkey. |
 | Unknown variable '$…' in hotkey '…'. Defined in [mods] of keybinds.toml: … | The hotkey uses a `$name` that `[mods]` does not define (typo, or removed from `[mods]`). | Fix the name, or add it to `[mods]`. Until then the last working `keybinds.toml` stays active. |
 | Unknown variable '$…' in hotkey '…'. No variables are defined: add them to a [mods] table in keybinds.toml. | The hotkey uses `$name`, but `keybinds.toml` has no `[mods]` (or it is empty). | Add `[mods]` with that name, see [Modifiers and variables](#modifiers-and-variables). |
 | '$' in hotkey '…' must be followed by a variable name (letters, digits, _). | A `$` with no name after it (`$+K`). | Write the variable's name right after `$`: `$card+K`. |
@@ -596,18 +673,36 @@ block anything.
 | [submaps.…] Submap key '…' is a modifier: a modifier alone cannot be a key. | `Shift`, `Ctrl`, … in `keys`. | Use a real key. |
 | [submaps.…] Unknown key '…' / No key on the active keyboard layout … / '…' is Shift+… | The key itself is wrong: the same messages and fixes as for hotkeys above. | See the rows above. |
 | [submaps.…] key '…' is listed twice (also as '…') | Two entries mean the same key (`p` and `P`, `"<"` and `0xE2`). | Keep one. |
-| [submaps.…] key '…' must name a prompt from prompts.toml or a command such as "/undo" | The target is empty (or just `/`) or not text. | Write a prompt name or a command. |
+| [submaps.…] key '…' must name a prompt from prompts.toml, a command such as "/undo" or a program such as "@firefox" | The target is empty (or just `/` or `@`) or not text. | Write a prompt name, a command or a program. |
 | [submaps.…] key '…': unknown command '/…' (commands: …) | A target with `/` that is not a command. | Use one of the commands the message lists, see [Targets](#targets). |
 | [submaps.…] key '…' runs '…', but prompts.toml has no prompt of that name (prompts: …) | No prompt has that name: a typo, or the prompt was renamed or removed. The message lists the prompts. | Fix the name in `keybinds.toml`, or add the prompt. If you just renamed it in `prompts.toml`, that file stays rejected until the submap uses the new name. |
 | [submaps.…] key '…' is also the hotkey of …; give one of them another key | A submap key that is already a hotkey without modifiers (e.g. an `F8` prompt hotkey and `F8` in a submap). | Change one of them. |
 | *(warning)* [submaps.…] unknown setting '…' | A field other than `open`, `label`, `timeout`, `keys` (often a typo such as `lable`). | Fix the name. |
-| *…*: Ctrl+… is used by the app to read and replace text (Ctrl+C, Ctrl+A, Ctrl+V); choose another hotkey | A hotkey (`[app]`, `[prompts]` or a submap's `open`) is plain `Ctrl+C`, `Ctrl+A` or `Ctrl+V`, also when it comes from a variable (`$main+C` with `main = "Ctrl"`). See [App shortcuts](#app-shortcuts). | Choose another hotkey, e.g. the default `Ctrl+Alt+C` for `result_copy`. |
+| *…*: Ctrl+… is used by the app to read and replace text (Ctrl+C, Ctrl+A, Ctrl+V); choose another hotkey | A hotkey (`[app]`, `[prompts]`, a submap's `open` or a program's `hotkey`) is plain `Ctrl+C`, `Ctrl+A` or `Ctrl+V`, also when it comes from a variable (`$main+C` with `main = "Ctrl"`). See [App shortcuts](#app-shortcuts). | Choose another hotkey, e.g. the default `Ctrl+Alt+C` for `result_copy`. |
 | [prompts] no prompt '…' in prompts.toml (prompts: …) | A name under `[prompts]` is not a prompt in `prompts.toml`: a typo, or the prompt was renamed or removed. Names are not case-sensitive. | Fix the name in `keybinds.toml`, or add the prompt. If you just renamed it in `prompts.toml`, that file stays rejected until `[prompts]` uses the new name; saving both files together works. |
 | [prompts] '…' is listed twice (prompt names are not case-sensitive) | Two lines under `[prompts]` name the same prompt (`Fix` and `fix`). | Keep one. |
 | [prompts] '…' must be a hotkey in quotes, e.g. "Ctrl+Alt+K" | The value is a number or a list. | Put the hotkey in quotes. `""` means no hotkey. |
 | app must be a table: [app] with lines like overlay = "…" / prompts must be a table: … | `app = …` or `prompts = …` was written as a single value. | Write an `[app]` or `[prompts]` table, one hotkey per line. |
 | *(warning)* [app] unknown hotkey '…' (known: overlay, undo, result_copy) | A line in `[app]` other than the three app hotkeys (often a typo). | Fix the name. Prompt hotkeys go under `[prompts]`. |
-| *(warning)* unknown entry '…' | Something at the top of `keybinds.toml` that is not `[mods]`, `[app]`, `[prompts]` or `[submaps.…]`, e.g. `overlay = …` above `[app]`. | Move it into the right table. |
+| *(warning)* unknown entry '…' | Something at the top of `keybinds.toml` that is not `[mods]`, `[app]`, `[prompts]`, `[submaps.…]` or `[programs.…]`, e.g. `overlay = …` above `[app]`. | Move it into the right table. |
+| programs must contain tables: [programs.name] with run and optionally args, dir and hotkey | `programs = …` was written as a single value. | Write one `[programs.<name>]` block per program, see [Starting programs](#starting-programs). |
+| programs.… must be a table ([programs.…] with run = ...) | A line `name = …` directly under `[programs]`. | Write `[programs.<name>]` and put `run` … below it. |
+| [programs.…] name '…' is not allowed: use letters, digits, _ and -. | The name in `[programs."…"]` has other characters (a space, a dot). | Rename it, e.g. `my-editor`. |
+| [programs.…] name '…' is used twice (names are not case-sensitive) | Two programs whose names differ only in case. | Rename one. |
+| [programs.…] run is missing | The block has no `run`, or `run = ""`. | Add what to start: `run = 'C:\…\app.exe'`, `run = "wt.exe"` or `run = 'shell:AppsFolder\<AppID>'`. |
+| [programs.…] run '…': scripts (.bat, .cmd, .ps1, .vbs) are not supported in this test build | `run` names a script. | Start an `.exe`, `.lnk` or Store app instead. |
+| [programs.…] run '…': URLs are not supported in this test build | `run` is a web address (`https://…`). | Start the browser with the address as an argument: `run = "firefox.exe"`, `args = ["https://…"]`. |
+| [programs.…] run '…': a path with a folder must be absolute | A relative path such as `tools\app.exe`, or a `%VARIABLE%` that does not exist (it stays as written). | Write the full path (`C:\…`), or only the program name (`"app.exe"`). |
+| [programs.…] run '…': must be an .exe or a .lnk … / a program name without a folder must end in .exe … | `run` is some other file (`.txt`, a folder) or a name without `.exe` (`"notepad"`). | Write `notepad.exe`, or the path to an `.exe` or `.lnk`. |
+| [programs.…] run '…': shell:AppsFolder\ needs the AppID of the app after it | `run = 'shell:AppsFolder\'` with nothing after it. | Add the AppID, see [Fields](#fields-1). |
+| [programs.…] args must be a list of texts, one per argument | `args = "-d C:\x"` (one text) or a list with numbers. | `args = ["-d", "C:\\x"]`. |
+| [programs.…] args cannot be passed to a shell:AppsFolder app | A Store app with `args`. | Remove `args`. |
+| [programs.…] dir must not be empty / dir '…' must be an absolute folder | `dir = ""` or a relative folder. | Write a full folder (`'C:\Projects'`), or remove the line for the default. |
+| [programs.…] hotkey: *any hotkey message above* | The program's hotkey has an error. | Fix it as the message says. |
+| *(warning)* [programs.…] run '…' / dir '…' does not exist right now; the start is tried anyway | The absolute path in `run` or `dir` is not there (yet), e.g. a program on a drive that is not connected. | Fix the path if it is a typo; otherwise ignore it. |
+| *(warning)* [programs.…] unknown setting '…' (known: run, args, dir, hotkey) | Another field, often a typo such as `arg`. | Fix the name. |
+| [submaps.…] key '…': no program '…' in [programs] (programs: …) | A target `"@name"` without a `[programs.name]` block: a typo, or the program was renamed or removed. | Fix the name, or add the program. |
+| Program '…' could not be started: … | Shown in the pill when the hotkey or `@` key was pressed: Windows could not start the program. The reason follows the colon (file not found, access denied, …). | Check `run` and `dir`; the log has the details. |
 | Hotkey … (…) is already used by another app. | Shown at start or reload: Windows refused the hotkey because another program registered it first. | Choose another hotkey, or quit the other program. |
 | Hotkey … (…) is invalid: … | Shown at start or reload: the hotkey could not be read when it was registered, most often a character such as `ü` while a keyboard layout without that key is active. The reason follows the colon. | Switch to the layout the hotkey was written for and reload, or write the key's name or code (see [Which keyboard layout counts](#which-keyboard-layout-counts)). |
 | *(warning)* overlay_hotkey / undo_hotkey / result_copy_hotkey / [mods] / [submaps] in settings.toml is no longer read; keybinds live in keybinds.toml | An old key in `settings.toml`. It was taken over into `keybinds.toml` once and is ignored since then. | Delete it from `settings.toml`; change the hotkey in `keybinds.toml`. |

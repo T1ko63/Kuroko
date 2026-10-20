@@ -38,7 +38,7 @@ public static class ConfigValidator
         const string KeybindsFile = KeybindsLoader.FileName;
         var promptNames = prompts.Count == 0 ? "none" : string.Join(", ", prompts.Select(p => p.Name));
 
-        // Every hotkey may be used once: the app hotkeys, the prompt hotkeys and the submap open hotkeys share one namespace.
+        // Every hotkey may be used once: the app hotkeys, the prompt hotkeys, the submap open hotkeys and the program hotkeys share one namespace.
         // The loader has filled in [mods] and checked each hotkey on its own already.
         var owners = new Dictionary<HotkeyGesture, string>();
         void Claim(string hotkey, string owner, int? line)
@@ -79,6 +79,7 @@ public static class ConfigValidator
         }
 
         foreach (var submap in keybinds.Submaps) Claim(submap.Open, $"submap '{submap.Name}'", submap.Line);
+        foreach (var program in keybinds.Programs.Where(p => p.Hotkey is not null)) Claim(program.Hotkey!, $"program '{program.Name}'", program.Line);
 
         foreach (var submap in keybinds.Submaps)
         {
@@ -91,11 +92,11 @@ public static class ConfigValidator
                         $"[submaps.{submap.Name}] key '{key.Key}' is also the hotkey of {owner}; give one of them another key", IsError: true));
                 }
 
-                if (!key.IsCommand && !prompts.Any(p => p.Name.Equals(key.Target, StringComparison.OrdinalIgnoreCase)))
+                if (key.IsPrompt && !prompts.Any(p => p.Name.Equals(key.Target, StringComparison.OrdinalIgnoreCase)))
                 {
                     issues.Add(new ConfigIssue(KeybindsFile, key.Line,
                         $"[submaps.{submap.Name}] key '{key.Key}' runs '{key.Target}', but prompts.toml has no prompt of that name "
-                        + $"(prompts: {promptNames}; a command starts with /, e.g. \"/undo\")", IsError: true));
+                        + $"(prompts: {promptNames}; a command starts with /, e.g. \"/undo\", a program with @, e.g. \"@firefox\")", IsError: true));
                 }
             }
         }

@@ -64,3 +64,41 @@ open = "Ctrl+Alt+Shift+K"
 label = "U undo · C copy last result · R reload · K correct"
 timeout = 2000
 keys = { U = "/undo", C = "/copy", R = "/reload", K = "Correction" }
+
+
+# Programs: a name, what to start, and optionally its arguments, working folder and hotkey. A submap key "@name" starts
+# the program as well. Names: letters, digits, _ and -, not case-sensitive. One [programs.<name>] per program:
+#   run    = what to start (required): the absolute path to an .exe or .lnk, a program name with .exe and no folder
+#            ("wt.exe": Windows looks it up as Win+R does, through App Paths and PATH; a full path is safer), or a Store
+#            app as shell:AppsFolder\<AppID>. %VARIABLES% are replaced. Scripts (.bat, .cmd, .ps1, .vbs) are not
+#            supported in this test build.
+#   args   = list of texts, one per argument, passed on as written (no variables, no shell); not with shell:AppsFolder
+#   dir    = absolute working folder (default: the folder of an .exe given by path, otherwise your user folder)
+#   hotkey = hotkey that starts it ($mods work); without one the program is only reached through a submap
+# Tip: write paths in single quotes, then \ needs no escaping. Kuroko starts the program and does not watch it; while a
+# prompt runs or the overlay is open, program hotkeys are ignored. If the start fails, the pill says why.
+# Find the AppID of a Store app in PowerShell: Get-StartApps | Where-Object Name -like "*Calculator*"
+[programs.terminal]
+run = "wt.exe"
+args = ["-d", "C:\\"]
+hotkey = "$main+Alt+T"
+
+[programs.explorer]
+run = "explorer.exe"
+
+[programs.calculator]
+run = 'shell:AppsFolder\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App'
+
+# [programs.firefox]
+# run = 'C:\Program Files\Mozilla Firefox\firefox.exe'
+# hotkey = "$main+Alt+F"
+#
+# [programs.obsidian]
+# run = '%LOCALAPPDATA%\Programs\Obsidian\Obsidian.exe'
+
+# A submap that starts programs: Ctrl+Alt+Space, then T, E or C.
+[submaps.start]
+open = "$main+Alt+Space"
+label = "T terminal · E explorer · C calculator"
+timeout = 3000
+keys = { T = "@terminal", E = "@explorer", C = "@calculator" }

@@ -50,6 +50,12 @@
       "description": "One [submaps.<name>] block per submap: its open hotkey shows the label in the pill and, for timeout milliseconds, makes each listed key a hotkey of its own without modifiers. Names: letters, digits, _ and -.",
       "propertyNames": { "pattern": "^[A-Za-z0-9_-]+$" },
       "additionalProperties": { "$ref": "#/definitions/submap" }
+    },
+    "programs": {
+      "type": "object",
+      "description": "One [programs.<name>] block per program: what to start, optionally its arguments, working folder and hotkey. A submap key \"@name\" starts it too. Names: letters, digits, _ and -, not case-sensitive.",
+      "propertyNames": { "pattern": "^[A-Za-z0-9_-]+$" },
+      "additionalProperties": { "$ref": "#/definitions/program" }
     }
   },
   "definitions": {
@@ -84,10 +90,38 @@
         "keys": {
           "type": "object",
           "minProperties": 1,
-          "description": "Key = what it runs. The key is written alone, without modifiers: a letter, digit, F-key, name (Space, Num5), code (0xE2) or the character on the key (\"<\", \"ü\"); not Esc. The target is a prompt name from prompts.toml or a command with a slash: /undo, /copy, /prompts, /settings, /keybinds, /folder, /reload, /keys, /test, /autostart, /about, /quit.",
+          "description": "Key = what it runs. The key is written alone, without modifiers: a letter, digit, F-key, name (Space, Num5), code (0xE2) or the character on the key (\"<\", \"ü\"); not Esc. The target is a prompt name from prompts.toml, a program from [programs] with an @ (\"@firefox\") or a command with a slash: /undo, /copy, /prompts, /settings, /keybinds, /folder, /reload, /keys, /test, /autostart, /about, /quit.",
           "propertyNames": { "pattern": "^\\s*([A-Za-z][A-Za-z0-9]*|0[xX][0-9A-Fa-f]{1,2}|[^\\s+]|\\+)\\s*$" },
           "additionalProperties": { "type": "string", "minLength": 1 },
           "examples": [{ "P": "Professioneller", "L": "Lockerer", "U": "/undo" }]
+        }
+      }
+    },
+    "program": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run"],
+      "properties": {
+        "run": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What to start: the absolute path to an .exe or .lnk ('C:\\Program Files\\App\\app.exe'), a program name with .exe and no folder (\"wt.exe\", looked up by Windows as Win+R does: App Paths, PATH) or a Store app as shell:AppsFolder\\<AppID> (find the AppID with Get-StartApps). %VARIABLES% are replaced. Scripts (.bat, .cmd, .ps1, .vbs) are not supported in this test build. No shell, no admin rights.",
+          "examples": ["C:\\Program Files\\Mozilla Firefox\\firefox.exe", "wt.exe", "%LOCALAPPDATA%\\Programs\\Obsidian\\Obsidian.exe", "shell:AppsFolder\\Microsoft.WindowsCalculator_8wekyb3d8bbwe!App"]
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Arguments, one text per argument, passed on exactly as written (no %VARIABLES%, no shell). Not allowed with shell:AppsFolder.",
+          "examples": [["-d", "C:\\Projects"]]
+        },
+        "dir": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Absolute working folder; %VARIABLES% are replaced. Default: the folder of an .exe given by path, otherwise the user's profile folder."
+        },
+        "hotkey": {
+          "anyOf": [{ "$ref": "#/definitions/hotkey" }, { "type": "string", "maxLength": 0 }],
+          "description": "Hotkey that starts the program; \"\" or left out = only through a submap key \"@name\". Counts in the check for hotkeys used twice."
         }
       }
     }

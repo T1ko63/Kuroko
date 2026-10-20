@@ -274,6 +274,39 @@ public class SchemaTests
     }
 
     [Fact]
+    public void Program_schema_names_the_fields_the_loader_reads_and_the_refused_scripts()
+    {
+        var schema = Schema("keybinds.schema.json");
+        var program = schema.GetProperty("definitions").GetProperty("program");
+        Assert.Equal(["args", "dir", "hotkey", "run"], Keys(schema, program).Order());
+        Assert.Equal(["run"], program.GetProperty("required").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal("#/definitions/program",
+            schema.GetProperty("properties").GetProperty("programs").GetProperty("additionalProperties").GetProperty("$ref").GetString());
+
+        var run = program.GetProperty("properties").GetProperty("run").GetProperty("description").GetString()!;
+        foreach (var script in ProgramRules.ScriptExtensions) Assert.Contains(script, run);
+
+        // Every example in the schema is read without an error.
+        foreach (var example in program.GetProperty("properties").GetProperty("run").GetProperty("examples").EnumerateArray())
+        {
+            Assert.NotNull(ProgramRules.Classify(Environment.ExpandEnvironmentVariables(example.GetString()!), out var error));
+            Assert.Empty(error);
+        }
+
+        // "@name" targets are named in the description of submap keys.
+        var keys = schema.GetProperty("definitions").GetProperty("submap").GetProperty("properties").GetProperty("keys");
+        Assert.Contains("@", keys.GetProperty("description").GetString());
+    }
+
+    [Fact]
+    public void Example_keybinds_have_programs_and_a_submap_that_starts_them()
+    {
+        var keybinds = KeybindsLoader.Parse(ReadFile("config/keybinds.example.toml"), FakeKeyLayout.German).Keybinds!;
+        Assert.NotEmpty(keybinds.Programs);
+        Assert.Contains(keybinds.Submaps, s => s.Keys.Any(k => k.IsProgram));
+    }
+
+    [Fact]
     public void Submap_schema_names_the_fields_the_loader_reads()
     {
         var schema = Schema("keybinds.schema.json");

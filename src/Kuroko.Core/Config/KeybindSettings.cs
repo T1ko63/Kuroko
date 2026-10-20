@@ -37,6 +37,13 @@ public sealed record KeybindSettings
     /// <summary>Submaps ([submaps.name]): a hotkey that makes a few plain keys hotkeys for a moment. Open hotkeys are stored filled in.</summary>
     public IReadOnlyList<SubmapDefinition> Submaps { get; init; } = [];
 
+    /// <summary>Programs ([programs.name]): started by their hotkey or by a submap key "@name". Hotkeys are stored filled in.</summary>
+    public IReadOnlyList<ProgramDefinition> Programs { get; init; } = [];
+
+    /// <summary>The program called <paramref name="name"/> (not case-sensitive), or null.</summary>
+    public ProgramDefinition? ProgramOf(string name)
+        => Programs.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
     public string OverlayHotkey => Overlay.Hotkey;
 
     public string UndoHotkey => Undo.Hotkey;
@@ -52,7 +59,7 @@ public sealed record KeybindSettings
     {
         foreach (var submap in Submaps)
         {
-            var key = submap.Keys.FirstOrDefault(k => !k.IsCommand && k.Target.Equals(name, StringComparison.OrdinalIgnoreCase));
+            var key = submap.Keys.FirstOrDefault(k => k.IsPrompt && k.Target.Equals(name, StringComparison.OrdinalIgnoreCase));
             if (key is not null) return (submap, key);
         }
 
@@ -70,7 +77,7 @@ public sealed record KeybindSettings
         return prompt with { Hotkey = hotkey, Submap = submap };
     }
 
-    /// <summary>Used until keybinds.toml has been read: the app hotkeys at their defaults, no prompt hotkeys, no submaps.</summary>
+    /// <summary>Used until keybinds.toml has been read: the app hotkeys at their defaults, no prompt hotkeys, no submaps, no programs.</summary>
     public static KeybindSettings Default { get; } = new();
 }
 
