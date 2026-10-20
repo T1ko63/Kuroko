@@ -20,6 +20,16 @@ public static class ConfigValidator
 
         foreach (var prompt in prompts)
         {
+            // gtools are sent by Gemini only; with any other provider they would silently do nothing.
+            if (prompt.GeminiTools.Count > 0
+                && (prompt.Provider ?? settings.DefaultProvider) is { Length: > 0 } toolProvider
+                && settings.Providers.TryGetValue(toolProvider, out var toolSettings)
+                && toolSettings.Type != Providers.ProviderType.Gemini)
+            {
+                issues.Add(new ConfigIssue(PromptsLoader.FileName, LineOf(prompt.Name),
+                    $"prompt '{prompt.Name}': gtools only work with Gemini; provider '{toolSettings.Name}' ignores them", IsError: false, Show: true));
+            }
+
             if (prompt.Provider is null) continue;
 
             if (!settings.Providers.TryGetValue(prompt.Provider, out var provider))

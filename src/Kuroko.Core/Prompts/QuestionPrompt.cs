@@ -5,7 +5,7 @@ namespace Kuroko.Core.Prompts;
 /// <summary>
 /// A one-off question typed after "//" in the overlay. The answer is always shown in the result card; nothing is replaced.
 /// It has its own fixed role and nothing to do with the universal prompt. No provider or model is set, so the default
-/// provider answers.
+/// provider answers. Grounding with Google Search is always on; it is sent only if that provider is of type gemini.
 /// </summary>
 public static class QuestionPrompt
 {
@@ -15,6 +15,9 @@ public static class QuestionPrompt
         + "plain text only: do not use Markdown (no headings, bold, italics, tables, links or code fences). For a list, put each "
         + "item on its own line starting with \"- \". Answer as fully as the question needs. Answer in the language of the question "
         + "unless it asks for another one.";
+
+    /// <summary>The Gemini tools of every question, in both variants.</summary>
+    public static IReadOnlyList<GeminiTool> Tools { get; } = [GeminiTool.GoogleSearch];
 
     /// <summary>The fixed name shown in the progress pill and written to the log; the question itself never is.</summary>
     public static string Name => Loc.Get("question_name");
@@ -29,12 +32,12 @@ public static class QuestionPrompt
         question = question.Trim();
         if (string.IsNullOrEmpty(selectedText))
         {
-            return (new PromptDefinition(Name, Role, PromptMode.Instruction, Output: PromptOutput.Overlay) { OpenEndedAnswer = true }, question);
+            return (new PromptDefinition(Name, Role, PromptMode.Instruction, Output: PromptOutput.Overlay) { OpenEndedAnswer = true, GeminiTools = Tools }, question);
         }
 
         var prompt = $"{Role}\n\n"
             + "The question or instruction refers to the text of the user message:\n"
             + $"{question}";
-        return (new PromptDefinition(Name, prompt, PromptMode.Transform, Output: PromptOutput.Overlay) { OpenEndedAnswer = true }, selectedText);
+        return (new PromptDefinition(Name, prompt, PromptMode.Transform, Output: PromptOutput.Overlay) { OpenEndedAnswer = true, GeminiTools = Tools }, selectedText);
     }
 }

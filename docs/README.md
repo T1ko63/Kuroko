@@ -380,11 +380,20 @@ mode = "transform"          # transform (Standard) | instruction | universal: be
 output = "replace"          # replace (Standard) | overlay: wohin das Ergebnis geht (overlay = Ergebnis-Karte, nichts wird ersetzt)
 provider = "gemini"         # optional: sonst der Standard-Anbieter
 model = "gemini-2.5-pro"    # optional: sonst das Modell des Anbieters
+gtools = ["googleSearch"]   # optional, nur Gemini: googleSearch | urlContext; ohne gtools keine Werkzeuge
 prompt = """
 Du bist mein Experte für Rechtschreibung und Grammatik. ...
 Gib ausschließlich den korrigierten Text aus.
 """
 ```
+
+`gtools` schaltet für diesen Prompt Gemini-Werkzeuge ein: `googleSearch` (Grounding mit der Google-Suche, z. B. für einen
+Faktencheck) und `urlContext` (Google lädt die Seiten der URLs im Text und nutzt ihren Inhalt). Groß-/Kleinschreibung
+ist egal, doppelte Einträge zählen einmal. Ohne `gtools` schickt Kuroko keine Werkzeuge. Andere Anbieter ignorieren den
+Eintrag; ein unbekannter Name, ein Wert, der keine Liste ist, und `gtools` bei einem Prompt, dessen Anbieter (eigener
+oder Standard) nicht vom Typ `gemini` ist, ergeben eine Warnung. Die eingebaute Frage (`//`) nutzt bei Gemini immer die
+Google-Suche. Geht eine Anfrage an den Ausweich-Anbieter, nimmt sie die Werkzeuge mit; wirksam sind sie nur, wenn
+auch er vom Typ `gemini` ist.
 
 Ein Beispiel für einen Overlay-Prompt steht in `config/prompts.example.toml`. Seinen Hotkey bekommt ein Prompt in `keybinds.toml`.
 
@@ -436,7 +445,9 @@ Ausweich-Anbieters, siehe unten).
 Was der Anbieter mit dem Text macht und wie lange er ihn aufbewahrt, regeln dessen eigene Bedingungen. Je Anbieter:
 
 * `openai`: Die Anfrage geht mit `store = false`, die Antwort wird also nicht im Antwortverlauf des Kontos gespeichert.
-* `gemini`: Die Anfrage aktiviert immer die Google-Suche (Grounding); Google kann aus dem Text Suchanfragen bilden.
+* `gemini`: Werkzeuge sind aus, solange ein Prompt sie nicht mit `gtools` einschaltet. Mit `googleSearch` (Grounding)
+  kann Google aus dem Text Suchanfragen bilden; mit `urlContext` lädt Google die im Text verlinkten Seiten. Die
+  eingebaute Frage (`//`) nutzt immer die Google-Suche.
 * `anthropic`: keine Besonderheiten.
 * `openai-compatible` mit einem lokalen Server (Ollama, LM Studio): Der Text verlässt den Rechner nicht.
 

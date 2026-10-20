@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Kuroko.Core.Prompts;
 
 namespace Kuroko.Core.Providers;
 
@@ -19,21 +20,44 @@ public sealed class GeminiProvider : LlmProvider
         return new Uri($"{BaseUrl}/models/{Uri.EscapeDataString(model)}:streamGenerateContent?alt=sse");
     }
 
-    protected override JsonObject BuildBody(LlmRequest request) => new()
+    protected override JsonObject BuildBody(LlmRequest request)
     {
-        ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray { new JsonObject { ["text"] = request.System } } },
-        ["contents"] = new JsonArray
+        var body = new JsonObject
         {
-            new JsonObject
+            ["systemInstruction"] = new JsonObject { ["parts"] = new JsonArray { new JsonObject { ["text"] = request.System } } },
+            ["contents"] = new JsonArray
             {
-                ["role"] = "user",
-                ["parts"] = new JsonArray { new JsonObject { ["text"] = request.User } },
+                new JsonObject
+                {
+                    ["role"] = "user",
+                    ["parts"] = new JsonArray { new JsonObject { ["text"] = request.User } },
+                },
             },
-        },
-        ["generationConfig"] = new JsonObject { ["maxOutputTokens"] = request.MaxOutputTokens },
-        // Grounding with Google Search, so answers are not limited to the model's training data.
-        // Gemini 2.x/3.x use "googleSearch"; the older "googleSearchRetrieval" is rejected by these models.
-        ["tools"] = new JsonArray { new JsonObject { ["googleSearch"] = new JsonObject() } },
+            ["generationConfig"] = new JsonObject { ["maxOutputTokens"] = request.MaxOutputTokens },
+        };
+
+        // Only the tools the prompt asks for (gtools in prompts.toml); without any, the key is left out entirely.
+        if (request.GeminiTools is { Count: > 0 } tools)
+        {
+            var array = new JsonArray();
+            foreach (var tool in tools.Distinct())
+            {
+                array.Add(new JsonObject { [ToolKey(tool)] = new JsonObject() });
+            }
+
+            body["tools"] = array;
+        }
+
+        return body;
+    }
+
+    /// <summary>The key of a tool in the request body.</summary>
+    /// <remarks>Gemini 2.x/3.x use "googleSearch"; the older "googleSearchRetrieval" is rejected by these models.</remarks>
+    private static string ToolKey(GeminiTool tool) => tool switch
+    {
+        GeminiTool.GoogleSearch => "googleSearch",
+        GeminiTool.UrlContext => "urlContext",
+        _ => throw new ArgumentOutOfRangeException(nameof(tool), tool, null),
     };
 
     protected override void AddHeaders(HttpRequestMessage message) => message.Headers.Add("x-goog-api-key", AuthKey);

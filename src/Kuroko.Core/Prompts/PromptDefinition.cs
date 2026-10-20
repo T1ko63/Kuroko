@@ -27,6 +27,16 @@ public enum PromptOutput
     Overlay,
 }
 
+/// <summary>A server-side tool Gemini may use while answering. Sent only by providers of type gemini.</summary>
+public enum GeminiTool
+{
+    /// <summary>Grounding with Google Search, so answers are not limited to the model's training data.</summary>
+    GoogleSearch,
+
+    /// <summary>Google loads the pages of URLs in the request and uses their content.</summary>
+    UrlContext,
+}
+
 /// <summary>One saved prompt. Mirrors an entry of prompts.toml; <see cref="Hotkey"/> comes from [prompts] in keybinds.toml.</summary>
 public sealed record PromptDefinition(
     string Name,
@@ -49,4 +59,10 @@ public sealed record PromptDefinition(
     /// how to reach it ("Alt+Shift+T › K"). Not read from prompts.toml.
     /// </summary>
     public SubmapCall? Submap { get; init; }
+
+    /// <summary>
+    /// The Gemini tools this prompt enables (gtools in prompts.toml), each at most once. Empty: no tools are sent. Only a
+    /// provider of type gemini sends them; every other provider ignores them.
+    /// </summary>
+    public IReadOnlyList<GeminiTool> GeminiTools { get; init; } = [];
 }

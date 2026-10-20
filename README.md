@@ -81,8 +81,9 @@ texts over 50,000 characters are not supported.
 * **No telemetry**, no usage statistics, no update check, no account. Kuroko only talks to the providers in `settings.toml`.
 * **When you run a prompt**, the prompt’s instruction and the captured text (selection or field, up to 50,000 characters)
   go to that prompt’s provider, together with the model and output settings. No window titles, app names or other
-  clipboard content. OpenAI requests are sent with `store = false`; Gemini requests always enable Google Search
-  grounding. With a local OpenAI-compatible server (Ollama, LM Studio) the text never leaves your PC.
+  clipboard content. OpenAI requests are sent with `store = false`. Gemini tools are off unless a prompt
+  enables them with `gtools`: `googleSearch` lets Google build search queries from the text, `urlContext` makes Google
+  load the pages linked in it; the built-in `//` question always uses Google Search when it goes to Gemini. With a local OpenAI-compatible server (Ollama, LM Studio) the text never leaves your PC.
 * **Fallback provider** (`fallback_provider`, off by default): if the prompt’s provider cannot be reached (no
   connection, 5xx, 429), the same text goes once to the fallback provider, so to a *different* provider than the
   prompt names. The pill says so. Local providers ignore the global setting and only fall back when their own block

@@ -23,7 +23,14 @@ public static class PromptsLoader
 
     private static readonly HashSet<string> PromptKeys = new(StringComparer.Ordinal)
     {
-        "name", "prompt", "mode", "output", "hotkey", "provider", "model", // hotkey: only to warn that it moved to keybinds.toml
+        "name", "prompt", "mode", "output", "hotkey", "provider", "model", "gtools", // hotkey: only to warn that it moved to keybinds.toml
+    };
+
+    /// <summary>The names gtools accepts (not case-sensitive), as Gemini's API writes them.</summary>
+    private static readonly Dictionary<string, GeminiTool> GeminiToolNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["googleSearch"] = GeminiTool.GoogleSearch,
+        ["urlContext"] = GeminiTool.UrlContext,
     };
 
     public static PromptsLoadResult Parse(string toml)
@@ -147,6 +154,39 @@ public static class PromptsLoader
             Hotkey: null,
             provider.Length == 0 ? null : provider,
             model.Length == 0 ? null : model,
-            output);
+            output)
+        {
+            GeminiTools = ReadGeminiTools(table, reader, label, Line),
+        };
+    }
+
+    /// <summary>
+    /// gtools: a list of Gemini tool names. Mistakes only warn: an unknown name is skipped, a value that is not a list is
+    /// ignored as a whole, so the prompt still runs (without that tool).
+    /// </summary>
+    private static List<GeminiTool> ReadGeminiTools(TomlTable table, TomlReader reader, string label, Func<string, int?> line)
+    {
+        var tools = new List<GeminiTool>();
+        if (!table.TryGetValue("gtools", out var value)) return tools;
+
+        var known = string.Join(", ", GeminiToolNames.Keys);
+        if (value is not TomlArray array)
+        {
+            reader.Issue(line("gtools"), $"{label}: gtools must be a list, e.g. gtools = [\"googleSearch\"]; ignored", isError: false, show: true);
+            return tools;
+        }
+
+        foreach (var item in array)
+        {
+            if (item is string name && GeminiToolNames.TryGetValue(name.Trim(), out var tool))
+            {
+                if (!tools.Contains(tool)) tools.Add(tool);
+                continue;
+            }
+
+            reader.Issue(line("gtools"), $"{label}: unknown gtools entry '{item}' (known: {known}); ignored", isError: false, show: true);
+        }
+
+        return tools;
     }
 }

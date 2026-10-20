@@ -26,6 +26,7 @@ public static class DefaultPrompts
         text.AppendLine("#                       result_copy in keybinds.toml kopiert sie.");
         text.AppendLine("#   provider optional: Name eines [providers.*] aus settings.toml (sonst der Standard-Anbieter)");
         text.AppendLine("#   model    optional: Modell, das statt dem des Anbieters verwendet wird");
+        text.AppendLine("#   gtools   optional, nur Gemini: Liste von Werkzeugen, z. B. [\"googleSearch\"] (Google-Suche) oder [\"urlContext\"] (Google lädt verlinkte Seiten); ohne gtools keine");
         text.AppendLine("# Hotkeys für Prompts stehen in keybinds.toml unter [prompts], z. B. Correction = \"Ctrl+Alt+K\".");
 
         foreach (var prompt in BuiltInPrompts.All)
