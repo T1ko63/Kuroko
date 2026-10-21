@@ -112,8 +112,13 @@ public static class FallbackPolicy
     public static bool Applies(LlmErrorKind kind) => kind is LlmErrorKind.Network or LlmErrorKind.Server or LlmErrorKind.RateLimit;
 }
 
-/// <summary>One request to a model. Output limit and texts are decided by the caller.</summary>
-public sealed record LlmRequest(string Model, string System, string User, int MaxOutputTokens, LlmTimings? Timings = null);
+/// <summary>
+/// One request to a model. Output limit and texts are decided by the caller. <see cref="GeminiTools"/> is read only by the
+/// Gemini provider; null or empty sends no tools.
+/// </summary>
+public sealed record LlmRequest(
+    string Model, string System, string User, int MaxOutputTokens, LlmTimings? Timings = null,
+    IReadOnlyList<Prompts.GeminiTool>? GeminiTools = null);
 
 /// <summary>Stopwatch timestamps of one call, filled in by the provider so the caller can log where time went.</summary>
 public sealed class LlmTimings

@@ -33,7 +33,8 @@ public sealed class ProviderPromptRunner : IPromptRunner
 
         /// <summary>
         /// The request for one provider. A model named by the prompt belongs to the prompt's provider; the fallback provider
-        /// gets its own model. The output limit follows the provider that is asked.
+        /// gets its own model. The output limit follows the provider that is asked. The prompt's Gemini tools go with the
+        /// request to either provider; only one of type gemini sends them.
         /// </summary>
         public LlmRequest RequestFor(ProviderSettings settings, bool usePromptModel)
         {
@@ -42,7 +43,7 @@ public sealed class ProviderPromptRunner : IPromptRunner
                 : PromptBuilder.EstimateMaxOutputTokens(
                     prompt.OpenEndedAnswer ? PromptMode.Instruction : prompt.Mode, Input.Length, settings.Reasoning != "off");
             var model = usePromptModel ? prompt.Model ?? settings.Model : settings.Model;
-            return new LlmRequest(model, system, user, maxTokens, timings);
+            return new LlmRequest(model, system, user, maxTokens, timings, prompt.GeminiTools);
         }
     }
 

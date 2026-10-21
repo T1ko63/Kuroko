@@ -47,6 +47,15 @@
         "model": {
           "type": "string",
           "description": "Overrides the provider's model for this prompt."
+        },
+        "gtools": {
+          "type": "array",
+          "description": "Gemini only: server-side tools for this prompt. googleSearch: grounding with Google Search. urlContext: Google loads the pages of URLs in the text. Names are not case-sensitive; a name listed twice counts once. Missing or empty: no tools are sent. Other providers ignore it.",
+          "items": {
+            "type": "string",
+            "examples": ["googleSearch", "urlContext"],
+            "pattern": "^\\s*([Gg][Oo][Oo][Gg][Ll][Ee][Ss][Ee][Aa][Rr][Cc][Hh]|[Uu][Rr][Ll][Cc][Oo][Nn][Tt][Ee][Xx][Tt])\\s*$"
+          }
         }
       }
     }
